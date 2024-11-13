@@ -12,7 +12,6 @@ import { toZonedTime } from 'date-fns-tz'
 import { ptBR } from "date-fns/locale"
 import { RefreshCw } from "lucide-react"
 import InventoryLoading from './loading'
-import { WEBHOOKS } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import {
   ColumnDef,
