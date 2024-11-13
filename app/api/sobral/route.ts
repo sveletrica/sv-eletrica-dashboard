@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server'
-import { WEBHOOKS, SUPABASE } from '@/lib/constants'
+import { SUPABASE_URL } from '@/lib/constants'
+
+if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error('SUPABASE_SERVICE_ROLE_KEY is not defined')
+}
 
 export async function GET() {
     try {
-        const url = WEBHOOKS.sobral
+        const url = `${SUPABASE_URL}/rest/v1/apisobral`
         if (!url) {
             throw new Error('Supabase URL is not configured')
         }
@@ -15,8 +19,8 @@ export async function GET() {
             headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
-                'apikey': SUPABASE.apiKey || '',
-                'Authorization': `Bearer ${SUPABASE.apiKey}`,
+                'apikey': process.env.SUPABASE_SERVICE_ROLE_KEY,
+                'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
                 'Prefer': 'return=representation'
             },
             cache: 'no-store',

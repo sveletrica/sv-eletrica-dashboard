@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server'
-import { WEBHOOKS, SUPABASE } from '@/lib/constants'
+import { SUPABASE_URL } from '@/lib/constants'
+
+if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error('SUPABASE_SERVICE_ROLE_KEY is not defined')
+}
 
 export async function GET() {
     try {
-        const url = WEBHOOKS.inventory
+        const url = `${SUPABASE_URL}/rest/v1/DBestoque`
         if (!url) {
             throw new Error('Supabase inventory URL is not configured')
         }
@@ -12,13 +16,13 @@ export async function GET() {
 
         const response = await fetch(`${url}?select=*`, {
             method: 'GET',
-            headers: new Headers({
+            headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
-                'apikey': SUPABASE.apiKey || '',
-                'Authorization': `Bearer ${SUPABASE.apiKey}`,
+                'apikey': process.env.SUPABASE_SERVICE_ROLE_KEY,
+                'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
                 'Prefer': 'return=representation'
-            }),
+            },
             cache: 'no-store',
         })
 
