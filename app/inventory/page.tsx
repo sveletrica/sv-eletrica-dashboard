@@ -77,104 +77,92 @@ export default function Inventory() {
     const [filteredData, setFilteredData] = useState<InventoryItem[]>([])
     const searchIndexRef = useRef<SearchIndex | null>(null);
 
-    // Initialize visible columns from localStorage
+    // Initialize visible columns and column order from localStorage
     useEffect(() => {
         if (typeof window !== 'undefined') {
-            const saved = localStorage.getItem('inventoryColumns')
-            if (saved) {
+            // First load visible columns
+            const savedVisibleColumns = localStorage.getItem('inventoryColumns')
+            let visibleColumnSet: Set<ColumnId>;
+            
+            if (savedVisibleColumns) {
                 try {
-                    const parsed = JSON.parse(saved) as ColumnId[]
-                    setVisibleColumns(new Set(parsed))
+                    const parsed = JSON.parse(savedVisibleColumns) as ColumnId[]
+                    visibleColumnSet = new Set(parsed)
                 } catch {
-                    setVisibleColumns(getDefaultVisibleColumns())
+                    visibleColumnSet = getDefaultVisibleColumns()
                 }
+            } else {
+                visibleColumnSet = getDefaultVisibleColumns()
             }
-        }
-    }, [])
+            setVisibleColumns(visibleColumnSet)
 
-    // Save column preferences to localStorage
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            localStorage.setItem('inventoryColumns', JSON.stringify([...visibleColumns]))
-        }
-    }, [visibleColumns])
-
-    // Initialize column order from localStorage
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
+            // Then load and set column order
             const savedOrder = localStorage.getItem('inventoryColumnOrder')
             if (savedOrder) {
                 try {
-                    // Get saved order
-                    const savedColumns = JSON.parse(savedOrder) as string[]
-                    // Get all current column IDs
-                    const allColumnIds = Object.keys(columnDefinitions)
+                    const savedOrderArray = JSON.parse(savedOrder) as string[]
                     
-                    // Filter out any saved columns that no longer exist
-                    const validSavedColumns = savedColumns.filter(id => allColumnIds.includes(id))
+                    // Filter to only include visible columns while maintaining order
+                    const validOrderedColumns = savedOrderArray.filter(id => 
+                        visibleColumnSet.has(id as ColumnId)
+                    )
                     
-                    // Add any new columns that aren't in the saved order
-                    const newColumns = allColumnIds.filter(id => !validSavedColumns.includes(id))
+                    // Add any visible columns that aren't in the saved order at the end
+                    const missingColumns = Array.from(visibleColumnSet).filter(id => 
+                        !validOrderedColumns.includes(id)
+                    )
                     
-                    // Combine valid saved columns with new ones
-                    const updatedOrder = [...validSavedColumns, ...newColumns]
-                    
-                    setColumnOrder(updatedOrder)
+                    setColumnOrder([...validOrderedColumns, ...missingColumns])
                 } catch (e) {
                     console.error('Failed to parse column order:', e)
-                    // Fallback to default order
-                    setColumnOrder(Object.keys(columnDefinitions))
+                    setColumnOrder(Array.from(visibleColumnSet))
                 }
             } else {
-                // No saved order, use default
-                setColumnOrder(Object.keys(columnDefinitions))
+                setColumnOrder(Array.from(visibleColumnSet))
             }
         }
     }, []) // Only run on mount
 
-    // Save column order to localStorage
-    useEffect(() => {
-        if (typeof window !== 'undefined' && columnOrder.length > 0) {
-            localStorage.setItem('inventoryColumnOrder', JSON.stringify(columnOrder))
-        }
-    }, [columnOrder])
-
-    // Initialize column order with visible columns if empty
-    useEffect(() => {
-        if (columnOrder.length === 0 && visibleColumns.size > 0) {
-            setColumnOrder(Array.from(visibleColumns))
-        }
-    }, [visibleColumns, columnOrder.length])
-
     // Update column order when visible columns change
     useEffect(() => {
         if (visibleColumns.size > 0) {
-            const allColumnIds = Object.keys(columnDefinitions)
-            
-            // Get current visible columns that are in the order
-            const currentOrderedColumns = columnOrder.filter(id => 
-                visibleColumns.has(id as ColumnId) && allColumnIds.includes(id)
-            )
-            
-            // Get new visible columns that aren't in the order yet
-            const newColumns = Array.from(visibleColumns).filter(id => 
-                !columnOrder.includes(id) && allColumnIds.includes(id)
-            )
-            
-            // Combine them to maintain order of existing columns and add new ones at the end
-            const newOrder = [...currentOrderedColumns, ...newColumns]
-            
-            if (newOrder.length !== columnOrder.length || 
-                !newOrder.every((col, i) => col === columnOrder[i])) {
-                setColumnOrder(newOrder)
+            setColumnOrder(current => {
+                // Keep only visible columns in their current order
+                const visibleOrdered = current.filter(id => visibleColumns.has(id as ColumnId))
+                
+                // Add any new visible columns that aren't in the order
+                const newColumns = Array.from(visibleColumns).filter(id => !visibleOrdered.includes(id))
+                
+                const newOrder = [...visibleOrdered, ...newColumns]
                 
                 // Save to localStorage
                 if (typeof window !== 'undefined') {
                     localStorage.setItem('inventoryColumnOrder', JSON.stringify(newOrder))
                 }
-            }
+                
+                return newOrder
+            })
         }
-    }, [visibleColumns, columnOrder])
+    }, [visibleColumns])
+
+    // Handle column visibility toggle
+    const handleColumnToggle = (columnId: ColumnId) => {
+        setVisibleColumns(prev => {
+            const next = new Set(prev)
+            if (next.has(columnId)) {
+                next.delete(columnId)
+                // Update column order by removing the hidden column
+                setColumnOrder(current => current.filter(id => id !== columnId))
+            } else {
+                next.add(columnId)
+                // Add the new column to the end of the order
+                setColumnOrder(current => [...current, columnId])
+            }
+            
+            localStorage.setItem('inventoryColumns', JSON.stringify(Array.from(next)))
+            return next
+        })
+    }
 
     const saveToLocalStorage = (data: InventoryItem[]): void => {
         try {
@@ -259,23 +247,6 @@ export default function Inventory() {
     const handleRefresh = async () => {
         setIsRefreshing(true)
         await fetchInventoryData(true)
-    }
-
-    // Handle column visibility toggle
-    const handleColumnToggle = (columnId: ColumnId) => {
-        setVisibleColumns(prev => {
-            const next = new Set(prev)
-            if (next.has(columnId)) {
-                next.delete(columnId)
-                // Remove from column order if hidden
-                setColumnOrder(current => current.filter(id => id !== columnId))
-            } else {
-                next.add(columnId)
-                // Add to end of column order if shown
-                setColumnOrder(current => [...current, columnId])
-            }
-            return next
-        })
     }
 
     // Initialize search index when data changes
@@ -522,10 +493,8 @@ export default function Inventory() {
                 newOrder.splice(currentIndex, 1)
                 newOrder.splice(targetIndex, 0, draggedColumnId)
                 
-                // Save to localStorage
-                if (typeof window !== 'undefined') {
-                    localStorage.setItem('inventoryColumnOrder', JSON.stringify(newOrder))
-                }
+                // Save the new order immediately
+                localStorage.setItem('inventoryColumnOrder', JSON.stringify(newOrder))
             }
             
             return newOrder
