@@ -1,0 +1,68 @@
+import { NextResponse } from 'next/server'
+import { WEBHOOKS, SUPABASE } from '@/lib/constants'
+
+export async function GET() {
+    try {
+        const url = WEBHOOKS.inventory
+        if (!url) {
+            throw new Error('Supabase inventory URL is not configured')
+        }
+
+        console.log('Fetching inventory from URL:', `${url}?select=*`) // Debug log
+
+        const response = await fetch(`${url}?select=*`, {
+            method: 'GET',
+            headers: new Headers({
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'apikey': SUPABASE.apiKey || '',
+                'Authorization': `Bearer ${SUPABASE.apiKey}`,
+                'Prefer': 'return=representation'
+            }),
+            cache: 'no-store',
+        })
+
+        if (!response.ok) {
+            const errorText = await response.text()
+            console.error('Supabase inventory error response:', {
+                status: response.status,
+                statusText: response.statusText,
+                body: errorText
+            })
+            throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const data = await response.json()
+        
+        return NextResponse.json(data, {
+            status: 200,
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            },
+        })
+    } catch (error) {
+        console.error('Error fetching inventory:', error)
+        return NextResponse.json({ 
+            error: 'Failed to fetch inventory data',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        }, { 
+            status: 500,
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+            },
+        })
+    }
+}
+
+export async function OPTIONS() {
+    return new NextResponse(null, {
+        status: 204,
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        },
+    })
+} 

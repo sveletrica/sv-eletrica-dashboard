@@ -1,0 +1,105 @@
+.table-container {
+    position: relative;
+}
+
+.resizer {
+    position: absolute;
+    right: 0;
+    top: 0;
+    height: 100%;
+    width: 4px;
+    background: rgba(0, 0, 0, 0.5);
+    cursor: col-resize;
+    user-select: none;
+    touch-action: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.resizer.isResizing {
+    background: rgba(0, 0, 0, 0.8);
+    opacity: 1;
+}
+
+*:hover > .resizer {
+    opacity: 1;
+}
+
+.resize-handle {
+    position: relative;
+}
+
+.resize-handle::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    height: 100%;
+    width: 4px;
+    cursor: col-resize;
+    background-color: transparent;
+}
+
+.resize-handle:hover::after {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+.dragging {
+    opacity: 0.5;
+}
+
+.drop-target {
+    position: relative;
+}
+
+.drop-target::before {
+    content: '';
+    position: absolute;
+    left: -2px;
+    top: 0;
+    height: 100%;
+    width: 4px;
+    background-color: hsl(var(--primary));
+}
+
+/* Add these new styles */
+td, th {
+    overflow: visible; /* Allow content to be visible */
+    text-overflow: initial; /* Remove ellipsis */
+    white-space: normal; /* Allow text wrapping */
+}
+
+/* Ensure table cells can grow with content */
+td > div, th > div {
+    min-width: 0;
+    width: 100%;
+}
+
+/* Add these new styles */
+.sort-button {
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.group:hover .sort-button,
+.sort-button[data-sorted="true"] {
+    opacity: 1;
+}
+
+/* Update the table header hover style */
+.resize-handle:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.dark .resize-handle:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Style for active sort column */
+[data-sorted="true"] {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+.dark [data-sorted="true"] {
+    background-color: rgba(255, 255, 255, 0.02);
+} 
