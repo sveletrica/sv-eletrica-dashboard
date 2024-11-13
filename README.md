@@ -1,6 +1,6 @@
 # SV Elétrica Dashboard
 
-Um dashboard desenvolvido em Next.js para gerenciamento de inventário e operações da SV Elétrica.
+Um dashboard desenvolvido em Next.js para gerenciamento de inventário e operações da SV Elétrica por Diogo Elias.
 
 ## Funcionalidades
 
