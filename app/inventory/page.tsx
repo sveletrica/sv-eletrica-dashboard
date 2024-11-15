@@ -180,7 +180,7 @@ export default function Inventory() {
             const data = decompressData(compressed);
             
             // Find the most recent update time from the cached data
-            const mostRecentUpdate = data.reduce((latest, item) => {
+            const mostRecentUpdate = data.reduce((latest: Date, item: InventoryItem) => {
                 const itemDate = new Date(item.Atualizacao);
                 return latest > itemDate ? latest : itemDate;
             }, new Date(0));
