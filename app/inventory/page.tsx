@@ -177,7 +177,18 @@ export default function Inventory() {
         try {
             const compressed = localStorage.getItem('inventoryData');
             if (!compressed) return null;
-            return decompressData(compressed);
+            const data = decompressData(compressed);
+            
+            // Find the most recent update time from the cached data
+            const mostRecentUpdate = data.reduce((latest, item) => {
+                const itemDate = new Date(item.Atualizacao);
+                return latest > itemDate ? latest : itemDate;
+            }, new Date(0));
+            
+            // Set the last update time
+            setLastUpdate(mostRecentUpdate);
+            
+            return data;
         } catch (error) {
             console.error('Error loading from localStorage:', error);
             return null;
