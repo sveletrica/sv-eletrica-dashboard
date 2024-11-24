@@ -41,11 +41,56 @@ import { ptBR } from 'date-fns/locale'
 import { addDays, subDays } from 'date-fns'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { DateRange } from "react-day-picker"
+import { openDB, IDBPDatabase } from 'idb'
 
 // Move parseDate outside the component
 const parseDate = (dateString: string): Date => {
     const [year, month, day] = dateString.split('-').map(Number)
     return new Date(year, month - 1, day, 12, 0, 0)
+}
+
+interface CachedData {
+    data: DailySale[]
+    timestamp: number
+    queryDate: string
+}
+
+const CACHE_DURATION = 60 * 60 * 1000 // 60 minutes in milliseconds
+const DB_NAME = 'sales-cache'
+const STORE_NAME = 'daily-sales'
+
+async function initDB(): Promise<IDBPDatabase> {
+    return openDB(DB_NAME, 1, {
+        upgrade(db) {
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+                db.createObjectStore(STORE_NAME)
+            }
+        },
+    })
+}
+
+async function getCachedData(queryDate: string): Promise<CachedData | null> {
+    try {
+        const db = await initDB()
+        const data = await db.get(STORE_NAME, queryDate)
+        return data || null
+    } catch (error) {
+        console.error('Error reading from cache:', error)
+        return null
+    }
+}
+
+async function setCachedData(queryDate: string, data: DailySale[]): Promise<void> {
+    try {
+        const db = await initDB()
+        await db.put(STORE_NAME, {
+            data,
+            timestamp: Date.now(),
+            queryDate
+        }, queryDate)
+    } catch (error) {
+        console.error('Error writing to cache:', error)
+    }
 }
 
 export default function DailySales() {
@@ -250,7 +295,6 @@ export default function DailySales() {
 
             let queryDate: string
             if (dateRange.to) {
-                // Ensure dates are in chronological order
                 const startDate = dateRange.from
                 const endDate = dateRange.to
                 
@@ -272,12 +316,28 @@ export default function DailySales() {
                 queryDate = `eq.${format(new Date(), 'dd/MM/yyyy')}`
             }
 
+            // Check cache first if not forcing refresh
+            if (!force) {
+                const cachedData = await getCachedData(queryDate)
+                if (cachedData && (Date.now() - cachedData.timestamp) < CACHE_DURATION) {
+                    setData(cachedData.data)
+                    setLastUpdate(new Date(cachedData.timestamp))
+                    setIsLoading(false)
+                    setIsRefreshing(false)
+                    return
+                }
+            }
+
             const response = await fetch(`/api/vendas-dia?date=${encodeURIComponent(queryDate)}`)
             if (!response.ok) {
                 throw new Error('Failed to fetch sales data')
             }
 
             const salesData = await response.json()
+            
+            // Cache the new data
+            await setCachedData(queryDate, salesData)
+            
             setData(salesData)
             setLastUpdate(new Date())
         } catch (error) {
