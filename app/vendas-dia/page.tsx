@@ -435,7 +435,7 @@ export default function DailySales() {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 min-w-[300px]">
             <div className="flex flex-col gap-2">
                 <div className="flex justify-between items-center">
                     <h1 className="text-3xl font-bold ml-10">Vendas do Dia</h1>
