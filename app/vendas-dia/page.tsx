@@ -105,7 +105,7 @@ const isSameDay = (date1: Date, date2: Date): boolean => {
 export default function DailySales() {
     const router = useRouter()
     const searchParams = useSearchParams()
-    
+
     const [data, setData] = useState<DailySale[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [isRefreshing, setIsRefreshing] = useState(false)
@@ -131,10 +131,10 @@ export default function DailySales() {
     const [dateRange, setDateRange] = useState<DateRange>(() => {
         const dateParam = searchParams.get('date')
         const endDateParam = searchParams.get('endDate')
-        
+
         const normalizedDate = dateParam ? new Date(parseDate(dateParam).setHours(12, 0, 0, 0)) : new Date(new Date().setHours(12, 0, 0, 0))
         const normalizedEndDate = endDateParam ? new Date(parseDate(endDateParam).setHours(12, 0, 0, 0)) : undefined
-        
+
         return {
             from: normalizedDate,
             to: normalizedEndDate
@@ -148,7 +148,6 @@ export default function DailySales() {
                 <Button
                     variant="ghost"
                     onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-                    className="max-[400px]:px-1"
                 >
                     Pedido
                     {column.getIsSorted() === "asc" ? (
@@ -163,49 +162,33 @@ export default function DailySales() {
             cell: ({ row }) => (
                 <Link
                     href={`/vendas-dia/${row.original.cdpedido}?nrdocumento=${row.original.nrdocumento}`}
-                    className="text-blue-500 hover:text-blue-700 underline whitespace-nowrap"
+                    className="text-blue-500 hover:text-blue-700 underline"
                 >
                     {row.original.cdpedido}
                 </Link>
             ),
-            size: 100,
         },
         {
             accessorKey: 'nrdocumento',
             header: "Documento",
-            size: 100,
         },
         {
             accessorKey: 'nmpessoa',
             header: "Cliente",
-            cell: ({ row }) => (
-                <div className="truncate max-w-[400px] max-[400px]:max-w-[100px]">
-                    {row.original.nmpessoa}
-                </div>
-            ),
         },
         {
             accessorKey: 'nmrepresentantevenda',
             header: "Representante",
-            cell: ({ row }) => (
-                <div className="truncate max-w-[100px] max-[400px]:max-w-[100px]">
-                    {row.original.nmrepresentantevenda}
-                </div>
-            ),
         },
         {
             accessorKey: 'nmempresacurtovenda',
             header: "Empresa",
-            cell: ({ row }) => (
-                <div className="truncate max-w-[150px] max-[400px]:max-w-[80px]">
-                    {row.original.nmempresacurtovenda}
-                </div>
-            ),
+            cell: ({ row }) => row.original.nmempresacurtovenda,
+            enableSorting: true,
         },
         {
             accessorKey: 'tpmovimentooperacao',
             header: "Tipo",
-            size: 80,
         },
         {
             accessorKey: 'qtdsku',
@@ -213,9 +196,8 @@ export default function DailySales() {
                 <Button
                     variant="ghost"
                     onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-                    className="max-[400px]:px-1"
                 >
-                    SKUs
+                    Qtd SKUs
                     {column.getIsSorted() === "asc" ? (
                         <ArrowUp className="ml-2 h-4 w-4" />
                     ) : column.getIsSorted() === "desc" ? (
@@ -226,11 +208,10 @@ export default function DailySales() {
                 </Button>
             ),
             cell: ({ row }) => (
-                <div className="text-right whitespace-nowrap">
+                <div className="text-center">
                     {row.original.qtdsku.toLocaleString('pt-BR')}
                 </div>
             ),
-            size: 80,
         },
         {
             accessorKey: 'total_faturamento',
@@ -238,9 +219,8 @@ export default function DailySales() {
                 <Button
                     variant="ghost"
                     onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-                    className="max-[400px]:px-1"
                 >
-                    Fat.
+                    Faturamento
                     {column.getIsSorted() === "asc" ? (
                         <ArrowUp className="ml-2 h-4 w-4" />
                     ) : column.getIsSorted() === "desc" ? (
@@ -250,15 +230,10 @@ export default function DailySales() {
                     )}
                 </Button>
             ),
-            cell: ({ row }) => (
-                <div className="text-right whitespace-nowrap">
-                    {row.original.total_faturamento.toLocaleString('pt-BR', {
-                        style: 'currency',
-                        currency: 'BRL'
-                    })}
-                </div>
-            ),
-            size: 120,
+            cell: ({ row }) => row.original.total_faturamento.toLocaleString('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+            }),
         },
         {
             accessorKey: 'total_custo_produto',
@@ -266,7 +241,6 @@ export default function DailySales() {
                 <Button
                     variant="ghost"
                     onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-                    className="max-[400px]:px-1"
                 >
                     Custo
                     {column.getIsSorted() === "asc" ? (
@@ -278,15 +252,10 @@ export default function DailySales() {
                     )}
                 </Button>
             ),
-            cell: ({ row }) => (
-                <div className="text-right whitespace-nowrap">
-                    {row.original.total_custo_produto.toLocaleString('pt-BR', {
-                        style: 'currency',
-                        currency: 'BRL'
-                    })}
-                </div>
-            ),
-            size: 120,
+            cell: ({ row }) => row.original.total_custo_produto.toLocaleString('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+            }),
         },
         {
             accessorKey: 'margem',
@@ -294,7 +263,6 @@ export default function DailySales() {
                 <Button
                     variant="ghost"
                     onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-                    className="max-[400px]:px-1"
                 >
                     Margem
                     {column.getIsSorted() === "asc" ? (
@@ -317,14 +285,13 @@ export default function DailySales() {
                     color = 'text-green-600';
                 }
                 return (
-                    <div className="text-right whitespace-nowrap">
+                    <div className="text-right">
                         <span className={`font-bold ${color}`}>
                             {margin.toFixed(2)}%
                         </span>
                     </div>
                 );
             },
-            size: 80,
         },
     ], [])
 
@@ -339,17 +306,17 @@ export default function DailySales() {
             if (dateRange.to) {
                 const startDate = dateRange.from
                 const endDate = dateRange.to
-                
+
                 if (startDate && endDate) {
                     const dates: Date[] = []
                     let currentDate = new Date(Math.min(startDate.getTime(), endDate.getTime()))
                     const finalDate = new Date(Math.max(startDate.getTime(), endDate.getTime()))
-                    
+
                     while (currentDate <= finalDate) {
                         dates.push(new Date(currentDate))
                         currentDate.setDate(currentDate.getDate() + 1)
                     }
-                    
+
                     queryDate = `in.(${dates.map(d => format(d, 'dd/MM/yyyy')).join(',')})`
                 }
             } else if (dateRange.from) {
@@ -376,10 +343,10 @@ export default function DailySales() {
             }
 
             const salesData = await response.json()
-            
+
             // Cache the new data
             await setCachedData(queryDate, salesData)
-            
+
             setData(salesData)
             setLastUpdate(new Date())
         } catch (error) {
@@ -398,24 +365,24 @@ export default function DailySales() {
     useEffect(() => {
         const dateParam = searchParams.get('date')
         const endDateParam = searchParams.get('endDate')
-        
+
         if (dateParam) {
             setDateRange(prev => ({
                 from: parseDate(dateParam),
                 to: endDateParam ? parseDate(endDateParam) : prev.to
             }))
         }
-        
+
         const searchParam = searchParams.get('search')
         if (searchParam) {
             setSearchTerm(searchParam)
         }
-        
+
         const empresaParam = searchParams.get('empresa')
         if (empresaParam) {
             setEmpresaFilter(empresaParam)
         }
-        
+
         const sortField = searchParams.get('sortField')
         const sortDir = searchParams.get('sortDir')
         if (sortField && sortDir) {
@@ -439,9 +406,9 @@ export default function DailySales() {
 
     const filteredData = useMemo(() => {
         let filtered = data;
-        
+
         if (empresaFilter !== 'all') {
-            filtered = filtered.filter(item => 
+            filtered = filtered.filter(item =>
                 item.nmempresacurtovenda === empresaFilter
             )
         }
@@ -483,7 +450,7 @@ export default function DailySales() {
 
     const updateSearchParams = (newDate?: Date, search?: string, empresa?: string, newSorting?: SortingState | ((prev: SortingState) => SortingState), endDate?: Date) => {
         const params = new URLSearchParams(searchParams.toString())
-        
+
         if (newDate) {
             params.set('date', format(newDate, 'yyyy-MM-dd'))
             if (endDate) {
@@ -492,7 +459,7 @@ export default function DailySales() {
                 params.delete('endDate')
             }
         }
-        
+
         if (search !== undefined) {
             if (search) {
                 params.set('search', search)
@@ -500,7 +467,7 @@ export default function DailySales() {
                 params.delete('search')
             }
         }
-        
+
         if (empresa !== undefined) {
             if (empresa !== 'all') {
                 params.set('empresa', empresa)
@@ -508,9 +475,9 @@ export default function DailySales() {
                 params.delete('empresa')
             }
         }
-        
+
         const sortingValue = typeof newSorting === 'function' ? newSorting(sorting) : newSorting
-        
+
         if (sortingValue && sortingValue.length > 0) {
             params.set('sortField', sortingValue[0].id)
             params.set('sortDir', sortingValue[0].desc ? 'desc' : 'asc')
@@ -518,7 +485,7 @@ export default function DailySales() {
             params.delete('sortField')
             params.delete('sortDir')
         }
-        
+
         router.replace(`${window.location.pathname}?${params.toString()}`, { scroll: false })
     }
 
@@ -551,9 +518,9 @@ export default function DailySales() {
 
     const handlePreviousDay = () => {
         if (!dateRange.from) return;
-        
+
         const newDate = new Date(subDays(dateRange.from, 1).setHours(12, 0, 0, 0))
-        
+
         if (dateRange.to) {
             const newTo = dateRange.to
             setDateRange({
@@ -572,9 +539,9 @@ export default function DailySales() {
 
     const handleNextDay = () => {
         if (!dateRange.from) return;
-        
+
         const newDate = new Date(addDays(dateRange.from, 1).setHours(12, 0, 0, 0))
-        
+
         if (dateRange.to) {
             if (newDate > dateRange.to) {
                 const newTo = new Date(addDays(dateRange.to, 1).setHours(12, 0, 0, 0))
@@ -667,7 +634,7 @@ export default function DailySales() {
     return (
         <div className="space-y-6 min-w-[300px]">
             <div className="flex flex-col gap-2">
-                <div className="flex justify-between items-center flex-wrap">
+                <div className="flex justify-between items-center">
                     <h1 className="text-3xl font-bold ml-10">Vendas do Dia</h1>
                     <div className="flex items-center gap-4 mt-2">
                         {lastUpdate && (
@@ -704,7 +671,7 @@ export default function DailySales() {
                 )}
             </div>
 
-            <div className="flex items-center gap-4 ml-0">
+            <div className="flex items-center gap-4 ml-10">
                 <div className="flex items-center gap-2">
                     <Button
                         variant="outline"
@@ -802,12 +769,12 @@ export default function DailySales() {
                     const isSelected = empresaFilter === summary.empresa;
 
                     return (
-                        <Card 
-                            key={summary.empresa} 
+                        <Card
+                            key={summary.empresa}
                             className={cn(
                                 "relative overflow-hidden cursor-pointer transition-all duration-200",
-                                isSelected 
-                                    ? "ring-2 ring-primary hover:ring-primary/70" 
+                                isSelected
+                                    ? "ring-2 ring-primary hover:ring-primary/70"
                                     : "hover:ring-2 hover:ring-primary/50 opacity-70 hover:opacity-100",
                                 empresaFilter !== 'all' && !isSelected && "opacity-50"
                             )}
@@ -860,7 +827,7 @@ export default function DailySales() {
             <Card>
                 <CardHeader>
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                        <CardTitle className="max-[400px]:text-sm">
+                        <CardTitle>
                             Lista de Vendas - {
                                 dateRange.from && (
                                     dateRange.to ? (
@@ -873,7 +840,7 @@ export default function DailySales() {
                                 )
                             }
                         </CardTitle>
-                        <div className="flex flex-row sm:flex-row items-stretch sm:items-center gap-4">
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
                             <Select
                                 value={empresaFilter}
                                 onValueChange={handleEmpresaFilter}
@@ -881,7 +848,7 @@ export default function DailySales() {
                                 <SelectTrigger className="w-[180px]">
                                     <SelectValue placeholder="Filtrar por Empresa" />
                                 </SelectTrigger>
-                                <SelectContent className="max-[400px]:text-xs">
+                                <SelectContent>
                                     <SelectItem value="all">Todas as Empresas</SelectItem>
                                     {uniqueEmpresas.map((empresa) => (
                                         <SelectItem key={empresa} value={empresa}>
@@ -895,7 +862,7 @@ export default function DailySales() {
                                     placeholder="Buscar por pedido, documento, cliente ou representante..."
                                     value={searchTerm}
                                     onChange={(e) => handleSearch(e.target.value)}
-                                    className="w-full sm:w-[300px] pr-8 max-[400px]:text-xs"
+                                    className="w-full sm:w-[300px] pr-8"
                                 />
                                 {searchTerm && (
                                     <Button
@@ -913,15 +880,12 @@ export default function DailySales() {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <div className="relative w-full overflow-auto">
+                    <div className="relative overflow-x-auto">
                         <Table>
                             <TableHeader>
                                 <TableRow>
                                     {table.getFlatHeaders().map((header) => (
-                                        <TableHead 
-                                            key={header.id}
-                                            className="px-2 py-2 max-[400px]:text-xs"
-                                        >
+                                        <TableHead key={header.id}>
                                             {flexRender(
                                                 header.column.columnDef.header,
                                                 header.getContext()
@@ -935,10 +899,7 @@ export default function DailySales() {
                                     table.getRowModel().rows.map((row) => (
                                         <TableRow key={row.id}>
                                             {row.getVisibleCells().map((cell) => (
-                                                <TableCell 
-                                                    key={cell.id}
-                                                    className="px-2 py-2 max-[400px]:text-xs"
-                                                >
+                                                <TableCell key={cell.id}>
                                                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                                 </TableCell>
                                             ))}
