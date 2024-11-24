@@ -93,6 +93,15 @@ async function setCachedData(queryDate: string, data: DailySale[]): Promise<void
     }
 }
 
+// Add this helper function to check if dates are the same day
+const isSameDay = (date1: Date, date2: Date): boolean => {
+    return (
+        date1.getFullYear() === date2.getFullYear() &&
+        date1.getMonth() === date2.getMonth() &&
+        date1.getDate() === date2.getDate()
+    )
+}
+
 export default function DailySales() {
     const router = useRouter()
     const searchParams = useSearchParams()
@@ -688,7 +697,11 @@ export default function DailySales() {
                                             dateRange.to < dateRange.from ? (
                                                 format(dateRange.from, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
                                             ) : (
-                                                `${format(dateRange.from, "dd 'de' MMMM", { locale: ptBR })} até ${format(dateRange.to, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}`
+                                                isSameDay(dateRange.from, dateRange.to) ? (
+                                                    format(dateRange.from, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+                                                ) : (
+                                                    `${format(dateRange.from, "dd 'de' MMMM", { locale: ptBR })} até ${format(dateRange.to, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}`
+                                                )
                                             )
                                         ) : (
                                             format(dateRange.from, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
@@ -817,9 +830,13 @@ export default function DailySales() {
                         <CardTitle>
                             Lista de Vendas - {
                                 dateRange.from && (
-                                    dateRange.to 
-                                        ? `${format(dateRange.from, "dd 'de' MMMM", { locale: ptBR })} até ${format(dateRange.to, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}`
-                                        : format(dateRange.from, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+                                    dateRange.to ? (
+                                        isSameDay(dateRange.from, dateRange.to) ? (
+                                            format(dateRange.from, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+                                        ) : (
+                                            `${format(dateRange.from, "dd 'de' MMMM", { locale: ptBR })} até ${format(dateRange.to, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}`
+                                        )
+                                    ) : format(dateRange.from, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
                                 )
                             }
                         </CardTitle>
