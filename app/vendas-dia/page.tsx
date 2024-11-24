@@ -1,5 +1,6 @@
 'use client'
 
+import './styles.css'
 import { useState, useEffect, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -39,6 +40,13 @@ import {
 import { ptBR } from 'date-fns/locale'
 import { addDays, subDays } from 'date-fns'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { DateRange } from "react-day-picker"
+
+// Move parseDate outside the component
+const parseDate = (dateString: string): Date => {
+    const [year, month, day] = dateString.split('-').map(Number)
+    return new Date(year, month - 1, day, 12, 0, 0)
+}
 
 export default function DailySales() {
     const router = useRouter()
@@ -66,9 +74,17 @@ export default function DailySales() {
         pageSize: 20,
     })
     const [empresaFilter, setEmpresaFilter] = useState(searchParams.get('empresa') || 'all')
-    const [date, setDate] = useState<Date>(() => {
+    const [dateRange, setDateRange] = useState<DateRange>(() => {
         const dateParam = searchParams.get('date')
-        return dateParam ? new Date(dateParam) : new Date()
+        const endDateParam = searchParams.get('endDate')
+        
+        const normalizedDate = dateParam ? new Date(parseDate(dateParam).setHours(12, 0, 0, 0)) : new Date(new Date().setHours(12, 0, 0, 0))
+        const normalizedEndDate = endDateParam ? new Date(parseDate(endDateParam).setHours(12, 0, 0, 0)) : undefined
+        
+        return {
+            from: normalizedDate,
+            to: normalizedEndDate
+        }
     })
 
     const columns = useMemo<ColumnDef<DailySale>[]>(() => [
@@ -232,8 +248,31 @@ export default function DailySales() {
                 setIsRefreshing(true)
             }
 
-            const formattedDate = format(date, 'dd/MM/yyyy')
-            const response = await fetch(`/api/vendas-dia?date=${formattedDate}`)
+            let queryDate: string
+            if (dateRange.to) {
+                // Ensure dates are in chronological order
+                const startDate = dateRange.from
+                const endDate = dateRange.to
+                
+                if (startDate && endDate) {
+                    const dates: Date[] = []
+                    let currentDate = new Date(Math.min(startDate.getTime(), endDate.getTime()))
+                    const finalDate = new Date(Math.max(startDate.getTime(), endDate.getTime()))
+                    
+                    while (currentDate <= finalDate) {
+                        dates.push(new Date(currentDate))
+                        currentDate.setDate(currentDate.getDate() + 1)
+                    }
+                    
+                    queryDate = `in.(${dates.map(d => format(d, 'dd/MM/yyyy')).join(',')})`
+                }
+            } else if (dateRange.from) {
+                queryDate = `eq.${format(dateRange.from, 'dd/MM/yyyy')}`
+            } else {
+                queryDate = `eq.${format(new Date(), 'dd/MM/yyyy')}`
+            }
+
+            const response = await fetch(`/api/vendas-dia?date=${encodeURIComponent(queryDate)}`)
             if (!response.ok) {
                 throw new Error('Failed to fetch sales data')
             }
@@ -252,7 +291,38 @@ export default function DailySales() {
 
     useEffect(() => {
         fetchData()
-    }, [date])
+    }, [dateRange])
+
+    useEffect(() => {
+        const dateParam = searchParams.get('date')
+        const endDateParam = searchParams.get('endDate')
+        
+        if (dateParam) {
+            setDateRange(prev => ({
+                from: parseDate(dateParam),
+                to: endDateParam ? parseDate(endDateParam) : prev.to
+            }))
+        }
+        
+        const searchParam = searchParams.get('search')
+        if (searchParam) {
+            setSearchTerm(searchParam)
+        }
+        
+        const empresaParam = searchParams.get('empresa')
+        if (empresaParam) {
+            setEmpresaFilter(empresaParam)
+        }
+        
+        const sortField = searchParams.get('sortField')
+        const sortDir = searchParams.get('sortDir')
+        if (sortField && sortDir) {
+            setSorting([{
+                id: sortField,
+                desc: sortDir === 'desc'
+            }])
+        }
+    }, [searchParams])
 
     const handleRefresh = () => {
         fetchData(true)
@@ -300,7 +370,7 @@ export default function DailySales() {
         getPaginationRowModel: getPaginationRowModel(),
         onSortingChange: (newSorting) => {
             setSorting(newSorting)
-            updateSearchParams(date, searchTerm, empresaFilter, newSorting)
+            updateSearchParams(dateRange.from, searchTerm, empresaFilter, newSorting, dateRange.to)
         },
         onPaginationChange: setPagination,
         state: {
@@ -309,11 +379,16 @@ export default function DailySales() {
         },
     })
 
-    const updateSearchParams = (newDate?: Date, search?: string, empresa?: string, newSorting?: SortingState | ((prev: SortingState) => SortingState)) => {
+    const updateSearchParams = (newDate?: Date, search?: string, empresa?: string, newSorting?: SortingState | ((prev: SortingState) => SortingState), endDate?: Date) => {
         const params = new URLSearchParams(searchParams.toString())
         
         if (newDate) {
-            params.set('date', newDate.toISOString().split('T')[0])
+            params.set('date', format(newDate, 'yyyy-MM-dd'))
+            if (endDate) {
+                params.set('endDate', format(endDate, 'yyyy-MM-dd'))
+            } else {
+                params.delete('endDate')
+            }
         }
         
         if (search !== undefined) {
@@ -342,36 +417,94 @@ export default function DailySales() {
             params.delete('sortDir')
         }
         
-        router.replace(`${window.location.pathname}?${params.toString()}`)
+        router.replace(`${window.location.pathname}?${params.toString()}`, { scroll: false })
     }
 
-    const handleDateChange = (newDate: Date | undefined) => {
-        if (newDate) {
-            setDate(newDate)
+    const handleDateChange = (range: DateRange | undefined) => {
+        if (!range) {
+            return;
+        }
+
+        // Normalize dates to noon to avoid timezone issues
+        const normalizedRange = {
+            from: range.from ? new Date(range.from.setHours(12, 0, 0, 0)) : undefined,
+            to: range.to ? new Date(range.to.setHours(12, 0, 0, 0)) : undefined
+        }
+
+        // If selecting a single day or if end date is before start date
+        if (!normalizedRange.to || (normalizedRange.from && normalizedRange.to && normalizedRange.to < normalizedRange.from)) {
+            const newRange = {
+                from: normalizedRange.from,
+                to: undefined
+            }
+            setDateRange(newRange)
+            updateSearchParams(normalizedRange.from, searchTerm, empresaFilter, sorting)
+            return;
+        }
+
+        // Normal range selection
+        setDateRange(normalizedRange)
+        updateSearchParams(normalizedRange.from, searchTerm, empresaFilter, sorting, normalizedRange.to)
+    }
+
+    const handlePreviousDay = () => {
+        if (!dateRange.from) return;
+        
+        const newDate = new Date(subDays(dateRange.from, 1).setHours(12, 0, 0, 0))
+        
+        if (dateRange.to) {
+            const newTo = dateRange.to
+            setDateRange({
+                from: newDate,
+                to: newTo
+            })
+            updateSearchParams(newDate, searchTerm, empresaFilter, sorting, newTo)
+        } else {
+            setDateRange({
+                from: newDate,
+                to: undefined
+            })
             updateSearchParams(newDate, searchTerm, empresaFilter, sorting)
         }
     }
 
-    const handlePreviousDay = () => {
-        const newDate = subDays(date, 1)
-        setDate(newDate)
-        updateSearchParams(newDate, searchTerm, empresaFilter, sorting)
-    }
-
     const handleNextDay = () => {
-        const newDate = addDays(date, 1)
-        setDate(newDate)
-        updateSearchParams(newDate, searchTerm, empresaFilter, sorting)
+        if (!dateRange.from) return;
+        
+        const newDate = new Date(addDays(dateRange.from, 1).setHours(12, 0, 0, 0))
+        
+        if (dateRange.to) {
+            if (newDate > dateRange.to) {
+                const newTo = new Date(addDays(dateRange.to, 1).setHours(12, 0, 0, 0))
+                setDateRange({
+                    from: newDate,
+                    to: newTo
+                })
+                updateSearchParams(newDate, searchTerm, empresaFilter, sorting, newTo)
+            } else {
+                setDateRange({
+                    from: newDate,
+                    to: dateRange.to
+                })
+                updateSearchParams(newDate, searchTerm, empresaFilter, sorting, dateRange.to)
+            }
+        } else {
+            setDateRange({
+                from: newDate,
+                to: undefined
+            })
+            updateSearchParams(newDate, searchTerm, empresaFilter, sorting)
+        }
     }
 
     const handleSearch = (value: string) => {
         setSearchTerm(value)
-        updateSearchParams(date, value, empresaFilter, sorting)
+        updateSearchParams(dateRange.from, value, empresaFilter, sorting, dateRange.to)
     }
 
     const handleEmpresaFilter = (value: string) => {
         setEmpresaFilter(value)
-        updateSearchParams(date, searchTerm, value, sorting)
+        updateSearchParams(dateRange.from, searchTerm, value, sorting, dateRange.to)
     }
 
     const calculateMargin = (totalRevenue: number, totalCost: number) => {
@@ -424,32 +557,6 @@ export default function DailySales() {
             }))
             .sort((a, b) => b.faturamento - a.faturamento)
     }, [data])
-
-    useEffect(() => {
-        const dateParam = searchParams.get('date')
-        if (dateParam) {
-            setDate(new Date(dateParam))
-        }
-        
-        const searchParam = searchParams.get('search')
-        if (searchParam) {
-            setSearchTerm(searchParam)
-        }
-        
-        const empresaParam = searchParams.get('empresa')
-        if (empresaParam) {
-            setEmpresaFilter(empresaParam)
-        }
-        
-        const sortField = searchParams.get('sortField')
-        const sortDir = searchParams.get('sortDir')
-        if (sortField && sortDir) {
-            setSorting([{
-                id: sortField,
-                desc: sortDir === 'desc'
-            }])
-        }
-    }, [])
 
     if (isLoading) {
         return <Loading />
@@ -511,13 +618,21 @@ export default function DailySales() {
                                 variant="outline"
                                 className={cn(
                                     "min-w-[260px] justify-start text-left font-normal",
-                                    !date && "text-muted-foreground"
+                                    !dateRange.from && "text-muted-foreground"
                                 )}
                             >
                                 <CalendarIcon className="mr-2 h-4 w-4" />
-                                {date ? (
+                                {dateRange.from ? (
                                     <span className="font-medium">
-                                        {format(date, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                                        {dateRange.to ? (
+                                            dateRange.to < dateRange.from ? (
+                                                format(dateRange.from, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+                                            ) : (
+                                                `${format(dateRange.from, "dd 'de' MMMM", { locale: ptBR })} até ${format(dateRange.to, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}`
+                                            )
+                                        ) : (
+                                            format(dateRange.from, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+                                        )}
                                     </span>
                                 ) : (
                                     <span>Selecione uma data</span>
@@ -526,11 +641,14 @@ export default function DailySales() {
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
                             <Calendar
-                                mode="single"
-                                selected={date}
+                                mode="range"
+                                selected={dateRange}
                                 onSelect={handleDateChange}
                                 initialFocus
                                 locale={ptBR}
+                                numberOfMonths={2}
+                                disabled={{ after: new Date() }} // Prevent future date selection
+                                defaultMonth={dateRange.from} // Keep the calendar centered on the selected month
                                 className="rounded-md border"
                                 classNames={{
                                     month: "space-y-4",
@@ -637,7 +755,13 @@ export default function DailySales() {
                 <CardHeader>
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                         <CardTitle>
-                            Lista de Vendas - {format(date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                            Lista de Vendas - {
+                                dateRange.from && (
+                                    dateRange.to 
+                                        ? `${format(dateRange.from, "dd 'de' MMMM", { locale: ptBR })} até ${format(dateRange.to, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}`
+                                        : format(dateRange.from, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+                                )
+                            }
                         </CardTitle>
                         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
                             <Select

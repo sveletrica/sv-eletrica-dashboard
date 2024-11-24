@@ -7,7 +7,6 @@ if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
 
 export async function GET(request: Request) {
     try {
-        // Get the date from query params
         const { searchParams } = new URL(request.url)
         const date = searchParams.get('date')
 
@@ -20,8 +19,7 @@ export async function GET(request: Request) {
 
         const url = `${SUPABASE_URL}/rest/v1/vendamesporpedido`
         
-        // Format the query correctly for Supabase
-        const response = await fetch(`${url}?dtemissao=eq.${date}`, {
+        const response = await fetch(`${url}?dtemissao=${date}`, {
             method: 'GET',
             headers: {
                 Accept: 'application/json',

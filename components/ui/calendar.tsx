@@ -12,11 +12,13 @@ function Calendar({
     className,
     classNames,
     showOutsideDays = true,
+    numberOfMonths,
     ...props
 }: CalendarProps) {
     return (
         <DayPicker
             showOutsideDays={showOutsideDays}
+            numberOfMonths={numberOfMonths || 1}
             className={cn("p-3", className)}
             classNames={{
                 months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
@@ -35,24 +37,29 @@ function Calendar({
                 head_cell:
                     "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
                 row: "flex w-full mt-2",
-                cell: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+                cell: cn(
+                    "relative p-0 text-center text-sm focus-within:relative focus-within:z-20",
+                    "first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md"
+                ),
                 day: cn(
                     buttonVariants({ variant: "ghost" }),
                     "h-9 w-9 p-0 font-normal aria-selected:opacity-100"
                 ),
                 day_selected:
-                    "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground rounded-full font-bold ring-2 ring-primary ring-offset-2",
+                    "bg-red-600 text-white hover:bg-red-600 hover:text-white focus:bg-red-600 focus:text-white",
                 day_today: "bg-accent text-accent-foreground",
                 day_outside: "text-muted-foreground opacity-50",
                 day_disabled: "text-muted-foreground opacity-50",
                 day_range_middle:
-                    "aria-selected:bg-accent aria-selected:text-accent-foreground",
+                    "aria-selected:bg-red-100 aria-selected:text-red-900",
+                day_range_end: "aria-selected:bg-red-600 aria-selected:text-white",
+                day_range_start: "aria-selected:bg-red-600 aria-selected:text-white",
                 day_hidden: "invisible",
                 ...classNames,
             }}
             components={{
-                iconLeft: ({ ...props }) => <ChevronLeft className="h-4 w-4" />,
-                iconRight: ({ ...props }) => <ChevronRight className="h-4 w-4" />,
+                PrevButton: () => <ChevronLeft className="h-4 w-4" />,
+                NextButton: () => <ChevronRight className="h-4 w-4" />,
             }}
             {...props}
         />
