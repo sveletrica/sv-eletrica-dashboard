@@ -149,7 +149,7 @@ export default function DailySales() {
                     variant="ghost"
                     onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
                 >
-                    Pedido
+                    Ped.
                     {column.getIsSorted() === "asc" ? (
                         <ArrowUp className="ml-2 h-4 w-4" />
                     ) : column.getIsSorted() === "desc" ? (
@@ -162,7 +162,7 @@ export default function DailySales() {
             cell: ({ row }) => (
                 <Link
                     href={`/vendas-dia/${row.original.cdpedido}?nrdocumento=${row.original.nrdocumento}`}
-                    className="text-blue-500 hover:text-blue-700 underline"
+                    className="text-blue-500 hover:text-blue-700 underline text-xs"
                 >
                     {row.original.cdpedido}
                 </Link>
@@ -170,7 +170,7 @@ export default function DailySales() {
         },
         {
             accessorKey: 'nrdocumento',
-            header: "Documento",
+            header: "Doc.",
         },
         {
             accessorKey: 'nmpessoa',
@@ -178,7 +178,7 @@ export default function DailySales() {
         },
         {
             accessorKey: 'nmrepresentantevenda',
-            header: "Representante",
+            header: "Vendedor",
         },
         {
             accessorKey: 'nmempresacurtovenda',
@@ -220,7 +220,7 @@ export default function DailySales() {
                     variant="ghost"
                     onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
                 >
-                    Faturamento
+                    Fat.
                     {column.getIsSorted() === "asc" ? (
                         <ArrowUp className="ml-2 h-4 w-4" />
                     ) : column.getIsSorted() === "desc" ? (
