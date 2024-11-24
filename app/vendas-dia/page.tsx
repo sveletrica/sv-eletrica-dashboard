@@ -148,6 +148,7 @@ export default function DailySales() {
                 <Button
                     variant="ghost"
                     onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                    className="max-[400px]:px-1"
                 >
                     Pedido
                     {column.getIsSorted() === "asc" ? (
@@ -162,33 +163,49 @@ export default function DailySales() {
             cell: ({ row }) => (
                 <Link
                     href={`/vendas-dia/${row.original.cdpedido}?nrdocumento=${row.original.nrdocumento}`}
-                    className="text-blue-500 hover:text-blue-700 underline"
+                    className="text-blue-500 hover:text-blue-700 underline whitespace-nowrap"
                 >
                     {row.original.cdpedido}
                 </Link>
             ),
+            size: 100,
         },
         {
             accessorKey: 'nrdocumento',
             header: "Documento",
+            size: 100,
         },
         {
             accessorKey: 'nmpessoa',
             header: "Cliente",
+            cell: ({ row }) => (
+                <div className="truncate max-w-[400px] max-[400px]:max-w-[100px]">
+                    {row.original.nmpessoa}
+                </div>
+            ),
         },
         {
             accessorKey: 'nmrepresentantevenda',
             header: "Representante",
+            cell: ({ row }) => (
+                <div className="truncate max-w-[100px] max-[400px]:max-w-[100px]">
+                    {row.original.nmrepresentantevenda}
+                </div>
+            ),
         },
         {
             accessorKey: 'nmempresacurtovenda',
             header: "Empresa",
-            cell: ({ row }) => row.original.nmempresacurtovenda,
-            enableSorting: true,
+            cell: ({ row }) => (
+                <div className="truncate max-w-[150px] max-[400px]:max-w-[80px]">
+                    {row.original.nmempresacurtovenda}
+                </div>
+            ),
         },
         {
             accessorKey: 'tpmovimentooperacao',
             header: "Tipo",
+            size: 80,
         },
         {
             accessorKey: 'qtdsku',
@@ -196,8 +213,9 @@ export default function DailySales() {
                 <Button
                     variant="ghost"
                     onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                    className="max-[400px]:px-1"
                 >
-                    Qtd SKUs
+                    SKUs
                     {column.getIsSorted() === "asc" ? (
                         <ArrowUp className="ml-2 h-4 w-4" />
                     ) : column.getIsSorted() === "desc" ? (
@@ -208,10 +226,11 @@ export default function DailySales() {
                 </Button>
             ),
             cell: ({ row }) => (
-                <div className="text-center">
+                <div className="text-right whitespace-nowrap">
                     {row.original.qtdsku.toLocaleString('pt-BR')}
                 </div>
             ),
+            size: 80,
         },
         {
             accessorKey: 'total_faturamento',
@@ -219,8 +238,9 @@ export default function DailySales() {
                 <Button
                     variant="ghost"
                     onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                    className="max-[400px]:px-1"
                 >
-                    Faturamento
+                    Fat.
                     {column.getIsSorted() === "asc" ? (
                         <ArrowUp className="ml-2 h-4 w-4" />
                     ) : column.getIsSorted() === "desc" ? (
@@ -230,10 +250,15 @@ export default function DailySales() {
                     )}
                 </Button>
             ),
-            cell: ({ row }) => row.original.total_faturamento.toLocaleString('pt-BR', {
-                style: 'currency',
-                currency: 'BRL'
-            }),
+            cell: ({ row }) => (
+                <div className="text-right whitespace-nowrap">
+                    {row.original.total_faturamento.toLocaleString('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL'
+                    })}
+                </div>
+            ),
+            size: 120,
         },
         {
             accessorKey: 'total_custo_produto',
@@ -241,6 +266,7 @@ export default function DailySales() {
                 <Button
                     variant="ghost"
                     onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                    className="max-[400px]:px-1"
                 >
                     Custo
                     {column.getIsSorted() === "asc" ? (
@@ -252,10 +278,15 @@ export default function DailySales() {
                     )}
                 </Button>
             ),
-            cell: ({ row }) => row.original.total_custo_produto.toLocaleString('pt-BR', {
-                style: 'currency',
-                currency: 'BRL'
-            }),
+            cell: ({ row }) => (
+                <div className="text-right whitespace-nowrap">
+                    {row.original.total_custo_produto.toLocaleString('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL'
+                    })}
+                </div>
+            ),
+            size: 120,
         },
         {
             accessorKey: 'margem',
@@ -263,6 +294,7 @@ export default function DailySales() {
                 <Button
                     variant="ghost"
                     onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                    className="max-[400px]:px-1"
                 >
                     Margem
                     {column.getIsSorted() === "asc" ? (
@@ -285,13 +317,14 @@ export default function DailySales() {
                     color = 'text-green-600';
                 }
                 return (
-                    <div className="text-right">
+                    <div className="text-right whitespace-nowrap">
                         <span className={`font-bold ${color}`}>
                             {margin.toFixed(2)}%
                         </span>
                     </div>
                 );
             },
+            size: 80,
         },
     ], [])
 
@@ -634,7 +667,7 @@ export default function DailySales() {
     return (
         <div className="space-y-6 min-w-[300px]">
             <div className="flex flex-col gap-2">
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center flex-wrap">
                     <h1 className="text-3xl font-bold ml-10">Vendas do Dia</h1>
                     <div className="flex items-center gap-4 mt-2">
                         {lastUpdate && (
@@ -671,7 +704,7 @@ export default function DailySales() {
                 )}
             </div>
 
-            <div className="flex items-center gap-4 ml-10">
+            <div className="flex items-center gap-4 ml-0">
                 <div className="flex items-center gap-2">
                     <Button
                         variant="outline"
@@ -827,7 +860,7 @@ export default function DailySales() {
             <Card>
                 <CardHeader>
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                        <CardTitle>
+                        <CardTitle className="max-[400px]:text-sm">
                             Lista de Vendas - {
                                 dateRange.from && (
                                     dateRange.to ? (
@@ -840,7 +873,7 @@ export default function DailySales() {
                                 )
                             }
                         </CardTitle>
-                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+                        <div className="flex flex-row sm:flex-row items-stretch sm:items-center gap-4">
                             <Select
                                 value={empresaFilter}
                                 onValueChange={handleEmpresaFilter}
@@ -848,7 +881,7 @@ export default function DailySales() {
                                 <SelectTrigger className="w-[180px]">
                                     <SelectValue placeholder="Filtrar por Empresa" />
                                 </SelectTrigger>
-                                <SelectContent>
+                                <SelectContent className="max-[400px]:text-xs">
                                     <SelectItem value="all">Todas as Empresas</SelectItem>
                                     {uniqueEmpresas.map((empresa) => (
                                         <SelectItem key={empresa} value={empresa}>
@@ -862,7 +895,7 @@ export default function DailySales() {
                                     placeholder="Buscar por pedido, documento, cliente ou representante..."
                                     value={searchTerm}
                                     onChange={(e) => handleSearch(e.target.value)}
-                                    className="w-full sm:w-[300px] pr-8"
+                                    className="w-full sm:w-[300px] pr-8 max-[400px]:text-xs"
                                 />
                                 {searchTerm && (
                                     <Button
@@ -880,12 +913,15 @@ export default function DailySales() {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <div className="relative overflow-x-auto">
+                    <div className="relative w-full overflow-auto">
                         <Table>
                             <TableHeader>
                                 <TableRow>
                                     {table.getFlatHeaders().map((header) => (
-                                        <TableHead key={header.id}>
+                                        <TableHead 
+                                            key={header.id}
+                                            className="px-2 py-2 max-[400px]:text-xs"
+                                        >
                                             {flexRender(
                                                 header.column.columnDef.header,
                                                 header.getContext()
@@ -899,7 +935,10 @@ export default function DailySales() {
                                     table.getRowModel().rows.map((row) => (
                                         <TableRow key={row.id}>
                                             {row.getVisibleCells().map((cell) => (
-                                                <TableCell key={cell.id}>
+                                                <TableCell 
+                                                    key={cell.id}
+                                                    className="px-2 py-2 max-[400px]:text-xs"
+                                                >
                                                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                                 </TableCell>
                                             ))}
