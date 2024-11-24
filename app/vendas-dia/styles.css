@@ -42,4 +42,15 @@
 [data-disabled]:not([data-outside]) {
     opacity: 0.5;
     cursor: not-allowed;
+}
+
+/* Add these styles to handle the scrollbar appearance */
+.overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none;  /* Internet Explorer 10+ */
+}
+
+.overflow-x-auto::-webkit-scrollbar { 
+    display: none;  /* Safari and Chrome */
 } 

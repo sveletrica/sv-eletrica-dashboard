@@ -634,11 +634,11 @@ export default function DailySales() {
     return (
         <div className="space-y-6 min-w-[300px]">
             <div className="flex flex-col gap-2">
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center flex-wrap">
                     <h1 className="text-3xl font-bold ml-10">Vendas do Dia</h1>
                     <div className="flex items-center gap-4 mt-2">
                         {lastUpdate && (
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-xs text-muted-foreground ml-1">
                                 Última atualização: {lastUpdate.toLocaleString('pt-BR')}
                             </span>
                         )}
@@ -671,7 +671,7 @@ export default function DailySales() {
                 )}
             </div>
 
-            <div className="flex items-center gap-4 ml-10">
+            <div className="flex items-center gap-4 justify-center">
                 <div className="flex items-center gap-2">
                     <Button
                         variant="outline"
@@ -762,72 +762,74 @@ export default function DailySales() {
                 </div>
             </div>
 
-            <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5 w-full">
-                {companySummaries.map((summary) => {
-                    const margin = (summary.faturamento - (summary.faturamento * 0.268 + summary.custo)) / summary.faturamento * 100;
-                    const marginStyle = getMarginStyle(margin);
-                    const isSelected = empresaFilter === summary.empresa;
+            <div className="overflow-x-auto pb-4 -mx-6 px-6 md:overflow-visible md:-mx-0 md:px-0">
+                <div className="grid grid-flow-col auto-cols-[calc(25%-0.75rem)] md:grid-flow-row md:auto-cols-auto md:grid-cols-3 lg:grid-cols-5 gap-4 min-w-[calc(200%-1.5rem)] md:min-w-0">
+                    {companySummaries.map((summary) => {
+                        const margin = (summary.faturamento - (summary.faturamento * 0.268 + summary.custo)) / summary.faturamento * 100;
+                        const marginStyle = getMarginStyle(margin);
+                        const isSelected = empresaFilter === summary.empresa;
 
-                    return (
-                        <Card
-                            key={summary.empresa}
-                            className={cn(
-                                "relative overflow-hidden cursor-pointer transition-all duration-200",
-                                isSelected
-                                    ? "ring-2 ring-primary hover:ring-primary/70"
-                                    : "hover:ring-2 hover:ring-primary/50 opacity-70 hover:opacity-100",
-                                empresaFilter !== 'all' && !isSelected && "opacity-50"
-                            )}
-                            onClick={() => handleEmpresaFilter(isSelected ? 'all' : summary.empresa)}
-                        >
-                            <div className={cn(
-                                "absolute top-0 right-0 w-24 h-24 -translate-y-8 translate-x-8",
-                                isSelected ? "opacity-30" : "opacity-20"
-                            )}>
-                                {marginStyle.icon}
-                            </div>
-                            <CardHeader className="p-4">
-                                <CardTitle className="text-sm flex items-center justify-between">
-                                    {summary.empresa}
-                                    {isSelected && (
-                                        <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-full">
-                                            Filtrado
-                                        </span>
-                                    )}
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="p-4 pt-0 space-y-2">
-                                <div className="flex justify-between items-center text-xs">
-                                    <span className="text-muted-foreground">Pedidos</span>
-                                    <span>{summary.count}</span>
+                        return (
+                            <Card
+                                key={summary.empresa}
+                                className={cn(
+                                    "relative overflow-hidden cursor-pointer transition-all duration-200 w-full",
+                                    isSelected
+                                        ? "ring-2 ring-primary hover:ring-primary/70"
+                                        : "hover:ring-2 hover:ring-primary/50 opacity-70 hover:opacity-100",
+                                    empresaFilter !== 'all' && !isSelected && "opacity-50"
+                                )}
+                                onClick={() => handleEmpresaFilter(isSelected ? 'all' : summary.empresa)}
+                            >
+                                <div className={cn(
+                                    "absolute top-0 right-0 w-24 h-24 -translate-y-8 translate-x-8",
+                                    isSelected ? "opacity-30" : "opacity-20"
+                                )}>
+                                    {marginStyle.icon}
                                 </div>
-                                <div className="flex justify-between items-center text-xs">
-                                    <span className="text-muted-foreground">Fat.</span>
-                                    <span>{summary.faturamento.toLocaleString('pt-BR', {
-                                        style: 'currency',
-                                        currency: 'BRL'
-                                    })}</span>
-                                </div>
-                                <div className="mt-2 p-2 rounded-md" style={{ background: marginStyle.background }}>
-                                    <div className="flex justify-between items-center">
-                                        <span className={cn("text-xs font-medium", marginStyle.textColor)}>
-                                            Margem
-                                        </span>
-                                        <span className={cn("text-sm font-bold", marginStyle.textColor)}>
-                                            {margin.toFixed(2)}%
-                                        </span>
+                                <CardHeader className="p-4">
+                                    <CardTitle className="text-sm flex items-center justify-between">
+                                        {summary.empresa}
+                                        {isSelected && (
+                                            <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-full">
+                                                Filtrado
+                                            </span>
+                                        )}
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-4 pt-0 space-y-2">
+                                    <div className="flex justify-between items-center text-xs">
+                                        <span className="text-muted-foreground">Pedidos</span>
+                                        <span>{summary.count}</span>
                                     </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    );
-                })}
+                                    <div className="flex justify-between items-center text-xs">
+                                        <span className="text-muted-foreground">Fat.</span>
+                                        <span>{summary.faturamento.toLocaleString('pt-BR', {
+                                            style: 'currency',
+                                            currency: 'BRL'
+                                        })}</span>
+                                    </div>
+                                    <div className="mt-2 p-2 rounded-md" style={{ background: marginStyle.background }}>
+                                        <div className="flex justify-between items-center">
+                                            <span className={cn("text-xs font-medium", marginStyle.textColor)}>
+                                                Margem
+                                            </span>
+                                            <span className={cn("text-sm font-bold", marginStyle.textColor)}>
+                                                {margin.toFixed(2)}%
+                                            </span>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        );
+                    })}
+                </div>
             </div>
 
             <Card>
                 <CardHeader>
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                        <CardTitle>
+                        <CardTitle className="text-md">
                             Lista de Vendas - {
                                 dateRange.from && (
                                     dateRange.to ? (
@@ -840,7 +842,7 @@ export default function DailySales() {
                                 )
                             }
                         </CardTitle>
-                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+                        <div className="flex flex-row sm:flex-row items-stretch sm:items-center gap-4">
                             <Select
                                 value={empresaFilter}
                                 onValueChange={handleEmpresaFilter}
@@ -881,11 +883,14 @@ export default function DailySales() {
                 </CardHeader>
                 <CardContent>
                     <div className="relative overflow-x-auto">
-                        <Table>
+                        <Table className="[&_tr]:!py-1">
                             <TableHeader>
-                                <TableRow>
+                                <TableRow className="hover:bg-transparent">
                                     {table.getFlatHeaders().map((header) => (
-                                        <TableHead key={header.id}>
+                                        <TableHead 
+                                            key={header.id}
+                                            className="!py-2"
+                                        >
                                             {flexRender(
                                                 header.column.columnDef.header,
                                                 header.getContext()
@@ -897,9 +902,15 @@ export default function DailySales() {
                             <TableBody>
                                 {table.getRowModel().rows?.length ? (
                                     table.getRowModel().rows.map((row) => (
-                                        <TableRow key={row.id}>
+                                        <TableRow 
+                                            key={row.id}
+                                            className="hover:bg-muted/40"
+                                        >
                                             {row.getVisibleCells().map((cell) => (
-                                                <TableCell key={cell.id}>
+                                                <TableCell 
+                                                    key={cell.id}
+                                                    className="!py-1"
+                                                >
                                                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                                 </TableCell>
                                             ))}
