@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { Home, BarChart2, Package, Menu, X } from 'lucide-react'
+import { Home, BarChart2, Package, Menu, X, ShoppingCart } from 'lucide-react'
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Button } from "@/components/ui/button"
 import { useState, useEffect } from 'react'
@@ -92,6 +92,14 @@ export function Sidebar() {
                     >
                         <Package size={20} />
                         <span>Estoque</span>
+                    </Link>
+                    <Link 
+                        href="/vendas-dia" 
+                        className="flex items-center gap-2 px-4 py-3 text-foreground rounded-md hover:bg-accent hover:text-accent-foreground"
+                        onClick={() => isMobile && setIsOpen(false)}
+                    >
+                        <ShoppingCart size={20} />
+                        <span>Vendas Dia</span>
                     </Link>
                     <div className="px-4 py-3 font-semibold text-muted-foreground text-sm">Lojas</div>
                     <Link 
