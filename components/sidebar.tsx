@@ -60,6 +60,7 @@ export function Sidebar() {
                 "fixed md:sticky top-0 left-0 z-40",
                 "transition-transform duration-300 ease-in-out",
                 "w-64 shrink-0",
+                "absolute md:relative",
                 isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
             )}>
                 <div className="sticky top-0 bg-card z-20 border-b">

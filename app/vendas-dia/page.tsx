@@ -27,7 +27,18 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams, usePathname } from 'next/navigation'
+import { format } from 'date-fns'
+import { Calendar as CalendarIcon } from "lucide-react"
+import { Calendar } from "@/components/ui/calendar"
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover"
+import { ptBR } from 'date-fns/locale'
+import { addDays, subDays } from 'date-fns'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 export default function DailySales() {
     const router = useRouter()
@@ -45,6 +56,10 @@ export default function DailySales() {
         pageSize: 20,
     })
     const [empresaFilter, setEmpresaFilter] = useState(searchParams.get('empresa') || 'all')
+    const [date, setDate] = useState<Date>(() => {
+        const dateParam = searchParams.get('date')
+        return dateParam ? new Date(dateParam) : new Date()
+    })
 
     const columns = useMemo<ColumnDef<DailySale>[]>(() => [
         {
@@ -186,7 +201,8 @@ export default function DailySales() {
                 setIsRefreshing(true)
             }
 
-            const response = await fetch('/api/vendas-dia')
+            const formattedDate = format(date, 'dd/MM/yyyy')
+            const response = await fetch(`/api/vendas-dia?date=${formattedDate}`)
             if (!response.ok) {
                 throw new Error('Failed to fetch sales data')
             }
@@ -205,7 +221,7 @@ export default function DailySales() {
 
     useEffect(() => {
         fetchData()
-    }, [])
+    }, [date])
 
     const handleRefresh = () => {
         fetchData(true)
@@ -259,23 +275,59 @@ export default function DailySales() {
         },
     })
 
-    const updateSearchParams = (search: string, empresa: string) => {
-        const params = new URLSearchParams()
-        if (search) params.set('search', search)
-        if (empresa !== 'all') params.set('empresa', empresa)
+    const updateSearchParams = (newDate?: Date, search?: string, empresa?: string) => {
+        const params = new URLSearchParams(searchParams.toString())
         
-        const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`
-        router.replace(newUrl)
+        if (newDate) {
+            params.set('date', newDate.toISOString().split('T')[0])
+        }
+        
+        if (search !== undefined) {
+            if (search) {
+                params.set('search', search)
+            } else {
+                params.delete('search')
+            }
+        }
+        
+        if (empresa !== undefined) {
+            if (empresa !== 'all') {
+                params.set('empresa', empresa)
+            } else {
+                params.delete('empresa')
+            }
+        }
+        
+        router.replace(`${window.location.pathname}?${params.toString()}`)
+    }
+
+    const handleDateChange = (newDate: Date | undefined) => {
+        if (newDate) {
+            setDate(newDate)
+            updateSearchParams(newDate, searchTerm, empresaFilter)
+        }
+    }
+
+    const handlePreviousDay = () => {
+        const newDate = subDays(date, 1)
+        setDate(newDate)
+        updateSearchParams(newDate, searchTerm, empresaFilter)
+    }
+
+    const handleNextDay = () => {
+        const newDate = addDays(date, 1)
+        setDate(newDate)
+        updateSearchParams(newDate, searchTerm, empresaFilter)
     }
 
     const handleSearch = (value: string) => {
         setSearchTerm(value)
-        updateSearchParams(value, empresaFilter)
+        updateSearchParams(date, value, empresaFilter)
     }
 
     const handleEmpresaFilter = (value: string) => {
         setEmpresaFilter(value)
-        updateSearchParams(searchTerm, value)
+        updateSearchParams(date, searchTerm, value)
     }
 
     const calculateMargin = (totalRevenue: number, totalCost: number) => {
@@ -329,6 +381,23 @@ export default function DailySales() {
             .sort((a, b) => b.faturamento - a.faturamento)
     }, [data])
 
+    useEffect(() => {
+        const dateParam = searchParams.get('date')
+        if (dateParam) {
+            setDate(new Date(dateParam))
+        }
+        
+        const searchParam = searchParams.get('search')
+        if (searchParam) {
+            setSearchTerm(searchParam)
+        }
+        
+        const empresaParam = searchParams.get('empresa')
+        if (empresaParam) {
+            setEmpresaFilter(empresaParam)
+        }
+    }, [])
+
     if (isLoading) {
         return <Loading />
     }
@@ -337,10 +406,10 @@ export default function DailySales() {
         <div className="space-y-6">
             <div className="flex flex-col gap-2">
                 <div className="flex justify-between items-center">
-                    <h1 className="text-3xl font-bold">Vendas do Dia</h1>
-                    <div className="flex items-center gap-4">
+                    <h1 className="text-3xl font-bold ml-10">Vendas do Dia</h1>
+                    <div className="flex items-center gap-4 mt-2">
                         {lastUpdate && (
-                            <span className="text-sm text-muted-foreground">
+                            <span className="text-xs text-muted-foreground">
                                 Última atualização: {lastUpdate.toLocaleString('pt-BR')}
                             </span>
                         )}
@@ -371,6 +440,82 @@ export default function DailySales() {
                         {error}
                     </div>
                 )}
+            </div>
+
+            <div className="flex items-center gap-4 ml-10">
+                <div className="flex items-center gap-2">
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={handlePreviousDay}
+                    >
+                        <ChevronLeft className="h-4 w-4" />
+                    </Button>
+
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant="outline"
+                                className={cn(
+                                    "min-w-[260px] justify-start text-left font-normal",
+                                    !date && "text-muted-foreground"
+                                )}
+                            >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {date ? (
+                                    <span className="font-medium">
+                                        {format(date, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                                    </span>
+                                ) : (
+                                    <span>Selecione uma data</span>
+                                )}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                                mode="single"
+                                selected={date}
+                                onSelect={handleDateChange}
+                                initialFocus
+                                locale={ptBR}
+                                className="rounded-md border"
+                                classNames={{
+                                    month: "space-y-4",
+                                    caption: "flex justify-center pt-1 relative items-center",
+                                    caption_label: "text-sm font-medium",
+                                    nav: "space-x-1 flex items-center",
+                                    nav_button: cn(
+                                        "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
+                                    ),
+                                    table: "w-full border-collapse space-y-1",
+                                    head_row: "flex",
+                                    head_cell: "text-muted-foreground rounded-md w-8 font-normal text-[0.8rem]",
+                                    row: "flex w-full mt-2",
+                                    cell: "text-center text-sm p-0 relative [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+                                    day: cn(
+                                        "h-8 w-8 p-0 font-normal aria-selected:opacity-100 hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                                    ),
+                                    day_selected:
+                                        "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground rounded-md",
+                                    day_today: "bg-accent text-accent-foreground",
+                                    day_outside: "text-muted-foreground opacity-50",
+                                    day_disabled: "text-muted-foreground opacity-50",
+                                    day_range_middle:
+                                        "aria-selected:bg-accent aria-selected:text-accent-foreground",
+                                    day_hidden: "invisible",
+                                }}
+                            />
+                        </PopoverContent>
+                    </Popover>
+
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={handleNextDay}
+                    >
+                        <ChevronRight className="h-4 w-4" />
+                    </Button>
+                </div>
             </div>
 
             <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5 w-full">
@@ -438,7 +583,9 @@ export default function DailySales() {
             <Card>
                 <CardHeader>
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                        <CardTitle>Lista de Vendas</CardTitle>
+                        <CardTitle>
+                            Lista de Vendas - {format(date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                        </CardTitle>
                         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
                             <Select
                                 value={empresaFilter}

@@ -18,7 +18,7 @@ export async function GET(
             throw new Error('nrdocumento is required')
         }
 
-        const baseUrl = `${SUPABASE_URL}/rest/v1/iosvendadia`
+        const baseUrl = `${SUPABASE_URL}/rest/v1/iosvendames`
         const queryUrl = `${baseUrl}?cdpedido=eq.${cdpedido}&nrdocumento=eq.${nrdocumento}`
         
         const response = await fetch(queryUrl, {

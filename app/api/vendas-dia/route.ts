@@ -5,11 +5,23 @@ if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error('SUPABASE_SERVICE_ROLE_KEY is not defined')
 }
 
-export async function GET() {
+export async function GET(request: Request) {
     try {
-        const url = `${SUPABASE_URL}/rest/v1/vendadiaporpedido`
+        // Get the date from query params
+        const { searchParams } = new URL(request.url)
+        const date = searchParams.get('date')
+
+        if (!date) {
+            return NextResponse.json(
+                { error: 'Date parameter is required' },
+                { status: 400 }
+            )
+        }
+
+        const url = `${SUPABASE_URL}/rest/v1/vendamesporpedido`
         
-        const response = await fetch(`${url}?select=*`, {
+        // Format the query correctly for Supabase
+        const response = await fetch(`${url}?dtemissao=eq.${date}`, {
             method: 'GET',
             headers: {
                 Accept: 'application/json',

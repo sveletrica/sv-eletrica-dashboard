@@ -9,6 +9,7 @@ export interface DailySale {
     total_faturamento: number
     total_custo_produto: number
     margem: string
+    dtemissao: string
 }
 
 export interface SaleDetail {
