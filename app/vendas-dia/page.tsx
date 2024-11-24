@@ -646,7 +646,7 @@ export default function DailySales() {
                                 onSelect={handleDateChange}
                                 initialFocus
                                 locale={ptBR}
-                                numberOfMonths={2}
+                                numberOfMonths={1}
                                 disabled={{ after: new Date() }} // Prevent future date selection
                                 defaultMonth={dateRange.from} // Keep the calendar centered on the selected month
                                 className="rounded-md border"
