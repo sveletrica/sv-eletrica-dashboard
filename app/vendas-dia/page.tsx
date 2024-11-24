@@ -49,7 +49,17 @@ export default function DailySales() {
     const [isRefreshing, setIsRefreshing] = useState(false)
     const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
     const [error, setError] = useState<string | null>(null)
-    const [sorting, setSorting] = useState<SortingState>([])
+    const [sorting, setSorting] = useState<SortingState>(() => {
+        const sortField = searchParams.get('sortField')
+        const sortDir = searchParams.get('sortDir')
+        if (sortField && sortDir) {
+            return [{
+                id: sortField,
+                desc: sortDir === 'desc'
+            }]
+        }
+        return []
+    })
     const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '')
     const [pagination, setPagination] = useState({
         pageIndex: 0,
@@ -267,7 +277,10 @@ export default function DailySales() {
         getCoreRowModel: getCoreRowModel(),
         getSortedRowModel: getSortedRowModel(),
         getPaginationRowModel: getPaginationRowModel(),
-        onSortingChange: setSorting,
+        onSortingChange: (newSorting) => {
+            setSorting(newSorting)
+            updateSearchParams(date, searchTerm, empresaFilter, newSorting)
+        },
         onPaginationChange: setPagination,
         state: {
             sorting,
@@ -275,7 +288,7 @@ export default function DailySales() {
         },
     })
 
-    const updateSearchParams = (newDate?: Date, search?: string, empresa?: string) => {
+    const updateSearchParams = (newDate?: Date, search?: string, empresa?: string, newSorting?: SortingState | ((prev: SortingState) => SortingState)) => {
         const params = new URLSearchParams(searchParams.toString())
         
         if (newDate) {
@@ -298,36 +311,46 @@ export default function DailySales() {
             }
         }
         
+        const sortingValue = typeof newSorting === 'function' ? newSorting(sorting) : newSorting
+        
+        if (sortingValue && sortingValue.length > 0) {
+            params.set('sortField', sortingValue[0].id)
+            params.set('sortDir', sortingValue[0].desc ? 'desc' : 'asc')
+        } else {
+            params.delete('sortField')
+            params.delete('sortDir')
+        }
+        
         router.replace(`${window.location.pathname}?${params.toString()}`)
     }
 
     const handleDateChange = (newDate: Date | undefined) => {
         if (newDate) {
             setDate(newDate)
-            updateSearchParams(newDate, searchTerm, empresaFilter)
+            updateSearchParams(newDate, searchTerm, empresaFilter, sorting)
         }
     }
 
     const handlePreviousDay = () => {
         const newDate = subDays(date, 1)
         setDate(newDate)
-        updateSearchParams(newDate, searchTerm, empresaFilter)
+        updateSearchParams(newDate, searchTerm, empresaFilter, sorting)
     }
 
     const handleNextDay = () => {
         const newDate = addDays(date, 1)
         setDate(newDate)
-        updateSearchParams(newDate, searchTerm, empresaFilter)
+        updateSearchParams(newDate, searchTerm, empresaFilter, sorting)
     }
 
     const handleSearch = (value: string) => {
         setSearchTerm(value)
-        updateSearchParams(date, value, empresaFilter)
+        updateSearchParams(date, value, empresaFilter, sorting)
     }
 
     const handleEmpresaFilter = (value: string) => {
         setEmpresaFilter(value)
-        updateSearchParams(date, searchTerm, value)
+        updateSearchParams(date, searchTerm, value, sorting)
     }
 
     const calculateMargin = (totalRevenue: number, totalCost: number) => {
@@ -395,6 +418,15 @@ export default function DailySales() {
         const empresaParam = searchParams.get('empresa')
         if (empresaParam) {
             setEmpresaFilter(empresaParam)
+        }
+        
+        const sortField = searchParams.get('sortField')
+        const sortDir = searchParams.get('sortDir')
+        if (sortField && sortDir) {
+            setSorting([{
+                id: sortField,
+                desc: sortDir === 'desc'
+            }])
         }
     }, [])
 
