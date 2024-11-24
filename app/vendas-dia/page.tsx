@@ -137,7 +137,11 @@ export default function DailySales() {
                     )}
                 </Button>
             ),
-            cell: ({ row }) => row.original.qtdsku.toLocaleString('pt-BR'),
+            cell: ({ row }) => (
+                <div className="text-center">
+                    {row.original.qtdsku.toLocaleString('pt-BR')}
+                </div>
+            ),
         },
         {
             accessorKey: 'total_faturamento',
@@ -200,7 +204,24 @@ export default function DailySales() {
                     )}
                 </Button>
             ),
-            cell: ({ row }) => `${row.original.margem}%`,
+            cell: ({ row }) => {
+                const margin = parseFloat(row.original.margem);
+                let color;
+                if (margin < 0) {
+                    color = 'text-red-600';
+                } else if (margin <= 3) {
+                    color = 'text-yellow-700';
+                } else {
+                    color = 'text-green-600';
+                }
+                return (
+                    <div className="text-right">
+                        <span className={`font-bold ${color}`}>
+                            {margin.toFixed(2)}%
+                        </span>
+                    </div>
+                );
+            },
         },
     ], [])
 
