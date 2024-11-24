@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { RefreshCw, Download, ArrowUpDown, ArrowUp, ArrowDown, X } from 'lucide-react'
+import { RefreshCw, Download, ArrowUpDown, ArrowUp, ArrowDown, X, TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { DailySale } from '@/types/sales'
 import Loading from './loading'
@@ -278,6 +278,57 @@ export default function DailySales() {
         updateSearchParams(searchTerm, value)
     }
 
+    const calculateMargin = (totalRevenue: number, totalCost: number) => {
+        const margin = (totalRevenue - (totalRevenue * 0.268 + totalCost)) / totalRevenue * 100
+        return margin
+    }
+
+    const getMarginStyle = (margin: number) => {
+        if (margin > 3) {
+            return {
+                background: "linear-gradient(to right, hsl(142.1 76.2% 36.3%), hsl(143.8 71.8% 29.2%))",
+                icon: <TrendingUp className="h-8 w-8 text-white" />,
+                textColor: "text-white"
+            }
+        } else if (margin >= 0) {
+            return {
+                background: "linear-gradient(to right, hsl(47.9 95.8% 53.1%), hsl(46 96.2% 48.3%))",
+                icon: <AlertTriangle className="h-8 w-8 text-white" />,
+                textColor: "text-white"
+            }
+        } else {
+            return {
+                background: "linear-gradient(to right, hsl(0 72.2% 50.6%), hsl(0 72.2% 40.6%))",
+                icon: <TrendingDown className="h-8 w-8 text-white" />,
+                textColor: "text-white"
+            }
+        }
+    }
+
+    const companySummaries = useMemo(() => {
+        const summaries = data.reduce((acc, item) => {
+            if (!acc[item.nmempresacurtovenda]) {
+                acc[item.nmempresacurtovenda] = {
+                    faturamento: 0,
+                    custo: 0,
+                    count: 0
+                }
+            }
+            acc[item.nmempresacurtovenda].faturamento += item.total_faturamento
+            acc[item.nmempresacurtovenda].custo += item.total_custo_produto
+            acc[item.nmempresacurtovenda].count += 1
+            return acc
+        }, {} as Record<string, { faturamento: number; custo: number; count: number }>)
+
+        return Object.entries(summaries)
+            .map(([empresa, values]) => ({
+                empresa,
+                ...values,
+                margin: calculateMargin(values.faturamento, values.custo)
+            }))
+            .sort((a, b) => b.faturamento - a.faturamento)
+    }, [data])
+
     if (isLoading) {
         return <Loading />
     }
@@ -320,6 +371,68 @@ export default function DailySales() {
                         {error}
                     </div>
                 )}
+            </div>
+
+            <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5 w-full">
+                {companySummaries.map((summary) => {
+                    const margin = (summary.faturamento - (summary.faturamento * 0.268 + summary.custo)) / summary.faturamento * 100;
+                    const marginStyle = getMarginStyle(margin);
+                    const isSelected = empresaFilter === summary.empresa;
+
+                    return (
+                        <Card 
+                            key={summary.empresa} 
+                            className={cn(
+                                "relative overflow-hidden cursor-pointer transition-all duration-200",
+                                isSelected 
+                                    ? "ring-2 ring-primary hover:ring-primary/70" 
+                                    : "hover:ring-2 hover:ring-primary/50 opacity-70 hover:opacity-100",
+                                empresaFilter !== 'all' && !isSelected && "opacity-50"
+                            )}
+                            onClick={() => handleEmpresaFilter(isSelected ? 'all' : summary.empresa)}
+                        >
+                            <div className={cn(
+                                "absolute top-0 right-0 w-24 h-24 -translate-y-8 translate-x-8",
+                                isSelected ? "opacity-30" : "opacity-20"
+                            )}>
+                                {marginStyle.icon}
+                            </div>
+                            <CardHeader className="p-4">
+                                <CardTitle className="text-sm flex items-center justify-between">
+                                    {summary.empresa}
+                                    {isSelected && (
+                                        <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-full">
+                                            Filtrado
+                                        </span>
+                                    )}
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-4 pt-0 space-y-2">
+                                <div className="flex justify-between items-center text-xs">
+                                    <span className="text-muted-foreground">Pedidos</span>
+                                    <span>{summary.count}</span>
+                                </div>
+                                <div className="flex justify-between items-center text-xs">
+                                    <span className="text-muted-foreground">Fat.</span>
+                                    <span>{summary.faturamento.toLocaleString('pt-BR', {
+                                        style: 'currency',
+                                        currency: 'BRL'
+                                    })}</span>
+                                </div>
+                                <div className="mt-2 p-2 rounded-md" style={{ background: marginStyle.background }}>
+                                    <div className="flex justify-between items-center">
+                                        <span className={cn("text-xs font-medium", marginStyle.textColor)}>
+                                            Margem
+                                        </span>
+                                        <span className={cn("text-sm font-bold", marginStyle.textColor)}>
+                                            {margin.toFixed(2)}%
+                                        </span>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    );
+                })}
             </div>
 
             <Card>
