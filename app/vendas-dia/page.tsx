@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { RefreshCw, Download, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
+import { RefreshCw, Download, ArrowUpDown, ArrowUp, ArrowDown, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { DailySale } from '@/types/sales'
 import Loading from './loading'
@@ -27,20 +27,24 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
+import { useRouter, useSearchParams } from 'next/navigation'
 
 export default function DailySales() {
+    const router = useRouter()
+    const searchParams = useSearchParams()
+    
     const [data, setData] = useState<DailySale[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [isRefreshing, setIsRefreshing] = useState(false)
     const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
     const [error, setError] = useState<string | null>(null)
     const [sorting, setSorting] = useState<SortingState>([])
-    const [searchTerm, setSearchTerm] = useState('')
+    const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '')
     const [pagination, setPagination] = useState({
         pageIndex: 0,
         pageSize: 20,
     })
-    const [empresaFilter, setEmpresaFilter] = useState<string>('all')
+    const [empresaFilter, setEmpresaFilter] = useState(searchParams.get('empresa') || 'all')
 
     const columns = useMemo<ColumnDef<DailySale>[]>(() => [
         {
@@ -255,6 +259,25 @@ export default function DailySales() {
         },
     })
 
+    const updateSearchParams = (search: string, empresa: string) => {
+        const params = new URLSearchParams()
+        if (search) params.set('search', search)
+        if (empresa !== 'all') params.set('empresa', empresa)
+        
+        const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`
+        router.replace(newUrl)
+    }
+
+    const handleSearch = (value: string) => {
+        setSearchTerm(value)
+        updateSearchParams(value, empresaFilter)
+    }
+
+    const handleEmpresaFilter = (value: string) => {
+        setEmpresaFilter(value)
+        updateSearchParams(searchTerm, value)
+    }
+
     if (isLoading) {
         return <Loading />
     }
@@ -306,7 +329,7 @@ export default function DailySales() {
                         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
                             <Select
                                 value={empresaFilter}
-                                onValueChange={setEmpresaFilter}
+                                onValueChange={handleEmpresaFilter}
                             >
                                 <SelectTrigger className="w-[180px]">
                                     <SelectValue placeholder="Filtrar por Empresa" />
@@ -320,12 +343,25 @@ export default function DailySales() {
                                     ))}
                                 </SelectContent>
                             </Select>
-                            <Input
-                                placeholder="Buscar por pedido, documento, cliente ou representante..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full sm:w-[300px]"
-                            />
+                            <div className="relative">
+                                <Input
+                                    placeholder="Buscar por pedido, documento, cliente ou representante..."
+                                    value={searchTerm}
+                                    onChange={(e) => handleSearch(e.target.value)}
+                                    className="w-full sm:w-[300px] pr-8"
+                                />
+                                {searchTerm && (
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 p-0"
+                                        onClick={() => handleSearch('')}
+                                    >
+                                        <X className="h-4 w-4" />
+                                        <span className="sr-only">Clear search</span>
+                                    </Button>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </CardHeader>
