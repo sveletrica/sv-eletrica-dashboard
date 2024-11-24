@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { RefreshCw, Download, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { DailySale } from '@/types/sales'
-import Loading from './Loading'
+import Loading from './loading'
 import * as XLSX from 'xlsx'
 import {
     ColumnDef,
