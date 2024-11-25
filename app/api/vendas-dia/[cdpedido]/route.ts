@@ -13,13 +13,14 @@ export async function GET(
         const { cdpedido } = await context.params
         const url = new URL(request.url)
         const nrdocumento = url.searchParams.get('nrdocumento')
+        const dtemissao = url.searchParams.get('dtemissao')
         
-        if (!nrdocumento) {
-            throw new Error('nrdocumento is required')
+        if (!nrdocumento || !dtemissao) {
+            throw new Error('nrdocumento and dtemissao are required')
         }
 
         const baseUrl = `${SUPABASE_URL}/rest/v1/iosvendames`
-        const queryUrl = `${baseUrl}?cdpedido=eq.${cdpedido}&nrdocumento=eq.${nrdocumento}`
+        const queryUrl = `${baseUrl}?cdpedido=eq.${cdpedido}&nrdocumento=eq.${nrdocumento}&dtemissao=eq.${dtemissao}`
         
         const response = await fetch(queryUrl, {
             method: 'GET',

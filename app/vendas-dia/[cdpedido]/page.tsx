@@ -26,13 +26,14 @@ export default function SaleDetails() {
         const fetchData = async () => {
             try {
                 const nrdocumento = searchParams.get('nrdocumento')
+                const dtemissao = searchParams.get('dtemissao')
                 const cdpedido = params?.cdpedido as string
                 
-                if (!nrdocumento || !cdpedido) {
-                    throw new Error('Documento ou pedido não encontrado')
+                if (!nrdocumento || !cdpedido || !dtemissao) {
+                    throw new Error('Documento, pedido ou data de emissão não encontrado')
                 }
 
-                const response = await fetch(`/api/vendas-dia/${cdpedido}?nrdocumento=${nrdocumento}`)
+                const response = await fetch(`/api/vendas-dia/${cdpedido}?nrdocumento=${nrdocumento}&dtemissao=${dtemissao}`)
                 if (!response.ok) {
                     throw new Error('Failed to fetch sale details')
                 }

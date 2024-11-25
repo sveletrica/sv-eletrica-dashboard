@@ -161,7 +161,7 @@ export default function DailySales() {
             ),
             cell: ({ row }) => (
                 <Link
-                    href={`/vendas-dia/${row.original.cdpedido}?nrdocumento=${row.original.nrdocumento}`}
+                    href={`/vendas-dia/${row.original.cdpedido}?nrdocumento=${row.original.nrdocumento}&dtemissao=${row.original.dtemissao}`}
                     className="text-blue-500 hover:text-blue-700 underline text-xs"
                 >
                     {row.original.cdpedido}
