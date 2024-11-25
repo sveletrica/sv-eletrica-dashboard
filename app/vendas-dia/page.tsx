@@ -398,11 +398,41 @@ export default function DailySales() {
     }
 
     const handleExportXLSX = () => {
-        const worksheet = XLSX.utils.json_to_sheet(data)
-        const workbook = XLSX.utils.book_new()
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Vendas do Dia")
-        XLSX.writeFile(workbook, `vendas-dia-${new Date().toISOString().split('T')[0]}.xlsx`)
-    }
+        // Get the filtered and sorted data from the table
+        const exportData = table.getFilteredRowModel().rows.map(row => {
+            const item = row.original;
+            return {
+                'Pedido': item.cdpedido,
+                'Documento': item.nrdocumento,
+                'Cliente': item.nmpessoa,
+                'Representante': item.nmrepresentantevenda,
+                'Empresa': item.nmempresacurtovenda,
+                'Tipo': item.tpmovimentooperacao,
+                'Qtd SKUs': item.qtdsku,
+                'Faturamento': item.total_faturamento,
+                'Custo': item.total_custo_produto,
+                'Margem (%)': parseFloat(item.margem).toFixed(2)
+            };
+        });
+
+        const worksheet = XLSX.utils.json_to_sheet(exportData);
+        const workbook = XLSX.utils.book_new();
+        
+        // Get the date range for the filename
+        const dateStr = dateRange.to 
+            ? `${format(dateRange.from!, 'dd-MM-yyyy')}_ate_${format(dateRange.to, 'dd-MM-yyyy')}` 
+            : format(dateRange.from!, 'dd-MM-yyyy');
+        
+        // Add filters to filename if any are active
+        const filters = [];
+        if (empresaFilter !== 'all') filters.push(empresaFilter);
+        if (searchTerm) filters.push(`busca-${searchTerm}`);
+        
+        const filterStr = filters.length > 0 ? `_${filters.join('_')}` : '';
+        
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Vendas do Dia");
+        XLSX.writeFile(workbook, `vendas-dia_${dateStr}${filterStr}.xlsx`);
+    };
 
     const filteredData = useMemo(() => {
         let filtered = data;
@@ -635,13 +665,15 @@ export default function DailySales() {
         <div className="space-y-6 min-w-[300px]">
             <div className="flex flex-col gap-2">
                 <div className="flex justify-between items-center flex-wrap">
-                    <h1 className="text-3xl font-bold ml-10">Vendas do Dia</h1>
-                    <div className="flex items-center gap-4 mt-2">
+                    <div className="flex flex-col ml-10">
+                        <h1 className="text-3xl font-bold">Vendas do Dia</h1>
                         {lastUpdate && (
-                            <span className="text-xs text-muted-foreground ml-1">
+                            <span className="text-xs text-muted-foreground">
                                 Última atualização: {lastUpdate.toLocaleString('pt-BR')}
                             </span>
                         )}
+                    </div>
+                    <div className="flex items-center gap-4 mt-2">
                         <Button
                             variant="outline"
                             size="sm"
