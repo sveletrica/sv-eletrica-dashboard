@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import { Sora } from 'next/font/google'
 import { Sidebar } from "@/components/sidebar"
 import { ThemeProvider } from "@/components/theme-provider"
+import { AuthProvider } from '@/components/providers/auth-provider'
 
 const sora = Sora({
   subsets: ['latin'],
@@ -35,14 +36,16 @@ export default function RootLayout({
           defaultTheme="system"
           enableSystem
         >
-          <div className="flex min-h-screen">
-            <Sidebar />
-            <div className="flex-1 flex flex-col min-h-screen w-screen">
-              <main className="flex-1 p-4 md:p-6 bg-background">
-                {children}
-              </main>
+          <AuthProvider>
+            <div className="flex min-h-screen">
+              <Sidebar />
+              <div className="flex-1 flex flex-col min-h-screen w-screen">
+                <main className="flex-1 p-4 md:p-6 bg-background">
+                  {children}
+                </main>
+              </div>
             </div>
-          </div>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>
