@@ -529,7 +529,7 @@ export default function Inventory() {
     return (
         <div className="space-y-6">
             <div className="flex flex-col gap-2">
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center flex-col">
                     <h1 className="text-3xl font-bold">Inventário</h1>
                     <div className="flex items-center gap-4">
                         {lastUpdate && (
@@ -537,7 +537,7 @@ export default function Inventory() {
                                 <span className="text-xs text-muted-foreground">
                                     Última atualização do banco de dados
                                 </span>
-                                <span className="text-sm font-medium">
+                                <span className="text-sm font-medium self-start">
                                     {new Date(lastUpdate).toLocaleString('pt-BR', {
                                         day: '2-digit',
                                         month: '2-digit',

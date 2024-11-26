@@ -664,9 +664,9 @@ export default function DailySales() {
     return (
         <div className="space-y-6 min-w-[300px]">
             <div className="flex flex-col gap-2">
-                <div className="flex justify-between items-center flex-wrap">
-                    <div className="flex flex-col ml-10">
-                        <h1 className="text-3xl font-bold">Vendas do Dia</h1>
+                <div className="flex justify-center items-center flex-wrap">
+                    <div className="flex flex-col">
+                        <h1 className="text-3xl font-bold self-center">Vendas do Dia</h1>
                         {lastUpdate && (
                             <span className="text-xs text-muted-foreground">
                                 Última atualização: {lastUpdate.toLocaleString('pt-BR')}
@@ -795,66 +795,69 @@ export default function DailySales() {
             </div>
 
             <div className="overflow-x-auto pb-4 -mx-6 px-6 md:overflow-visible md:-mx-0 md:px-0">
-                <div className="grid grid-flow-col auto-cols-[calc(25%-0.75rem)] md:grid-flow-row md:auto-cols-auto md:grid-cols-3 lg:grid-cols-5 gap-4 min-w-[calc(200%-1.5rem)] md:min-w-0">
-                    {companySummaries.map((summary) => {
-                        const margin = (summary.faturamento - (summary.faturamento * 0.268 + summary.custo)) / summary.faturamento * 100;
-                        const marginStyle = getMarginStyle(margin);
-                        const isSelected = empresaFilter === summary.empresa;
+                <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide">
+                    <div className="flex gap-4 px-6">
+                        {companySummaries.map((summary) => {
+                            const margin = (summary.faturamento - (summary.faturamento * 0.268 + summary.custo)) / summary.faturamento * 100;
+                            const marginStyle = getMarginStyle(margin);
+                            const isSelected = empresaFilter === summary.empresa;
 
-                        return (
-                            <Card
-                                key={summary.empresa}
-                                className={cn(
-                                    "relative overflow-hidden cursor-pointer transition-all duration-200 w-full",
-                                    isSelected
-                                        ? "ring-2 ring-primary hover:ring-primary/70"
-                                        : "hover:ring-2 hover:ring-primary/50 opacity-70 hover:opacity-100",
-                                    empresaFilter !== 'all' && !isSelected && "opacity-50"
-                                )}
-                                onClick={() => handleEmpresaFilter(isSelected ? 'all' : summary.empresa)}
-                            >
-                                <div className={cn(
-                                    "absolute top-0 right-0 w-24 h-24 -translate-y-8 translate-x-8",
-                                    isSelected ? "opacity-30" : "opacity-20"
-                                )}>
-                                    {marginStyle.icon}
-                                </div>
-                                <CardHeader className="p-4">
-                                    <CardTitle className="text-sm flex items-center justify-between">
-                                        {summary.empresa}
-                                        {isSelected && (
-                                            <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-full">
-                                                Filtrado
-                                            </span>
-                                        )}
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="p-4 pt-0 space-y-2">
-                                    <div className="flex justify-between items-center text-xs">
-                                        <span className="text-muted-foreground">Pedidos</span>
-                                        <span>{summary.count}</span>
+                            return (
+                                <Card
+                                    key={summary.empresa}
+                                    className={cn(
+                                        "relative overflow-hidden cursor-pointer transition-all duration-200 snap-start shrink-0",
+                                        "w-[calc(40vw-1.5rem)] md:w-[220px]",
+                                        isSelected
+                                            ? "ring-2 ring-primary hover:ring-primary/70"
+                                            : "hover:ring-2 hover:ring-primary/50 opacity-70 hover:opacity-100",
+                                        empresaFilter !== 'all' && !isSelected && "opacity-50"
+                                    )}
+                                    onClick={() => handleEmpresaFilter(isSelected ? 'all' : summary.empresa)}
+                                >
+                                    <div className={cn(
+                                        "absolute top-0 right-0 w-24 h-24 -translate-y-8 translate-x-8",
+                                        isSelected ? "opacity-30" : "opacity-20"
+                                    )}>
+                                        {marginStyle.icon}
                                     </div>
-                                    <div className="flex justify-between items-center text-xs">
-                                        <span className="text-muted-foreground">Fat.</span>
-                                        <span>{summary.faturamento.toLocaleString('pt-BR', {
-                                            style: 'currency',
-                                            currency: 'BRL'
-                                        })}</span>
-                                    </div>
-                                    <div className="mt-2 p-2 rounded-md" style={{ background: marginStyle.background }}>
-                                        <div className="flex justify-between items-center">
-                                            <span className={cn("text-xs font-medium", marginStyle.textColor)}>
-                                                Margem
-                                            </span>
-                                            <span className={cn("text-sm font-bold", marginStyle.textColor)}>
-                                                {margin.toFixed(2)}%
-                                            </span>
+                                    <CardHeader className="p-4">
+                                        <CardTitle className="text-sm flex items-center justify-between">
+                                            {summary.empresa}
+                                            {isSelected && (
+                                                <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-full">
+                                                    Filtrado
+                                                </span>
+                                            )}
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="p-4 pt-0 space-y-2">
+                                        <div className="flex justify-between items-center text-xs">
+                                            <span className="text-muted-foreground">Pedidos</span>
+                                            <span>{summary.count}</span>
                                         </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        );
-                    })}
+                                        <div className="flex justify-between items-center text-xs">
+                                            <span className="text-muted-foreground">Fat.</span>
+                                            <span>{summary.faturamento.toLocaleString('pt-BR', {
+                                                style: 'currency',
+                                                currency: 'BRL'
+                                            })}</span>
+                                        </div>
+                                        <div className="mt-2 p-2 rounded-md" style={{ background: marginStyle.background }}>
+                                            <div className="flex justify-between items-center">
+                                                <span className={cn("text-xs font-medium", marginStyle.textColor)}>
+                                                    Margem
+                                                </span>
+                                                <span className={cn("text-sm font-bold", marginStyle.textColor)}>
+                                                    {margin.toFixed(2)}%
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            );
+                        })}
+                    </div>
                 </div>
             </div>
 
