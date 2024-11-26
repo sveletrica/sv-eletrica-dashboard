@@ -7,8 +7,6 @@ import { Button } from "@/components/ui/button"
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 
-const TEMP_PASSWORD = 'sveletrica2024' // This should be moved to environment variables later
-
 export default function Login() {
     const [password, setPassword] = useState('')
     const [error, setError] = useState('')
@@ -24,7 +22,7 @@ export default function Login() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (password === TEMP_PASSWORD) {
+        if (password === process.env.NEXT_PUBLIC_AUTH_PASSWORD) {
             // Set both cookie and localStorage
             document.cookie = 'auth=true; path=/'
             localStorage.setItem('isAuthenticated', 'true')
