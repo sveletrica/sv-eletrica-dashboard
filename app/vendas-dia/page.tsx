@@ -657,6 +657,23 @@ export default function DailySales() {
             .sort((a, b) => b.faturamento - a.faturamento)
     }, [data])
 
+    const totalSummary = useMemo(() => {
+        return companySummaries.reduce((acc, summary) => ({
+            faturamento: acc.faturamento + summary.faturamento,
+            custo: acc.custo + summary.custo,
+            count: acc.count + summary.count,
+            margin: 0 // será calculado abaixo
+        }), {
+            faturamento: 0,
+            custo: 0,
+            count: 0,
+            margin: 0
+        });
+    }, [companySummaries]);
+
+    // Calcular a margem total após ter os totais
+    totalSummary.margin = calculateMargin(totalSummary.faturamento, totalSummary.custo);
+
     if (isLoading) {
         return <Loading />
     }
@@ -797,6 +814,50 @@ export default function DailySales() {
             <div className="overflow-x-auto pb-4 -mx-6 px-6 md:overflow-visible md:-mx-0 md:px-0">
                 <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide xl:justify-center">
                     <div className="flex gap-4 px-6">
+                        {/* Card Total */}
+                        <Card
+                            className={cn(
+                                "relative overflow-hidden snap-start shrink-0",
+                                "w-[calc(40vw-1.5rem)] md:w-[220px]"
+                            )}
+                        >
+                            <div className="absolute top-0 right-0 w-24 h-24 -translate-y-8 translate-x-8 opacity-30">
+                                <TrendingUp className="h-8 w-8 text-white" />
+                            </div>
+                            <CardHeader className="p-4" style={{
+                                background: "linear-gradient(to right, hsl(0 84% 60%), hsl(0 84% 50%))"
+                            }}>
+                                <CardTitle className="text-sm flex items-center justify-between text-white">
+                                    TOTAL GERAL
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-4 pt-0 space-y-2" style={{
+                                background: "linear-gradient(to right, hsl(0 84% 60%), hsl(0 84% 50%))"
+                            }}>
+                                <div className="flex justify-between items-center text-xs text-white">
+                                    <span className="text-white/80">Pedidos</span>
+                                    <span>{totalSummary.count}</span>
+                                </div>
+                                <div className="flex justify-between items-center text-xs text-white">
+                                    <span className="text-white/80">Fat.</span>
+                                    <span>{totalSummary.faturamento.toLocaleString('pt-BR', {
+                                        style: 'currency',
+                                        currency: 'BRL'
+                                    })}</span>
+                                </div>
+                                <div className="mt-2 p-2 rounded-md bg-white/10">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-xs font-medium text-white">
+                                            Margem
+                                        </span>
+                                        <span className="text-sm font-bold text-white">
+                                            {totalSummary.margin.toFixed(2)}%
+                                        </span>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+
                         {companySummaries.map((summary) => {
                             const margin = (summary.faturamento - (summary.faturamento * 0.268 + summary.custo)) / summary.faturamento * 100;
                             const marginStyle = getMarginStyle(margin);
