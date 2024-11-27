@@ -5,27 +5,49 @@ import { useRouter, usePathname } from 'next/navigation'
 
 interface AuthContextType {
     isAuthenticated: boolean
+    setIsAuthenticated: (value: boolean) => void
     logout: () => void
 }
 
 const AuthContext = createContext<AuthContextType>({
     isAuthenticated: false,
+    setIsAuthenticated: () => {},
     logout: () => {},
 })
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [isAuthenticated, setIsAuthenticated] = useState(false)
+    const [isLoading, setIsLoading] = useState(true)
     const router = useRouter()
     const pathname = usePathname()
 
     useEffect(() => {
-        const auth = localStorage.getItem('isAuthenticated')
-        setIsAuthenticated(auth === 'true')
+        const checkAuth = () => {
+            const auth = localStorage.getItem('isAuthenticated')
+            const authCookie = document.cookie.includes('auth=true')
+            
+            const isAuth = auth === 'true' && authCookie
+            setIsAuthenticated(isAuth)
+            setIsLoading(false)
 
-        if (!auth && pathname !== '/login') {
-            router.push('/login')
+            if (!isAuth) {
+                document.cookie = 'auth=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT'
+                localStorage.removeItem('isAuthenticated')
+            }
         }
-    }, [pathname, router])
+
+        checkAuth()
+    }, [])
+
+    useEffect(() => {
+        if (!isLoading) {
+            if (!isAuthenticated && pathname !== '/login') {
+                router.push('/login')
+            } else if (isAuthenticated && pathname === '/login') {
+                router.push('/')
+            }
+        }
+    }, [isAuthenticated, isLoading, pathname, router])
 
     const logout = () => {
         document.cookie = 'auth=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT'
@@ -34,8 +56,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         router.push('/login')
     }
 
+    if (isLoading) {
+        return null
+    }
+
     return (
-        <AuthContext.Provider value={{ isAuthenticated, logout }}>
+        <AuthContext.Provider value={{ isAuthenticated, setIsAuthenticated, logout }}>
             {children}
         </AuthContext.Provider>
     )

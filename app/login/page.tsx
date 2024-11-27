@@ -1,31 +1,25 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/components/providers/auth-provider'
 import Image from 'next/image'
 
 export default function Login() {
     const [password, setPassword] = useState('')
     const [error, setError] = useState('')
     const router = useRouter()
-
-    useEffect(() => {
-        // Check if already authenticated
-        const isAuthenticated = localStorage.getItem('isAuthenticated')
-        if (isAuthenticated === 'true') {
-            router.push('/')
-        }
-    }, [router])
+    const { setIsAuthenticated } = useAuth()
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         if (password === process.env.NEXT_PUBLIC_AUTH_PASSWORD) {
-            // Set both cookie and localStorage
             document.cookie = 'auth=true; path=/'
             localStorage.setItem('isAuthenticated', 'true')
+            setIsAuthenticated(true)
             router.push('/')
         } else {
             setError('Senha incorreta')
