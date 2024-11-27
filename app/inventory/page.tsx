@@ -530,7 +530,7 @@ export default function Inventory() {
         <div className="space-y-6">
             <div className="flex flex-col gap-2">
                 <div className="flex justify-between items-center flex-col">
-                    <h1 className="text-3xl font-bold">Inventário</h1>
+                    <h1 className="text-3xl font-bold">Consulta Estoque</h1>
                     <div className="flex items-center gap-4">
                         {lastUpdate && (
                             <div className="flex flex-col items-end">

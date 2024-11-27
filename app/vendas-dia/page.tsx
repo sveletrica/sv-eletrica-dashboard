@@ -664,7 +664,7 @@ export default function DailySales() {
     return (
         <div className="space-y-6 min-w-[300px]">
             <div className="flex flex-col gap-2">
-                <div className="flex justify-center items-center flex-wrap">
+                <div className="flex justify-center items-center flex-wrap gap-x-4">
                     <div className="flex flex-col">
                         <h1 className="text-3xl font-bold self-center">Vendas do Dia</h1>
                         {lastUpdate && (
@@ -795,7 +795,7 @@ export default function DailySales() {
             </div>
 
             <div className="overflow-x-auto pb-4 -mx-6 px-6 md:overflow-visible md:-mx-0 md:px-0">
-                <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide">
+                <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide xl:justify-center">
                     <div className="flex gap-4 px-6">
                         {companySummaries.map((summary) => {
                             const margin = (summary.faturamento - (summary.faturamento * 0.268 + summary.custo)) / summary.faturamento * 100;
