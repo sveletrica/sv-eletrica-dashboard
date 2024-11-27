@@ -42,6 +42,7 @@ import { addDays, subDays } from 'date-fns'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { DateRange } from "react-day-picker"
 import { openDB, IDBPDatabase } from 'idb'
+import { DataExtracao } from '@/components/data-extracao'
 
 // Move parseDate outside the component
 const parseDate = (dateString: string): Date => {
@@ -1080,6 +1081,8 @@ export default function DailySales() {
                     </div>
                 </CardContent>
             </Card>
+
+            <DataExtracao />
         </div>
     )
 } 
