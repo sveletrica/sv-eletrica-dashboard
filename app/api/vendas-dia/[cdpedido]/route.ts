@@ -7,13 +7,14 @@ if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
 
 export async function GET(
     request: Request,
-    context: { params: Promise<{ cdpedido: string }> }
+    context: { params: { cdpedido: string } }
 ) {
     try {
-        const { cdpedido } = await context.params
-        const url = new URL(request.url)
-        const nrdocumento = url.searchParams.get('nrdocumento')
-        const dtemissao = url.searchParams.get('dtemissao')
+        // Aguarda a resolução dos parâmetros
+        const cdpedido = await Promise.resolve(context.params.cdpedido)
+        const { searchParams } = new URL(request.url)
+        const nrdocumento = searchParams.get('nrdocumento')
+        const dtemissao = searchParams.get('dtemissao')
         
         if (!nrdocumento || !dtemissao) {
             throw new Error('nrdocumento and dtemissao are required')

@@ -37,14 +37,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         checkAuth()
+
+        const handleStorageChange = (e: StorageEvent) => {
+            if (e.key === 'isAuthenticated') {
+                checkAuth()
+            }
+        }
+
+        window.addEventListener('storage', handleStorageChange)
+        return () => window.removeEventListener('storage', handleStorageChange)
     }, [])
 
     useEffect(() => {
         if (!isLoading) {
             if (!isAuthenticated && pathname !== '/login') {
-                router.push('/login')
+                router.replace('/login')
             } else if (isAuthenticated && pathname === '/login') {
-                router.push('/')
+                router.replace('/')
             }
         }
     }, [isAuthenticated, isLoading, pathname, router])
@@ -53,7 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         document.cookie = 'auth=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT'
         localStorage.removeItem('isAuthenticated')
         setIsAuthenticated(false)
-        router.push('/login')
+        router.replace('/login')
     }
 
     if (isLoading) {

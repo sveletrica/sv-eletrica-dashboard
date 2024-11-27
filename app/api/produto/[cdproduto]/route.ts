@@ -8,10 +8,10 @@ const supabase = createClient(
 
 export async function GET(
     request: Request,
-    { params }: { params: { cdproduto: string } }
+    context: { params: { cdproduto: string } }
 ) {
     try {
-        const { cdproduto } = params
+        const cdproduto = await Promise.resolve(context.params.cdproduto)
 
         const { data, error } = await supabase
             .from('iosvendames')
