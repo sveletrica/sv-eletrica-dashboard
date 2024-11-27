@@ -26,12 +26,15 @@ export default function Login() {
 
         try {
             if (password === process.env.NEXT_PUBLIC_AUTH_PASSWORD) {
-                setIsSuccess(true)
-                await new Promise(resolve => setTimeout(resolve, 1500)) // Aguarda a animação
-                setIsAuthenticated(true)
                 document.cookie = 'auth=true; path=/'
                 localStorage.setItem('isAuthenticated', 'true')
-                await router.replace('/')
+                setIsAuthenticated(true)
+                
+                setIsSuccess(true)
+                
+                setTimeout(() => {
+                    router.push('/')
+                }, 800)
             } else {
                 setError('Senha incorreta')
             }
@@ -42,6 +45,16 @@ export default function Login() {
             setIsLoading(false)
         }
     }
+
+    useEffect(() => {
+        if (isSuccess) {
+            const redirectTimer = setTimeout(() => {
+                window.location.href = '/'
+            }, 1000)
+
+            return () => clearTimeout(redirectTimer)
+        }
+    }, [isSuccess])
 
     return (
         <div className="min-h-screen flex items-center justify-center p-4 bg-background">
