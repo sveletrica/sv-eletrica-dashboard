@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { RefreshCw, Download, ArrowUpDown, ArrowUp, ArrowDown, X, TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react'
+import { RefreshCw, Download, ArrowUpDown, ArrowUp, ArrowDown, X, TrendingUp, TrendingDown, AlertTriangle, CheckCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { DailySale } from '@/types/sales'
 import Loading from './loading'
@@ -674,6 +674,22 @@ export default function DailySales() {
     // Calcular a margem total após ter os totais
     totalSummary.margin = calculateMargin(totalSummary.faturamento, totalSummary.custo);
 
+    // Adicione este useEffect para lidar com o evento de teclado
+    useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape' && empresaFilter !== 'all') {
+                handleEmpresaFilter('all')
+            }
+        }
+
+        window.addEventListener('keydown', handleKeyDown)
+
+        // Cleanup do event listener
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown)
+        }
+    }, [empresaFilter]) // Dependência do empresaFilter para ter acesso ao valor atual
+
     if (isLoading) {
         return <Loading />
     }
@@ -823,17 +839,25 @@ export default function DailySales() {
                                 )}
                             >
                                 <div className="absolute top-0 right-0 w-24 h-24 -translate-y-8 translate-x-8 opacity-30">
-                                    <TrendingUp className="h-8 w-8 text-white" />
+                                    {totalSummary.margin >= 4 ? (
+                                        <CheckCircle className="h-8 w-8 text-white" />
+                                    ) : (
+                                        <AlertTriangle className="h-8 w-8 text-white" />
+                                    )}
                                 </div>
                                 <CardHeader className="p-4" style={{
-                                    background: "linear-gradient(to right, hsl(0 84% 60%), hsl(0 84% 50%))"
+                                    background: totalSummary.margin >= 4 
+                                        ? "linear-gradient(to right, hsl(142.1 76.2% 36.3%), hsl(143.8 71.8% 29.2%))"
+                                        : "linear-gradient(to right, hsl(47.9 95.8% 53.1%), hsl(46 96.2% 48.3%))"
                                 }}>
                                     <CardTitle className="text-sm flex items-center justify-between text-white">
                                         TOTAL GERAL
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent className="p-4 pt-0 space-y-2" style={{
-                                    background: "linear-gradient(to right, hsl(0 84% 60%), hsl(0 84% 50%))"
+                                    background: totalSummary.margin >= 4 
+                                        ? "linear-gradient(to right, hsl(142.1 76.2% 36.3%), hsl(143.8 71.8% 29.2%))"
+                                        : "linear-gradient(to right, hsl(47.9 95.8% 53.1%), hsl(46 96.2% 48.3%))"
                                 }}>
                                     <div className="flex justify-between items-center text-xs text-white">
                                         <span className="text-white/80">Pedidos</span>
@@ -877,6 +901,7 @@ export default function DailySales() {
                                         empresaFilter !== 'all' && !isSelected && "opacity-50"
                                     )}
                                     onClick={() => handleEmpresaFilter(isSelected ? 'all' : summary.empresa)}
+                                    title={isSelected ? "Pressione ESC para desselecionar" : undefined}
                                 >
                                     <div className={cn(
                                         "absolute top-0 right-0 w-24 h-24 -translate-y-8 translate-x-8",
