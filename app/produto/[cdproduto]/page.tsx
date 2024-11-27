@@ -1,15 +1,20 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Package, ChevronLeft, ChevronRight, Check, AlertTriangle, XCircle } from 'lucide-react'
+import { ArrowLeft, Package, ChevronLeft, ChevronRight, Check, AlertTriangle, XCircle, Search } from 'lucide-react'
 import Loading from '../../vendas-dia/loading'
 import { cn } from "@/lib/utils"
 import { useSpring, animated } from '@react-spring/web'
 import './styles.css'
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { useDebounce } from 'use-debounce'
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import { useMediaQuery } from "@/hooks/use-media-query"
 
 interface ProductSale {
     cdpedido: string
@@ -21,9 +26,15 @@ interface ProductSale {
     margem: string
     cdproduto: string
     nmproduto: string
+    nmgrupoproduto: string
     qtbrutaproduto: number
     dtemissao: string
     nmempresacurtovenda: string
+}
+
+interface Product {
+    cdproduto: string
+    nmproduto: string
 }
 
 // Hook personalizado para animar números
@@ -85,6 +96,157 @@ const getMarginStyle = (margin: number) => {
     }
 }
 
+// Update the normalizeStr function
+const normalizeStr = (str: string | null | undefined) => {
+    if (!str) return '';
+    
+    return str
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[.,]/g, '')
+        .replace(/[x]/g, '');
+}
+
+// Add this function to highlight matched terms
+const highlightMatches = (text: string, searchTerms: string[]) => {
+    if (!searchTerms.length) return text;
+
+    const normalizedText = normalizeStr(text);
+    let result = text;
+    let offset = 0;
+
+    searchTerms.forEach(term => {
+        const normalizedTerm = normalizeStr(term);
+        let pos = 0;
+        while ((pos = normalizedText.indexOf(normalizedTerm, pos)) !== -1) {
+            const realPos = pos + offset;
+            const before = result.slice(0, realPos);
+            const match = result.slice(realPos, realPos + term.length);
+            const after = result.slice(realPos + term.length);
+            result = `${before}<mark class="bg-yellow-200 rounded-sm px-0.5">${match}</mark>${after}`;
+            offset += '<mark class="bg-yellow-200 rounded-sm px-0.5">'.length + '</mark>'.length;
+            pos += term.length;
+        }
+    });
+
+    return result;
+};
+
+// Add these functions at the top level after the existing helper functions
+const STORAGE_KEY = 'products_cache'
+const CACHE_DURATION = 24 * 60 * 60 * 1000 // 24 hours in milliseconds
+
+const getStoredProducts = () => {
+    if (typeof window === 'undefined') return null;
+    
+    const stored = localStorage.getItem(STORAGE_KEY)
+    if (!stored) return null;
+
+    try {
+        const { data, timestamp } = JSON.parse(stored)
+        // Check if cache is expired
+        if (Date.now() - timestamp > CACHE_DURATION) {
+            localStorage.removeItem(STORAGE_KEY)
+            return null
+        }
+        return data
+    } catch (error) {
+        console.error('Error parsing stored products:', error)
+        return null
+    }
+}
+
+const storeProducts = (products: Product[]) => {
+    if (typeof window === 'undefined') return;
+    
+    const dataToStore = {
+        data: products,
+        timestamp: Date.now()
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToStore))
+}
+
+// Update the search logic
+const searchProducts = (products: Product[], query: string) => {
+    if (!query) return products.slice(0, 50);
+
+    const searchTerms = normalizeStr(query)
+        .split(' ')
+        .filter(term => term.length > 0);
+
+    return products
+        .filter(product => {
+            const normalizedName = normalizeStr(product.nmproduto)
+            const normalizedCode = normalizeStr(product.cdproduto)
+
+            return searchTerms.every(term =>
+                normalizedName.includes(term) ||
+                normalizedCode.includes(term)
+            )
+        })
+        .slice(0, 50)
+}
+
+const SearchContent = ({ 
+    searchQuery, 
+    setSearchQuery, 
+    filteredProducts, 
+    handleProductSelect 
+}: { 
+    searchQuery: string
+    setSearchQuery: (value: string) => void
+    filteredProducts: Product[]
+    handleProductSelect: (product: Product) => void
+}) => {
+    return (
+        <div className="flex flex-col">
+            <div className="flex items-center border-b p-2">
+                <Search className="h-4 w-4 mr-2 shrink-0 opacity-50" />
+                <input
+                    className="flex w-full bg-transparent py-1.5 text-sm outline-none placeholder:text-muted-foreground"
+                    placeholder="Buscar produto..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    autoFocus
+                />
+            </div>
+            <div className="max-h-[300px] overflow-auto p-1">
+                {filteredProducts.map((product) => {
+                    const searchTerms = searchQuery
+                        .split(' ')
+                        .filter(term => term.length > 0);
+                    
+                    const highlightedName = highlightMatches(product.nmproduto, searchTerms);
+                    const highlightedCode = highlightMatches(product.cdproduto, searchTerms);
+                    
+                    return (
+                        <div
+                            key={product.cdproduto}
+                            className="flex flex-col px-2 py-1.5 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground rounded-sm"
+                            onClick={() => handleProductSelect(product)}
+                        >
+                            <span 
+                                className="font-medium"
+                                dangerouslySetInnerHTML={{ __html: highlightedName }}
+                            />
+                            <span 
+                                className="text-xs text-muted-foreground"
+                                dangerouslySetInnerHTML={{ __html: `Código: ${highlightedCode}` }}
+                            />
+                        </div>
+                    );
+                })}
+                {filteredProducts.length === 0 && (
+                    <div className="py-6 text-center text-sm text-muted-foreground">
+                        {searchQuery ? 'Nenhum produto encontrado.' : 'Digite para buscar produtos...'}
+                    </div>
+                )}
+            </div>
+        </div>
+    )
+}
+
 export default function ProductSalesDetails() {
     const router = useRouter()
     const params = useParams()
@@ -95,6 +257,14 @@ export default function ProductSalesDetails() {
     const [selectedFilial, setSelectedFilial] = useState<string | null>(null)
     const [currentPage, setCurrentPage] = useState(1)
     const itemsPerPage = 20
+    const [inputProductCode, setInputProductCode] = useState('')
+    const [isEditing, setIsEditing] = useState(false)
+    const [allProducts, setAllProducts] = useState<Product[]>([])
+    const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
+    const [isSearchOpen, setIsSearchOpen] = useState(false)
+    const [searchQuery, setSearchQuery] = useState('')
+    const [debouncedSearchQuery] = useDebounce(searchQuery, 300)
+    const isMobile = useMediaQuery("(max-width: 768px)")
 
     useEffect(() => {
         const fetchData = async () => {
@@ -131,6 +301,67 @@ export default function ProductSalesDetails() {
         }
         setCurrentPage(1) // Reset para primeira página ao filtrar
     }, [selectedFilial, data])
+
+    useEffect(() => {
+        // Set initial product code when data is loaded
+        if (data.length > 0) {
+            setInputProductCode(data[0].cdproduto)
+        }
+    }, [data])
+
+    useEffect(() => {
+        const fetchAndStoreProducts = async () => {
+            // Try to get from localStorage first
+            const storedProducts = getStoredProducts()
+            if (storedProducts) {
+                setAllProducts(storedProducts)
+                return
+            }
+
+            try {
+                const response = await fetch('/api/produtos')
+                if (!response.ok) throw new Error('Failed to fetch products')
+                const data = await response.json()
+                setAllProducts(data)
+                storeProducts(data)
+            } catch (error) {
+                console.error('Error fetching products:', error)
+            }
+        }
+
+        fetchAndStoreProducts()
+    }, [])
+
+    useEffect(() => {
+        if (!isSearchOpen) {
+            setFilteredProducts([])
+            return
+        }
+
+        const filtered = searchProducts(allProducts, searchQuery)
+        setFilteredProducts(filtered)
+    }, [searchQuery, allProducts, isSearchOpen])
+
+    const handleProductSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            const newProductCode = (e.target as HTMLInputElement).value
+            if (newProductCode && newProductCode !== params.cdproduto) {
+                router.push(`/produto/${newProductCode}`)
+            }
+            setIsEditing(false)
+        }
+    }
+
+    const handleBlur = () => {
+        setIsEditing(false)
+        setInputProductCode(data[0]?.cdproduto || '')
+    }
+
+    const handleProductSelect = (product: Product) => {
+        setIsSearchOpen(false)
+        setInputProductCode(product.cdproduto)
+        router.push(`/produto/${product.cdproduto}`)
+    }
 
     if (isLoading) return <Loading />
 
@@ -209,26 +440,95 @@ export default function ProductSalesDetails() {
             <h1 className="text-3xl font-bold tracking-tight">Detalhe do Produto</h1>
 
             <div className="grid gap-2 grid-cols-3">
-                <Card className="h-full">
+                <Card 
+                    className="h-full cursor-pointer hover:ring-2 hover:ring-primary/50"
+                    onClick={() => !isEditing && setIsEditing(true)}
+                >
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2">
                         <CardTitle className="text-xs sm:text-sm font-medium">
                             Código do Produto
                         </CardTitle>
                         <Package className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
-                    <CardContent className="p-2 sm:p-6">
-                        <div className="text-sm sm:text-2xl font-bold truncate">{data[0].cdproduto}</div>
+                    <CardContent className="p-2 md:p-4">
+                        {isEditing ? (
+                            <input
+                                type="text"
+                                value={inputProductCode}
+                                onChange={(e) => setInputProductCode(e.target.value)}
+                                onKeyDown={handleProductSearch}
+                                onBlur={handleBlur}
+                                className="w-full text-2xl font-bold bg-transparent border-none focus:outline-none focus:ring-0"
+                                autoFocus
+                            />
+                        ) : (
+                            <div className="text-2xl font-bold truncate product-code">
+                                {data[0]?.cdproduto}
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
-                <Card className="h-full">
+                <Card className="h-full cursor-pointer hover:ring-2 hover:ring-primary/50">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2">
                         <CardTitle className="text-xs sm:text-sm font-medium">
                             Descrição
                         </CardTitle>
+                        {isMobile ? (
+                            <>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    type="button"
+                                    onClick={() => setIsSearchOpen(true)}
+                                >
+                                    <Search className="h-4 w-4" />
+                                </Button>
+                                <Dialog open={isSearchOpen} onOpenChange={setIsSearchOpen}>
+                                    <DialogContent className="sm:max-w-[425px] p-0">
+                                        <DialogTitle className="sr-only">
+                                            Buscar Produto
+                                        </DialogTitle>
+                                        <SearchContent
+                                            searchQuery={searchQuery}
+                                            setSearchQuery={setSearchQuery}
+                                            filteredProducts={filteredProducts}
+                                            handleProductSelect={handleProductSelect}
+                                        />
+                                    </DialogContent>
+                                </Dialog>
+                            </>
+                        ) : (
+                            <Popover open={isSearchOpen} onOpenChange={setIsSearchOpen}>
+                                <PopoverTrigger asChild>
+                                    <div className="flex items-center justify-center">
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8"
+                                            type="button"
+                                        >
+                                            <Search className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </PopoverTrigger>
+                                <PopoverContent className="p-0 w-[400px]" align="end">
+                                    <SearchContent
+                                        searchQuery={searchQuery}
+                                        setSearchQuery={setSearchQuery}
+                                        filteredProducts={filteredProducts}
+                                        handleProductSelect={handleProductSelect}
+                                    />
+                                </PopoverContent>
+                            </Popover>
+                        )}
                     </CardHeader>
-                    <CardContent className="p-2 sm:p-6">
-                        <div className="text-sm sm:text-2xl font-bold break-words">
+                    <CardContent className="p-2 md:p-4">
+                        <div className="text-sm md:text-xl font-bold break-words">
                             {data[0].nmproduto}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-2">
+                            Grupo: {data[0].nmgrupoproduto}
                         </div>
                     </CardContent>
                 </Card>
@@ -238,8 +538,8 @@ export default function ProductSalesDetails() {
                             Total Vendido
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="p-2 sm:p-6">
-                        <div className="text-sm sm:text-2xl font-bold">
+                    <CardContent className="p-2 md:p-4">
+                        <div className="text-sm md:text-xl font-bold">
                             <AnimatedValue value={totals.quantidade} suffix=" un" />
                         </div>
                         <p className="text-xs text-muted-foreground">

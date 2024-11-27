@@ -16,10 +16,49 @@
     }
 }
 
+@keyframes blink {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0;
+    }
+}
+
 .animate-expand {
     animation: expand 2s ease-out forwards;
 }
 
 .animate-fade-in {
     animation: fadeIn 2s ease-out forwards;
-} 
+}
+
+.cursor-pointer:hover {
+    transition: all 0.2s ease-in-out;
+}
+
+input:focus {
+    outline: none;
+    background: transparent;
+}
+
+.product-code {
+    position: relative;
+    display: inline-block;
+    padding-right: 4px;
+}
+
+.product-code::after {
+    content: '|';
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    color: currentColor;
+    font-weight: normal;
+    animation: blink 1s step-end infinite;
+    height: 70%;
+    line-height: 1;
+    padding-left: 2px;
+}
+ 

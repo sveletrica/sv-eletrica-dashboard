@@ -836,7 +836,7 @@ export default function DailySales() {
                             <Card
                                 className={cn(
                                     "relative overflow-hidden snap-start shrink-0",
-                                    "w-[calc(40vw-1.5rem)] md:w-[220px]"
+                                    "w-[calc(40vw-1.5rem)] md:w-[200px]"
                                 )}
                             >
                                 <div className="absolute top-0 right-0 w-24 h-24 -translate-y-8 translate-x-8 opacity-30">
@@ -895,7 +895,7 @@ export default function DailySales() {
                                     key={summary.empresa}
                                     className={cn(
                                         "relative overflow-hidden cursor-pointer transition-all duration-200 snap-start shrink-0",
-                                        "w-[calc(40vw-1.5rem)] md:w-[220px]",
+                                        "w-[calc(40vw-1.5rem)] md:w-[200px]",
                                         isSelected
                                             ? "ring-2 ring-primary hover:ring-primary/70"
                                             : "hover:ring-2 hover:ring-primary/50 opacity-70 hover:opacity-100",
