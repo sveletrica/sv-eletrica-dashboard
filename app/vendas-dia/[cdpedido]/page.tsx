@@ -9,6 +9,7 @@ import { ArrowLeft, TrendingUp, TrendingDown, AlertTriangle, ArrowUp, ArrowDown,
 import { SaleDetail } from '@/types/sales'
 import Loading from '../loading'
 import { cn } from "@/lib/utils"
+import Link from 'next/link'
 
 export default function SaleDetails() {
     const router = useRouter()
@@ -301,7 +302,14 @@ export default function SaleDetails() {
                         <TableBody>
                             {data.map((item, index) => (
                                 <TableRow key={index}>
-                                    <TableCell>{item.cdproduto.trim()}</TableCell>
+                                    <TableCell>
+                                        <Link 
+                                            href={`/produto/${item.cdproduto.trim()}`}
+                                            className="text-blue-500 hover:underline"
+                                        >
+                                            {item.cdproduto.trim()}
+                                        </Link>
+                                    </TableCell>
                                     <TableCell>{item.nmproduto}</TableCell>
                                     <TableCell>{item.nmgrupoproduto}</TableCell>
                                     <TableCell className="text-right">{item.qtbrutaproduto}</TableCell>
