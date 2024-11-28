@@ -208,7 +208,7 @@ const SearchContent = ({
     handleProductSelect: (product: Product) => void
 }) => {
     return (
-        <div className="flex flex-col">
+        <div className={cn("flex flex-col", roboto.className)}>
             <div className="flex items-center border-b p-2">
                 <Search className="h-4 w-4 mr-2 shrink-0 opacity-50" />
                 <input
@@ -476,70 +476,71 @@ export default function ProductSalesDetails() {
                         )}
                     </CardContent>
                 </Card>
-                <Card className="h-full cursor-pointer hover:ring-2 hover:ring-primary/50">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2">
-                        <CardTitle className="text-xs sm:text-sm font-medium">
-                            Descrição
-                        </CardTitle>
-                        {isMobile ? (
-                            <>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8"
-                                    type="button"
-                                    onClick={() => setIsSearchOpen(true)}
-                                >
+                {isMobile ? (
+                    <Card 
+                        className="h-full cursor-pointer hover:ring-2 hover:ring-primary/50"
+                        onClick={() => setIsSearchOpen(true)}
+                    >
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2">
+                            <CardTitle className="text-xs sm:text-sm font-medium">
+                                Descrição
+                            </CardTitle>
+                            <Search className="h-4 w-4" />
+                        </CardHeader>
+                        <CardContent className="p-2 md:p-4">
+                            <div className="text-sm md:text-xl font-bold break-words">
+                                {data[0].nmproduto}
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-2">
+                                Grupo: {data[0].nmgrupoproduto}
+                            </div>
+                        </CardContent>
+                        <Dialog open={isSearchOpen} onOpenChange={setIsSearchOpen}>
+                            <DialogContent className="sm:max-w-[425px] p-0">
+                                <DialogTitle className="sr-only">
+                                    Buscar Produto
+                                </DialogTitle>
+                                <SearchContent
+                                    searchQuery={searchQuery}
+                                    setSearchQuery={setSearchQuery}
+                                    filteredProducts={filteredProducts}
+                                    handleProductSelect={handleProductSelect}
+                                />
+                            </DialogContent>
+                        </Dialog>
+                    </Card>
+                ) : (
+                    <Popover open={isSearchOpen} onOpenChange={setIsSearchOpen}>
+                        <PopoverTrigger asChild>
+                            <Card 
+                                className="h-full cursor-pointer hover:ring-2 hover:ring-primary/50"
+                            >
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2">
+                                    <CardTitle className="text-xs sm:text-sm font-medium">
+                                        Descrição
+                                    </CardTitle>
                                     <Search className="h-4 w-4" />
-                                </Button>
-                                <Dialog open={isSearchOpen} onOpenChange={setIsSearchOpen}>
-                                    <DialogContent className="sm:max-w-[425px] p-0">
-                                        <DialogTitle className="sr-only">
-                                            Buscar Produto
-                                        </DialogTitle>
-                                        <SearchContent
-                                            searchQuery={searchQuery}
-                                            setSearchQuery={setSearchQuery}
-                                            filteredProducts={filteredProducts}
-                                            handleProductSelect={handleProductSelect}
-                                        />
-                                    </DialogContent>
-                                </Dialog>
-                            </>
-                        ) : (
-                            <Popover open={isSearchOpen} onOpenChange={setIsSearchOpen}>
-                                <PopoverTrigger asChild>
-                                    <div className="flex items-center justify-center">
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8"
-                                            type="button"
-                                        >
-                                            <Search className="h-4 w-4" />
-                                        </Button>
+                                </CardHeader>
+                                <CardContent className="p-2 md:p-4">
+                                    <div className="text-sm md:text-xl font-bold break-words">
+                                        {data[0].nmproduto}
                                     </div>
-                                </PopoverTrigger>
-                                <PopoverContent className="p-0 w-[400px]" align="end">
-                                    <SearchContent
-                                        searchQuery={searchQuery}
-                                        setSearchQuery={setSearchQuery}
-                                        filteredProducts={filteredProducts}
-                                        handleProductSelect={handleProductSelect}
-                                    />
-                                </PopoverContent>
-                            </Popover>
-                        )}
-                    </CardHeader>
-                    <CardContent className="p-2 md:p-4">
-                        <div className="text-sm md:text-xl font-bold break-words">
-                            {data[0].nmproduto}
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-2">
-                            Grupo: {data[0].nmgrupoproduto}
-                        </div>
-                    </CardContent>
-                </Card>
+                                    <div className="text-xs text-muted-foreground mt-2">
+                                        Grupo: {data[0].nmgrupoproduto}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </PopoverTrigger>
+                        <PopoverContent className="p-0 w-[400px]" align="end">
+                            <SearchContent
+                                searchQuery={searchQuery}
+                                setSearchQuery={setSearchQuery}
+                                filteredProducts={filteredProducts}
+                                handleProductSelect={handleProductSelect}
+                            />
+                        </PopoverContent>
+                    </Popover>
+                )}
                 <Card className="h-full">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2">
                         <CardTitle className="text-xs sm:text-sm font-medium">
