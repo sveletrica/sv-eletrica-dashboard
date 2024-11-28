@@ -15,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useDebounce } from 'use-debounce'
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { useMediaQuery } from "@/hooks/use-media-query"
+import { Roboto } from 'next/font/google'
 
 interface ProductSale {
     cdpedido: string
@@ -36,6 +37,13 @@ interface Product {
     cdproduto: string
     nmproduto: string
 }
+
+// Add this font configuration after the imports
+const roboto = Roboto({
+    weight: ['400', '500'],
+    subsets: ['latin'],
+    display: 'swap',
+})
 
 // Hook personalizado para animar números
 function useCountUp(end: number, duration: number = 2000) {
@@ -427,17 +435,17 @@ export default function ProductSalesDetails() {
     )
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-2">
             <Button
                 variant="ghost"
                 onClick={() => router.back()}
-                className="mb-4"
+                className="mb-0 w-full justify-end"
             >
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Voltar
             </Button>
 
-            <h1 className="text-3xl font-bold tracking-tight">Detalhe do Produto</h1>
+            <h1 className="text-3xl font-bold tracking-tight flex justify-center">Detalhe do Produto</h1>
 
             <div className="grid gap-2 grid-cols-3">
                 <Card 
@@ -590,15 +598,17 @@ export default function ProductSalesDetails() {
                                         key={filial}
                                         className={cn(
                                             "relative cursor-pointer hover:bg-accent/50",
-                                            selectedFilial === filial && "bg-accent"
+                                            selectedFilial === filial && "bg-accent",
+                                            roboto.className,
+                                            "text-xs sm:text-sm"
                                         )}
                                         onClick={() => setSelectedFilial(filial === selectedFilial ? null : filial)}
                                     >
-                                        <TableCell className="font-medium">{filial}</TableCell>
-                                        <TableCell className="text-right">
+                                        <TableCell className="font-medium py-2">{filial}</TableCell>
+                                        <TableCell className="text-right py-2">
                                             <AnimatedValue value={values.quantidade} suffix=" un" />
                                         </TableCell>
-                                        <TableCell className="text-right">
+                                        <TableCell className="text-right py-2">
                                             <AnimatedValue 
                                                 value={values.faturamento}
                                                 formatter={(value) => value.toLocaleString('pt-BR', {
@@ -607,7 +617,7 @@ export default function ProductSalesDetails() {
                                                 })}
                                             />
                                         </TableCell>
-                                        <TableCell className="text-right">
+                                        <TableCell className="text-right py-2">
                                             {margin >= 0 ? (
                                                 <div className="inline-flex">
                                                     <div className={cn(
@@ -638,7 +648,7 @@ export default function ProductSalesDetails() {
                                                 </div>
                                             )}
                                         </TableCell>
-                                        <TableCell className="text-right">
+                                        <TableCell className="text-right py-2">
                                             <div className="relative">
                                                 <div 
                                                     className="absolute inset-0 bg-blue-200 rounded-full animate-expand"
@@ -660,7 +670,7 @@ export default function ProductSalesDetails() {
                                     </TableRow>
                                 )
                             })}
-                            <TableRow className="font-bold">
+                            <TableRow className={cn("font-bold", roboto.className, "text-xs sm:text-sm")}>
                                 <TableCell>Total</TableCell>
                                 <TableCell className="text-right">
                                     <AnimatedValue value={totals.quantidade} suffix=" un" />
@@ -755,7 +765,7 @@ export default function ProductSalesDetails() {
                                 <TableHead className="text-right">Margem</TableHead>
                             </TableRow>
                         </TableHeader>
-                        <TableBody>
+                        <TableBody className={cn(roboto.className, "text-xs sm:text-sm")}>
                             {currentItems.map((item, index) => (
                                 <TableRow key={index}>
                                     <TableCell>{item.dtemissao}</TableCell>

@@ -10,6 +10,13 @@ import { SaleDetail } from '@/types/sales'
 import Loading from '../loading'
 import { cn } from "@/lib/utils"
 import Link from 'next/link'
+import { Roboto } from 'next/font/google'
+
+const roboto = Roboto({
+  weight: ['400', '500', '700'],
+  subsets: ['latin'],
+  display: 'swap',
+})
 
 export default function SaleDetails() {
     const router = useRouter()
@@ -112,15 +119,17 @@ export default function SaleDetails() {
     const marginStyle = getMarginStyle(marginPercentage)
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-2">
             <Button
                 variant="ghost"
                 onClick={() => router.back()}
-                className="mb-4"
+                className="mb-0 w-full justify-end"
             >
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Voltar
             </Button>
+
+            <h1 className="text-3xl font-bold tracking-tight flex justify-center">Detalhes da Venda</h1>
 
             <div className="grid gap-4 grid-cols-2 sm:grid-cols-4 md:grid-cols-4">
                 <Card>
@@ -299,10 +308,10 @@ export default function SaleDetails() {
                                 </TableHead>
                             </TableRow>
                         </TableHeader>
-                        <TableBody>
+                        <TableBody className={roboto.className}>
                             {data.map((item, index) => (
                                 <TableRow key={index}>
-                                    <TableCell>
+                                    <TableCell className="text-xs sm:text-sm">
                                         <Link 
                                             href={`/produto/${item.cdproduto.trim()}`}
                                             className="text-blue-500 hover:underline"
@@ -310,49 +319,53 @@ export default function SaleDetails() {
                                             {item.cdproduto.trim()}
                                         </Link>
                                     </TableCell>
-                                    <TableCell>{item.nmproduto}</TableCell>
-                                    <TableCell>{item.nmgrupoproduto}</TableCell>
-                                    <TableCell className="text-right">{item.qtbrutaproduto}</TableCell>
-                                    <TableCell className="text-right">
+                                    <TableCell className="text-xs sm:text-sm">{item.nmproduto}</TableCell>
+                                    <TableCell className="text-xs sm:text-sm max-w-[100px] sm:max-w-none">
+                                        <span className="block truncate sm:text-clip">
+                                            {item.nmgrupoproduto}
+                                        </span>
+                                    </TableCell>
+                                    <TableCell className="text-xs sm:text-sm text-right">{item.qtbrutaproduto}</TableCell>
+                                    <TableCell className="text-xs sm:text-sm text-right">
                                         {(item.vlfaturamento / item.qtbrutaproduto).toLocaleString('pt-BR', {
                                             style: 'currency',
                                             currency: 'BRL'
                                         })}
                                     </TableCell>
-                                    <TableCell className="text-right">
+                                    <TableCell className="text-xs sm:text-sm text-right">
                                         {item.vlfaturamento.toLocaleString('pt-BR', {
                                             style: 'currency',
                                             currency: 'BRL'
                                         })}
                                     </TableCell>
-                                    <TableCell className="text-right">
+                                    <TableCell className="text-xs sm:text-sm text-right">
                                         {item.vltotalcustoproduto.toLocaleString('pt-BR', {
                                             style: 'currency',
                                             currency: 'BRL'
                                         })}
                                     </TableCell>
-                                    <TableCell className="text-right">
+                                    <TableCell className="text-xs sm:text-sm text-right">
                                         {item.margem}
                                     </TableCell>
                                 </TableRow>
                             ))}
                             <TableRow className="font-bold">
-                                <TableCell colSpan={3}>Total</TableCell>
-                                <TableCell className="text-right">{totals.quantidade}</TableCell>
-                                <TableCell className="text-right">-</TableCell>
-                                <TableCell className="text-right">
+                                <TableCell colSpan={3} className="text-xs sm:text-sm">Total</TableCell>
+                                <TableCell className="text-xs sm:text-sm text-right">{totals.quantidade}</TableCell>
+                                <TableCell className="text-xs sm:text-sm text-right">-</TableCell>
+                                <TableCell className="text-xs sm:text-sm text-right">
                                     {totals.faturamento.toLocaleString('pt-BR', {
                                         style: 'currency',
                                         currency: 'BRL'
                                     })}
                                 </TableCell>
-                                <TableCell className="text-right">
+                                <TableCell className="text-xs sm:text-sm text-right">
                                     {totals.custo.toLocaleString('pt-BR', {
                                         style: 'currency',
                                         currency: 'BRL'
                                     })}
                                 </TableCell>
-                                <TableCell className="text-right">
+                                <TableCell className="text-xs sm:text-sm text-right">
                                     {marginPercentage.toFixed(2)}%
                                 </TableCell>
                             </TableRow>
