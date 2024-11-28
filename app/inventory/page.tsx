@@ -36,6 +36,13 @@ import { HighlightedText } from "@/components/highlighted-text"
 import { compressData, decompressData } from '@/lib/utils';
 import { useDebouncedCallback } from 'use-debounce';
 import Fuse from 'fuse.js';
+import { Roboto } from 'next/font/google'
+
+const roboto = Roboto({
+    weight: ['400', '500'],
+    subsets: ['latin'],
+    display: 'swap',
+})
 
 const CACHE_KEY = 'inventoryData'
 const CACHE_DURATION = 24 * 60 * 60 * 1000 // 24 hours in milliseconds
@@ -58,6 +65,27 @@ function getDefaultVisibleColumns(): Set<ColumnId> {
     )
 }
 
+// First, add this CSS to ensure the table respects column widths
+// Add this near the top of the file after the imports
+const TABLE_STYLES = {
+    tableLayout: 'fixed' as const,
+    width: '100%'
+} as const;
+
+// Add this function at the top level of the component
+const loadSavedColumnOrder = (): string[] => {
+    if (typeof window === 'undefined') return [];
+    
+    try {
+        const savedOrder = localStorage.getItem('inventoryColumnOrder');
+        if (!savedOrder) return [];
+        return JSON.parse(savedOrder);
+    } catch (e) {
+        console.error('Failed to load column order:', e);
+        return [];
+    }
+};
+
 export default function Inventory() {
     const [isLoading, setIsLoading] = useState(true)
     const [isRefreshing, setIsRefreshing] = useState(false)
@@ -68,7 +96,7 @@ export default function Inventory() {
     const [error, setError] = useState<string | null>(null)
     const [pageSize] = useState(40)
     const [pageIndex, setPageIndex] = useState(0)
-    const [columnOrder, setColumnOrder] = useState<string[]>([])
+    const [columnOrder, setColumnOrder] = useState<string[]>(loadSavedColumnOrder())
     const [columnSizing, setColumnSizing] = useState<Record<string, number>>({})
     const [columnResizeMode] = useState<ColumnResizeMode>('onChange')
     const [sorting, setSorting] = useState<SortingState>([])
@@ -79,89 +107,71 @@ export default function Inventory() {
     // Initialize visible columns and column order from localStorage
     useEffect(() => {
         if (typeof window !== 'undefined') {
-            // First load visible columns
-            const savedVisibleColumns = localStorage.getItem('inventoryColumns')
+            // Load visible columns first
+            const savedVisibleColumns = localStorage.getItem('inventoryColumns');
             let visibleColumnSet: Set<ColumnId>;
             
             if (savedVisibleColumns) {
                 try {
-                    const parsed = JSON.parse(savedVisibleColumns) as ColumnId[]
-                    visibleColumnSet = new Set(parsed)
+                    const parsed = JSON.parse(savedVisibleColumns) as ColumnId[];
+                    visibleColumnSet = new Set(parsed);
                 } catch {
-                    visibleColumnSet = getDefaultVisibleColumns()
+                    visibleColumnSet = getDefaultVisibleColumns();
                 }
             } else {
-                visibleColumnSet = getDefaultVisibleColumns()
+                visibleColumnSet = getDefaultVisibleColumns();
             }
-            setVisibleColumns(visibleColumnSet)
-
-            // Then load and set column order
-            const savedOrder = localStorage.getItem('inventoryColumnOrder')
-            if (savedOrder) {
-                try {
-                    const savedOrderArray = JSON.parse(savedOrder) as string[]
-                    
-                    // Filter to only include visible columns while maintaining order
-                    const validOrderedColumns = savedOrderArray.filter(id => 
-                        visibleColumnSet.has(id as ColumnId)
-                    )
-                    
-                    // Add any visible columns that aren't in the saved order at the end
-                    const missingColumns = Array.from(visibleColumnSet).filter(id => 
-                        !validOrderedColumns.includes(id)
-                    )
-                    
-                    setColumnOrder([...validOrderedColumns, ...missingColumns])
-                } catch (e) {
-                    console.error('Failed to parse column order:', e)
-                    setColumnOrder(Array.from(visibleColumnSet))
-                }
+            
+            // Load saved column order
+            const savedOrder = loadSavedColumnOrder();
+            
+            if (savedOrder.length > 0) {
+                // Use the saved order exactly as is, only filtering out non-visible columns
+                const validOrder = savedOrder.filter(id => visibleColumnSet.has(id as ColumnId));
+                
+                // Only add missing columns that are visible but not in the saved order
+                const missingColumns = Array.from(visibleColumnSet).filter(id => !validOrder.includes(id));
+                
+                setColumnOrder([...validOrder, ...missingColumns]);
             } else {
-                setColumnOrder(Array.from(visibleColumnSet))
+                // If no saved order exists, create initial order from visible columns
+                const defaultOrder = Array.from(visibleColumnSet);
+                setColumnOrder(defaultOrder);
+                // Save this initial order
+                localStorage.setItem('inventoryColumnOrder', JSON.stringify(defaultOrder));
             }
+            
+            setVisibleColumns(visibleColumnSet);
         }
-    }, []) // Only run on mount
-
-    // Update column order when visible columns change
-    useEffect(() => {
-        if (visibleColumns.size > 0) {
-            setColumnOrder(current => {
-                // Keep only visible columns in their current order
-                const visibleOrdered = current.filter(id => visibleColumns.has(id as ColumnId))
-                
-                // Add any new visible columns that aren't in the order
-                const newColumns = Array.from(visibleColumns).filter(id => !visibleOrdered.includes(id))
-                
-                const newOrder = [...visibleOrdered, ...newColumns]
-                
-                // Save to localStorage
-                if (typeof window !== 'undefined') {
-                    localStorage.setItem('inventoryColumnOrder', JSON.stringify(newOrder))
-                }
-                
-                return newOrder
-            })
-        }
-    }, [visibleColumns])
+    }, []); // Only run on mount
 
     // Handle column visibility toggle
     const handleColumnToggle = (columnId: ColumnId) => {
         setVisibleColumns(prev => {
-            const next = new Set(prev)
+            const next = new Set(prev);
+            
             if (next.has(columnId)) {
-                next.delete(columnId)
+                next.delete(columnId);
                 // Update column order by removing the hidden column
-                setColumnOrder(current => current.filter(id => id !== columnId))
+                setColumnOrder(current => {
+                    const newOrder = current.filter(id => id !== columnId);
+                    localStorage.setItem('inventoryColumnOrder', JSON.stringify(newOrder));
+                    return newOrder;
+                });
             } else {
-                next.add(columnId)
+                next.add(columnId);
                 // Add the new column to the end of the order
-                setColumnOrder(current => [...current, columnId])
+                setColumnOrder(current => {
+                    const newOrder = [...current, columnId];
+                    localStorage.setItem('inventoryColumnOrder', JSON.stringify(newOrder));
+                    return newOrder;
+                });
             }
             
-            localStorage.setItem('inventoryColumns', JSON.stringify(Array.from(next)))
-            return next
-        })
-    }
+            localStorage.setItem('inventoryColumns', JSON.stringify(Array.from(next)));
+            return next;
+        });
+    };
 
     const saveToLocalStorage = (data: InventoryItem[]): void => {
         try {
@@ -428,29 +438,45 @@ export default function Inventory() {
 
                 return (a as string).localeCompare(b as string, 'pt-BR')
             },
-            size: columnSizing[columnId] || (() => {
+            size: (() => {
+                // First check if there's a custom size in columnSizing
+                if (columnSizing[columnId]) {
+                    return columnSizing[columnId];
+                }
+                
+                // Then apply our default sizes
                 switch (columnId) {
                     case 'CdChamada':
-                        return 90
+                        return 70;
                     case 'NmProduto':
-                        return 400
+                        return window.innerWidth < 640 ? 150 : 400;
                     case 'NmGrupoProduto':
+                        return window.innerWidth < 640 ? 100 : 120;
                     case 'NmFamiliaProduto':
-                        return 200
+                        return window.innerWidth < 640 ? 150 : 180;
                     case 'Atualizacao':
                     case 'DataInicio':
                     case 'DataFim':
-                        return 180
+                        return window.innerWidth < 640 ? 140 : 160;
                     case 'VlPreco_Empresa59':
                     case 'PrecoPromo':
                     case 'PrecoDe':
-                        return 120
+                        return 120;
+                    case 'QtEstoque_Empresa1':
+                    case 'QtEstoque_Empresa4':
+                    case 'QtEstoque_Empresa12':
+                    case 'QtEstoque_Empresa59':
+                    case 'QtEstoque_Empresa13':
+                    case 'QtEstoque_Empresa15':
+                    case 'QtEstoque_Empresa17':
+                    case 'StkTotal':
+                        return 100;
                     default:
-                        return 150
+                        return window.innerWidth < 640 ? 100 : 120;
                 }
             })(),
-            minSize: 80,
-            maxSize: 600,
+            minSize: columnId === 'NmProduto' ? 150 : 80, // Set minimum size for produto column
+            maxSize: columnId === 'NmProduto' ? 600 : 400, // Set maximum size for produto column
         })),
         state: {
             pagination: {
@@ -463,7 +489,18 @@ export default function Inventory() {
         },
         onSortingChange: setSorting,
         getSortedRowModel: getSortedRowModel(),
-        onColumnOrderChange: setColumnOrder,
+        onColumnOrderChange: (updater: any) => {
+            const newOrder = typeof updater === 'function' ? updater(columnOrder) : updater;
+            // Preserve exact order, only filter out non-visible columns
+            const validOrder = newOrder.filter(id => visibleColumns.has(id as ColumnId));
+            
+            // Only add missing visible columns at the end
+            const missingColumns = Array.from(visibleColumns).filter(id => !validOrder.includes(id));
+            
+            const finalOrder = [...validOrder, ...missingColumns];
+            setColumnOrder(finalOrder);
+            localStorage.setItem('inventoryColumnOrder', JSON.stringify(finalOrder));
+        },
         onColumnSizingChange: setColumnSizing,
         columnResizeMode,
         enableColumnResizing: true,
@@ -487,39 +524,55 @@ export default function Inventory() {
     const table = useReactTable(tableConfig);
 
     // Add this function to handle column reordering
-    const handleColumnReorder = (draggedColumnId: string, targetColumnId: string) => {
-        const allColumnIds = Object.keys(columnDefinitions)
+    const handleColumnReorder = useCallback((draggedColumnId: string, targetColumnId: string) => {
+        const allColumnIds = Object.keys(columnDefinitions);
         
         if (!allColumnIds.includes(draggedColumnId) || !allColumnIds.includes(targetColumnId)) {
-            return
+            return;
         }
 
         setColumnOrder(currentOrder => {
-            const newOrder = [...currentOrder]
-            const currentIndex = newOrder.indexOf(draggedColumnId)
-            const targetIndex = newOrder.indexOf(targetColumnId)
+            // Remove any duplicates first
+            const uniqueOrder = Array.from(new Set(currentOrder));
+            const newOrder = [...uniqueOrder];
+            
+            // Get correct indices
+            const currentIndex = newOrder.indexOf(draggedColumnId);
+            const targetIndex = newOrder.indexOf(targetColumnId);
             
             if (currentIndex !== -1 && targetIndex !== -1) {
-                newOrder.splice(currentIndex, 1)
-                newOrder.splice(targetIndex, 0, draggedColumnId)
+                // Remove from current position
+                newOrder.splice(currentIndex, 1);
+                // Insert at new position
+                newOrder.splice(targetIndex, 0, draggedColumnId);
                 
                 // Save the new order immediately
-                localStorage.setItem('inventoryColumnOrder', JSON.stringify(newOrder))
+                localStorage.setItem('inventoryColumnOrder', JSON.stringify(newOrder));
+                return newOrder;
             }
             
-            return newOrder
-        })
-    }
+            return currentOrder;
+        });
+    }, []);
 
-    // Add this function to handle column hiding
+    // Update the handleHideColumn function
     const handleHideColumn = (columnId: string) => {
         if (visibleColumns.size <= 1) return; // Prevent hiding all columns
+        
         setVisibleColumns(prev => {
             const next = new Set(prev);
             next.delete(columnId as ColumnId);
+            // Save visible columns to localStorage
+            localStorage.setItem('inventoryColumns', JSON.stringify(Array.from(next)));
             return next;
         });
-        setColumnOrder(current => current.filter(id => id !== columnId));
+        
+        // Update column order and save it
+        setColumnOrder(current => {
+            const newOrder = current.filter(id => id !== columnId);
+            localStorage.setItem('inventoryColumnOrder', JSON.stringify(newOrder));
+            return newOrder;
+        });
     };
 
     if (isLoading) {
@@ -576,21 +629,21 @@ export default function Inventory() {
 
             <Card>
                 <CardHeader>
-                    <div className="flex justify-between items-center">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <CardTitle>Lista de Produtos</CardTitle>
-                        <div className="flex-1 max-w-sm ml-4">
+                        <div className="w-full sm:w-auto sm:flex-1 sm:max-w-sm sm:ml-4">
                             <Input
                                 placeholder="Buscar em todos os campos..."
                                 value={searchTerm}
                                 onChange={(e) => handleSearch(e.target.value)}
-                                className="w-full"
+                                className="w-full text-xs"
                             />
                         </div>
                     </div>
                 </CardHeader>
                 <CardContent>
                     <div className="relative overflow-x-auto">
-                        <Table>
+                        <Table style={TABLE_STYLES}>
                             <TableHeader>
                                 <TableRow>
                                     {table.getFlatHeaders().map((header) => (
@@ -685,12 +738,18 @@ export default function Inventory() {
                                         {row.getVisibleCells().map((cell) => (
                                             <TableCell 
                                                 key={cell.id}
-                                                className="px-2 first:pl-4 last:pr-4"
+                                                className={cn(
+                                                    "px-2 first:pl-4 last:pr-4",
+                                                    roboto.className,
+                                                    "text-xs sm:text-sm",
+                                                    cell.column.id === 'NmGrupoProduto' && "max-w-[100px] sm:max-w-[120px] truncate",
+                                                    cell.column.id === 'NmProduto' && "max-w-[300px] sm:max-w-[600px]" // Responsive max-width
+                                                )}
                                                 style={{
                                                     width: cell.column.getSize(),
                                                     maxWidth: cell.column.getSize(),
-                                                    whiteSpace: 'normal', // Allow text to wrap
-                                                    wordBreak: 'break-word' // Break long words if needed
+                                                    whiteSpace: cell.column.id === 'NmGrupoProduto' ? 'nowrap' : 'normal',
+                                                    wordBreak: cell.column.id === 'NmGrupoProduto' ? 'normal' : 'break-word'
                                                 }}
                                             >
                                                 {flexRender(
