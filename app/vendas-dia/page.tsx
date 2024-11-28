@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { RefreshCw, Download, ArrowUpDown, ArrowUp, ArrowDown, X, TrendingUp, TrendingDown, AlertTriangle, CheckCircle } from 'lucide-react'
+import { RefreshCw, Download, ArrowUpDown, ArrowUp, ArrowDown, X, TrendingUp, TrendingDown, AlertTriangle, CheckCircle, Settings2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { DailySale } from '@/types/sales'
 import Loading from './loading'
@@ -39,10 +39,14 @@ import {
 } from "@/components/ui/popover"
 import { ptBR } from 'date-fns/locale'
 import { addDays, subDays } from 'date-fns'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react'
 import { DateRange } from "react-day-picker"
 import { openDB, IDBPDatabase } from 'idb'
 import { DataExtracao } from '@/components/data-extracao'
+import { ExpandableRow } from '@/components/ui/expandable-row'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Checkbox } from "@/components/ui/checkbox"
+import { useMediaQuery } from '@/hooks/use-media-query'
 
 // Move parseDate outside the component
 const parseDate = (dateString: string): Date => {
@@ -103,6 +107,29 @@ const isSameDay = (date1: Date, date2: Date): boolean => {
     )
 }
 
+// Add this helper function near the top of your component
+const getColumnDisplayName = (column: any) => {
+    if (typeof column.columnDef.header === 'string') {
+        return column.columnDef.header
+    }
+    
+    // Map column IDs to display names
+    const displayNames: Record<string, string> = {
+        'cdpedido': 'Pedido',
+        'nrdocumento': 'Documento',
+        'nmpessoa': 'Cliente',
+        'nmrepresentantevenda': 'Vendedor',
+        'nmempresacurtovenda': 'Empresa',
+        'tpmovimentooperacao': 'Tipo',
+        'qtdsku': 'Qtd SKUs',
+        'total_faturamento': 'Faturamento',
+        'total_custo_produto': 'Custo',
+        'margem': 'Margem'
+    }
+
+    return displayNames[column.id] || column.id
+}
+
 export default function DailySales() {
     const router = useRouter()
     const searchParams = useSearchParams()
@@ -141,6 +168,10 @@ export default function DailySales() {
             to: normalizedEndDate
         }
     })
+    const [columnVisibility, setColumnVisibility] = useState({})
+    const [columnOrder, setColumnOrder] = useState<string[]>([])
+    const [showBackToTop, setShowBackToTop] = useState(false)
+    const isMobile = useMediaQuery("(max-width: 768px)")
 
     const columns = useMemo<ColumnDef<DailySale>[]>(() => [
         {
@@ -472,10 +503,16 @@ export default function DailySales() {
             setSorting(newSorting)
             updateSearchParams(dateRange.from, searchTerm, empresaFilter, newSorting, dateRange.to)
         },
+        onColumnVisibilityChange: setColumnVisibility,
+        onColumnOrderChange: setColumnOrder,
         onPaginationChange: setPagination,
+        manualPagination: false,
+        pageCount: Math.ceil(filteredData.length / pagination.pageSize),
         state: {
             sorting,
             pagination,
+            columnVisibility,
+            columnOrder,
         },
     })
 
@@ -690,6 +727,21 @@ export default function DailySales() {
             window.removeEventListener('keydown', handleKeyDown)
         }
     }, [empresaFilter]) // Dependência do empresaFilter para ter acesso ao valor atual
+
+    // Add this useEffect for scroll handling
+    useEffect(() => {
+        const handleScroll = () => {
+            setShowBackToTop(window.scrollY > 400)
+        }
+
+        window.addEventListener('scroll', handleScroll)
+        return () => window.removeEventListener('scroll', handleScroll)
+    }, [])
+
+    // Add this function for scrolling to top
+    const scrollToTop = () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
 
     if (isLoading) {
         return <Loading />
@@ -967,22 +1019,54 @@ export default function DailySales() {
                             }
                         </CardTitle>
                         <div className="flex flex-row sm:flex-row items-stretch sm:items-center gap-4">
-                            <Select
-                                value={empresaFilter}
-                                onValueChange={handleEmpresaFilter}
-                            >
-                                <SelectTrigger className="w-[180px]">
-                                    <SelectValue placeholder="Filtrar por Empresa" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Todas as Empresas</SelectItem>
-                                    {uniqueEmpresas.map((empresa) => (
-                                        <SelectItem key={empresa} value={empresa}>
-                                            {empresa}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            <div className="flex items-center gap-2">
+                                <Select
+                                    value={empresaFilter}
+                                    onValueChange={handleEmpresaFilter}
+                                >
+                                    <SelectTrigger className="w-[180px]">
+                                        <SelectValue placeholder="Filtrar por Empresa" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Todas as Empresas</SelectItem>
+                                        {uniqueEmpresas.map((empresa) => (
+                                            <SelectItem key={empresa} value={empresa}>
+                                                {empresa}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+
+                                {/* Column customization button - desktop only */}
+                                {!isMobile && (
+                                    <Dialog>
+                                        <DialogTrigger asChild>
+                                            <Button variant="outline" size="sm">
+                                                <Settings2 className="h-4 w-4 mr-2" />
+                                                Colunas
+                                            </Button>
+                                        </DialogTrigger>
+                                        <DialogContent>
+                                            <DialogHeader>
+                                                <DialogTitle>Personalizar Colunas</DialogTitle>
+                                            </DialogHeader>
+                                            <div className="space-y-4">
+                                                {table.getAllColumns().map(column => {
+                                                    return (
+                                                        <div key={column.id} className="flex items-center space-x-2">
+                                                            <Checkbox
+                                                                checked={column.getIsVisible()}
+                                                                onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                                                            />
+                                                            <label>{getColumnDisplayName(column)}</label>
+                                                        </div>
+                                                    )
+                                                })}
+                                            </div>
+                                        </DialogContent>
+                                    </Dialog>
+                                )}
+                            </div>
                             <div className="relative">
                                 <Input
                                     placeholder="Buscar por pedido, documento, cliente ou representante..."
@@ -1006,83 +1090,174 @@ export default function DailySales() {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <div className="relative overflow-x-auto">
-                        <Table className="[&_tr]:!py-1">
-                            <TableHeader>
-                                <TableRow className="hover:bg-transparent">
-                                    {table.getFlatHeaders().map((header) => (
-                                        <TableHead 
-                                            key={header.id}
-                                            className="!py-2"
-                                        >
-                                            {flexRender(
-                                                header.column.columnDef.header,
-                                                header.getContext()
-                                            )}
-                                        </TableHead>
-                                    ))}
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {table.getRowModel().rows?.length ? (
-                                    table.getRowModel().rows.map((row) => (
-                                        <TableRow 
+                    <div className="relative">
+                        {isMobile ? (
+                            <>
+                                <div className="space-y-4">
+                                    {table.getRowModel().rows.map((row) => (
+                                        <ExpandableRow 
                                             key={row.id}
-                                            className="hover:bg-muted/40"
+                                            row={row.original}
+                                            columns={columns.map(col => ({
+                                                header: col.header && typeof col.header === 'string' 
+                                                    ? col.header 
+                                                    : col.accessorKey === 'qtdsku' ? 'Qtd SKUs'
+                                                    : col.accessorKey === 'total_faturamento' ? 'Faturamento'
+                                                    : col.accessorKey === 'total_custo_produto' ? 'Custo'
+                                                    : col.accessorKey === 'margem' ? 'Margem'
+                                                    : String(col.accessorKey),
+                                                accessor: col.accessorKey as keyof DailySale,
+                                                format: col.cell 
+                                                    ? (value: any) => {
+                                                        const rendered = flexRender(col.cell, { 
+                                                            row, 
+                                                            cell: row.getAllCells().find(c => c.column.id === col.accessorKey)
+                                                        })
+                                                        return typeof rendered === 'string' ? rendered : null
+                                                    }
+                                                    : undefined
+                                            }))}
+                                        />
+                                    ))}
+                                </div>
+
+                                {/* Mobile Pagination Controls */}
+                                <div className="mt-4 flex flex-col gap-2">
+                                    <div className="flex items-center justify-between">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => table.setPageIndex(table.getState().pagination.pageIndex - 1)}
+                                            disabled={!table.getCanPreviousPage()}
+                                            className="w-[100px]"
                                         >
-                                            {row.getVisibleCells().map((cell) => (
-                                                <TableCell 
-                                                    key={cell.id}
-                                                    className="!py-1"
-                                                >
-                                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                                </TableCell>
-                                            ))}
-                                        </TableRow>
-                                    ))
-                                ) : (
-                                    <TableRow>
-                                        <TableCell colSpan={columns.length} className="h-24 text-center">
-                                            Nenhum resultado encontrado.
-                                        </TableCell>
+                                            <ChevronLeft className="h-4 w-4 mr-1" />
+                                            Anterior
+                                        </Button>
+                                        <span className="text-sm text-muted-foreground">
+                                            Página {table.getState().pagination.pageIndex + 1} de{' '}
+                                            {table.getPageCount()}
+                                        </span>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => table.setPageIndex(table.getState().pagination.pageIndex + 1)}
+                                            disabled={!table.getCanNextPage()}
+                                            className="w-[100px]"
+                                        >
+                                            Próximo
+                                            <ChevronRight className="h-4 w-4 ml-1" />
+                                        </Button>
+                                    </div>
+                                    
+                                    <div className="text-xs text-center text-muted-foreground">
+                                        Mostrando {Math.min(
+                                            table.getState().pagination.pageSize * table.getState().pagination.pageIndex + 1,
+                                            filteredData.length
+                                        )} até{" "}
+                                        {Math.min(
+                                            table.getState().pagination.pageSize * (table.getState().pagination.pageIndex + 1),
+                                            filteredData.length
+                                        )}{" "}
+                                        de {filteredData.length} registros
+                                    </div>
+                                </div>
+                            </>
+                        ) : (
+                            <Table className="[&_tr]:!py-1">
+                                <TableHeader className="sticky top-0 bg-background z-10">
+                                    <TableRow className="hover:bg-transparent">
+                                        {table.getFlatHeaders().map((header) => (
+                                            <TableHead 
+                                                key={header.id}
+                                                className="!py-2"
+                                            >
+                                                {flexRender(
+                                                    header.column.columnDef.header,
+                                                    header.getContext()
+                                                )}
+                                            </TableHead>
+                                        ))}
                                     </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
+                                </TableHeader>
+                                <TableBody>
+                                    {table.getRowModel().rows?.length ? (
+                                        table.getRowModel().rows.map((row) => (
+                                            <TableRow 
+                                                key={row.id}
+                                                className="hover:bg-muted/40"
+                                            >
+                                                {row.getVisibleCells().map((cell) => (
+                                                    <TableCell 
+                                                        key={cell.id}
+                                                        className="!py-1"
+                                                    >
+                                                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                                    </TableCell>
+                                                ))}
+                                            </TableRow>
+                                        ))
+                                    ) : (
+                                        <TableRow>
+                                            <TableCell colSpan={columns.length} className="h-24 text-center">
+                                                Nenhum resultado encontrado.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        )}
                     </div>
 
-                    <div className="flex items-center justify-between px-2 py-4">
-                        <div className="flex-1 text-sm text-muted-foreground">
-                            Mostrando {table.getState().pagination.pageSize * table.getState().pagination.pageIndex + 1} até{" "}
-                            {Math.min(
-                                table.getState().pagination.pageSize * (table.getState().pagination.pageIndex + 1),
-                                table.getFilteredRowModel().rows.length
-                            )}{" "}
-                            de {table.getFilteredRowModel().rows.length} registros
+                    {/* Show pagination info only for desktop view */}
+                    {!isMobile && (
+                        <div className="flex items-center justify-between px-2 py-4">
+                            <div className="flex-1 text-sm text-muted-foreground">
+                                Mostrando {Math.min(
+                                    table.getState().pagination.pageSize * table.getState().pagination.pageIndex + 1,
+                                    filteredData.length
+                                )} até{" "}
+                                {Math.min(
+                                    table.getState().pagination.pageSize * (table.getState().pagination.pageIndex + 1),
+                                    filteredData.length
+                                )}{" "}
+                                de {filteredData.length} registros
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => table.setPageIndex(table.getState().pagination.pageIndex - 1)}
+                                    disabled={!table.getCanPreviousPage()}
+                                >
+                                    Anterior
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => table.setPageIndex(table.getState().pagination.pageIndex + 1)}
+                                    disabled={!table.getCanNextPage()}
+                                >
+                                    Próximo
+                                </Button>
+                            </div>
                         </div>
-                        <div className="flex items-center space-x-2">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => table.previousPage()}
-                                disabled={!table.getCanPreviousPage()}
-                            >
-                                Anterior
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => table.nextPage()}
-                                disabled={!table.getCanNextPage()}
-                            >
-                                Próximo
-                            </Button>
-                        </div>
-                    </div>
+                    )}
                 </CardContent>
             </Card>
 
             <DataExtracao />
+
+            {showBackToTop && (
+                <Button
+                    variant="secondary"
+                    size="sm"
+                    className="fixed bottom-4 left-1/2 -translate-x-1/2 rounded-full shadow-lg z-50"
+                    onClick={scrollToTop}
+                >
+                    <ChevronUp className="h-4 w-4" />
+                </Button>
+            )}
         </div>
     )
 } 

@@ -33,7 +33,7 @@ export function DataExtracao() {
     if (!dataExtracao) return null
 
     return (
-        <div className="fixed bottom-4 right-4 bg-black/80 text-white px-4 py-2 rounded-full text-xs backdrop-blur-sm">
+        <div className="fixed bottom-4 right-14 bg-black/80 text-white px-4 py-2 rounded-full text-xs backdrop-blur-sm">
             Dados atualizados em {dataExtracao}
         </div>
     )
