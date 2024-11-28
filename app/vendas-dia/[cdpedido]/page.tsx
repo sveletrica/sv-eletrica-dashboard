@@ -316,8 +316,8 @@ export default function SaleDetails() {
                                     key={index}
                                     className={cn(
                                         highlightedProduct && item.cdproduto.trim() === highlightedProduct.trim() && 
-                                        "bg-yellow-100 animate-pulse-slow",
-                                        "transition-colors"
+                                        "bg-yellow-300 dark:bg-red-800/50 animate-pulse-slow",
+                                        "transition-colors hover:bg-accent/50"
                                     )}
                                 >
                                     <TableCell className="text-xs sm:text-sm">
