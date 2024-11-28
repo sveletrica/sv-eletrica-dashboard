@@ -1252,10 +1252,10 @@ export default function DailySales() {
                 <Button
                     variant="secondary"
                     size="sm"
-                    className="fixed bottom-4 left-1/2 -translate-x-1/2 rounded-full shadow-lg z-50"
+                    className="fixed bottom-4 right-4 rounded-full shadow-lg z-50"
                     onClick={scrollToTop}
                 >
-                    <ChevronUp className="h-4 w-4" />
+                    <ChevronUp className="h-10 w-10" />
                 </Button>
             )}
         </div>
