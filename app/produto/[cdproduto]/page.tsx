@@ -16,6 +16,7 @@ import { useDebounce } from 'use-debounce'
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { Roboto } from 'next/font/google'
+import Link from 'next/link'
 
 interface ProductSale {
     cdpedido: string
@@ -793,7 +794,14 @@ export default function ProductSalesDetails() {
                             {currentItems.map((item, index) => (
                                 <TableRow key={index}>
                                     <TableCell>{item.dtemissao}</TableCell>
-                                    <TableCell>{item.cdpedido}</TableCell>
+                                    <TableCell>
+                                        <Link
+                                            href={`/vendas-dia/${item.cdpedido}?nrdocumento=${item.nrdocumento}&dtemissao=${item.dtemissao}&fromProduct=${item.cdproduto}`}
+                                            className="text-blue-500 hover:text-blue-700 underline"
+                                        >
+                                            {item.cdpedido}
+                                        </Link>
+                                    </TableCell>
                                     <TableCell>{item.nrdocumento}</TableCell>
                                     <TableCell>{item.nmpessoa}</TableCell>
                                     <TableCell>{item.tppessoa}</TableCell>

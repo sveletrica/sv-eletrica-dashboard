@@ -30,6 +30,8 @@ export default function SaleDetails() {
         direction: 'asc'
     })
 
+    const highlightedProduct = searchParams.get('fromProduct')
+
     useEffect(() => {
         const fetchData = async () => {
             try {
@@ -310,7 +312,14 @@ export default function SaleDetails() {
                         </TableHeader>
                         <TableBody className={roboto.className}>
                             {data.map((item, index) => (
-                                <TableRow key={index}>
+                                <TableRow 
+                                    key={index}
+                                    className={cn(
+                                        highlightedProduct && item.cdproduto.trim() === highlightedProduct.trim() && 
+                                        "bg-yellow-100 animate-pulse-slow",
+                                        "transition-colors"
+                                    )}
+                                >
                                     <TableCell className="text-xs sm:text-sm">
                                         <Link 
                                             href={`/produto/${item.cdproduto.trim()}`}
