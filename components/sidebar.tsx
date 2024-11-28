@@ -14,8 +14,8 @@ export function Sidebar() {
 
     useEffect(() => {
         const checkIsMobile = () => {
-            setIsMobile(window.innerWidth < 768)
-            if (window.innerWidth >= 768) {
+            setIsMobile(window.innerWidth < 1024)
+            if (window.innerWidth >= 1024) {
                 setIsOpen(true)
             } else {
                 setIsOpen(false)
@@ -34,7 +34,7 @@ export function Sidebar() {
                 <Button
                     variant="ghost"
                     size="icon"
-                    className="fixed top-4 left-4 z-50 md:hidden hover:bg-accent"
+                    className="fixed top-4 left-4 z-50 lg:hidden hover:bg-accent"
                     onClick={() => setIsOpen(!isOpen)}
                     aria-label={isOpen ? "Fechar menu" : "Abrir menu"}
                 >
@@ -57,11 +57,11 @@ export function Sidebar() {
             {/* Sidebar */}
             <div className={cn(
                 "min-h-screen h-full bg-card border-r",
-                "fixed md:sticky top-0 left-0 z-40",
+                "fixed lg:sticky top-0 left-0 z-40",
                 "transition-transform duration-300 ease-in-out",
                 "w-64 shrink-0",
-                "absolute md:relative",
-                isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+                "absolute lg:relative",
+                isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
             )}>
                 <div className="sticky top-0 bg-card z-20 border-b">
                     <div className="p-6 flex justify-between items-center">

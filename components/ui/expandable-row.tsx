@@ -1,9 +1,10 @@
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { ChevronDown, ChevronUp, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from './button'
 import { DailySale } from '@/types/sales'
 import { Table, TableBody, TableCell, TableRow } from './table'
 import Link from 'next/link'
+import { SortingState } from '@tanstack/react-table'
 
 interface ExpandableRowProps {
   row: DailySale
@@ -12,10 +13,27 @@ interface ExpandableRowProps {
     accessor: keyof DailySale
     format?: (value: any) => string | null
   }[]
+  sorting?: SortingState
+  onSort?: (field: string) => void
 }
 
-export function ExpandableRow({ row, columns }: ExpandableRowProps) {
+export function ExpandableRow({ row, columns, sorting, onSort }: ExpandableRowProps) {
   const [isExpanded, setIsExpanded] = useState(false)
+
+  const getSortDirection = (field: string) => {
+    if (!sorting?.length) return undefined
+    const sort = sorting[0]
+    if (sort.id === field) return sort.desc ? 'desc' : 'asc'
+    return undefined
+  }
+
+  const renderSortIcon = (field: string) => {
+    const direction = getSortDirection(field)
+    if (!direction) return <ArrowUpDown className="ml-1 h-3 w-3" />
+    return direction === 'asc' ? 
+      <ArrowUp className="ml-1 h-3 w-3" /> : 
+      <ArrowDown className="ml-1 h-3 w-3" />
+  }
 
   const formatValue = (value: any, accessor: keyof DailySale, format?: (value: any) => string | null) => {
     if (format) {
@@ -66,7 +84,7 @@ export function ExpandableRow({ row, columns }: ExpandableRowProps) {
   const margin = parseFloat(row.margem)
 
   return (
-    <div className="mb-4 rounded-lg border bg-card">
+    <div className="mb-4 rounded-lg border bg-card font-roboto">
       <Table>
         <TableBody>
           <TableRow className="hover:bg-muted/50 data-[state=selected]:bg-muted">
@@ -88,26 +106,46 @@ export function ExpandableRow({ row, columns }: ExpandableRowProps) {
               <div className="flex flex-col gap-1">
                 <Link
                   href={`/vendas-dia/${row.cdpedido}?nrdocumento=${row.nrdocumento}&dtemissao=${row.dtemissao}`}
-                  className="text-blue-500 hover:text-blue-700 underline text-xs"
+                  className="text-blue-500 hover:text-blue-700 underline text-xs md:text-sm"
                 >
                   {row.cdpedido}
                 </Link>
-                <span className="text-xs text-muted-foreground">
+                <span className="text-xs md:text-sm text-muted-foreground">
                   {truncateText(row.nmpessoa, 30)}
                 </span>
               </div>
             </TableCell>
-            <TableCell className="text-right">
-              <div className="flex flex-col items-end gap-1">
-                <span>
-                  {row.total_faturamento.toLocaleString('pt-BR', {
-                    style: 'currency',
-                    currency: 'BRL'
-                  })}
-                </span>
-                <span className={`text-xs font-medium ${getMarginColor(margin)}`}>
-                  {margin.toFixed(2)}%
-                </span>
+            <TableCell className="text-right p-0">
+              <div className="flex flex-col items-stretch gap-0.5">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto py-2 px-3 flex items-center justify-end gap-2 hover:bg-muted/60 active:bg-muted"
+                  onClick={() => onSort?.('total_faturamento')}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm">
+                      {row.total_faturamento.toLocaleString('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL'
+                      })}
+                    </span>
+                    {renderSortIcon('total_faturamento')}
+                  </div>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto py-2 px-3 flex items-center justify-end gap-2 hover:bg-muted/60 active:bg-muted"
+                  onClick={() => onSort?.('margem')}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span className={`text-sm font-medium ${getMarginColor(margin)}`}>
+                      {margin.toFixed(2)}%
+                    </span>
+                    {renderSortIcon('margem')}
+                  </div>
+                </Button>
               </div>
             </TableCell>
           </TableRow>
@@ -118,7 +156,6 @@ export function ExpandableRow({ row, columns }: ExpandableRowProps) {
         <div className="border-t bg-muted/30">
           <div className="p-4 space-y-2">
             {columns.map((column) => {
-              // Skip the columns that are already shown in the main row
               if (column.accessor === 'cdpedido' || 
                   column.accessor === 'total_faturamento' || 
                   column.accessor === 'margem' ||
@@ -127,7 +164,7 @@ export function ExpandableRow({ row, columns }: ExpandableRowProps) {
               }
               
               return (
-                <div key={String(column.accessor)} className="flex justify-between text-xs">
+                <div key={String(column.accessor)} className="flex justify-between text-xs md:text-sm">
                   <span className="font-medium">
                     {column.header}
                   </span>

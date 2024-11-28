@@ -272,7 +272,7 @@ export default function ProductSalesDetails() {
     const [isSearchOpen, setIsSearchOpen] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
     const [debouncedSearchQuery] = useDebounce(searchQuery, 300)
-    const isMobile = useMediaQuery("(max-width: 768px)")
+    const isMobile = useMediaQuery("(max-width: 1024px)")
 
     useEffect(() => {
         const fetchData = async () => {
@@ -303,9 +303,32 @@ export default function ProductSalesDetails() {
 
     useEffect(() => {
         if (selectedFilial) {
-            setFilteredData(data.filter(item => item.nmempresacurtovenda === selectedFilial))
+            setFilteredData(data
+                .filter(item => item.nmempresacurtovenda === selectedFilial)
+                .sort((a, b) => {
+                    // Split the date string into day, month, year
+                    const [dayA, monthA, yearA] = a.dtemissao.split('/').map(Number);
+                    const [dayB, monthB, yearB] = b.dtemissao.split('/').map(Number);
+                    
+                    // Create date objects (month - 1 because JavaScript months are 0-based)
+                    const dateA = new Date(yearA, monthA - 1, dayA);
+                    const dateB = new Date(yearB, monthB - 1, dayB);
+                    
+                    return dateB.getTime() - dateA.getTime();
+                })
+            )
         } else {
-            setFilteredData(data)
+            setFilteredData(data
+                .sort((a, b) => {
+                    const [dayA, monthA, yearA] = a.dtemissao.split('/').map(Number);
+                    const [dayB, monthB, yearB] = b.dtemissao.split('/').map(Number);
+                    
+                    const dateA = new Date(yearA, monthA - 1, dayA);
+                    const dateB = new Date(yearB, monthB - 1, dayB);
+                    
+                    return dateB.getTime() - dateA.getTime();
+                })
+            )
         }
         setCurrentPage(1) // Reset para primeira página ao filtrar
     }, [selectedFilial, data])

@@ -1,5 +1,6 @@
 'use client'
 
+import { Roboto } from 'next/font/google'
 import './styles.css'
 import { useState, useEffect, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -47,6 +48,13 @@ import { ExpandableRow } from '@/components/ui/expandable-row'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useMediaQuery } from '@/hooks/use-media-query'
+
+// Initialize the font
+const roboto = Roboto({
+  weight: ['400', '500', '700'],
+  subsets: ['latin'],
+  display: 'swap',
+})
 
 // Move parseDate outside the component
 const parseDate = (dateString: string): Date => {
@@ -171,7 +179,9 @@ export default function DailySales() {
     const [columnVisibility, setColumnVisibility] = useState({})
     const [columnOrder, setColumnOrder] = useState<string[]>([])
     const [showBackToTop, setShowBackToTop] = useState(false)
-    const isMobile = useMediaQuery("(max-width: 768px)")
+    const isMobile = useMediaQuery("(max-width: 1024px)")
+    const [showRightFade, setShowRightFade] = useState(true)
+    const [scrollFade, setScrollFade] = useState({ left: false, right: true })
 
     const columns = useMemo<ColumnDef<DailySale>[]>(() => [
         {
@@ -743,12 +753,22 @@ export default function DailySales() {
         window.scrollTo({ top: 0, behavior: 'smooth' })
     }
 
+    const handleCardsScroll = (e: React.UIEvent<HTMLDivElement>) => {
+        const container = e.currentTarget
+        const isAtEnd = container.scrollLeft + container.clientWidth >= container.scrollWidth - 10 // 10px threshold
+        
+        setScrollFade({
+            right: !isAtEnd,
+            left: isAtEnd // Only show left fade when we're at the end
+        })
+    }
+
     if (isLoading) {
         return <Loading />
     }
 
     return (
-        <div className="space-y-6 min-w-[300px]">
+        <div className={`space-y-6 min-w-[300px] ${roboto.className}`}>
             <div className="flex flex-col gap-2">
                 <div className="flex justify-center items-center flex-wrap gap-x-4">
                     <div className="flex flex-col">
@@ -881,123 +901,146 @@ export default function DailySales() {
             </div>
 
             <div className="overflow-x-auto pb-4 -mx-6 px-6 md:overflow-visible md:-mx-0 md:px-0">
-                <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide xl:justify-center">
-                    <div className="flex gap-4 px-6">
-                        {/* Card Total - Only show if there's data */}
-                        {totalSummary.count > 0 && (
-                            <Card
-                                className={cn(
-                                    "relative overflow-hidden snap-start shrink-0",
-                                    "w-[calc(40vw-1.5rem)] md:w-[200px]"
-                                )}
-                            >
-                                <div className="absolute top-0 right-0 w-24 h-24 -translate-y-8 translate-x-8 opacity-30">
-                                    {totalSummary.margin >= 4 ? (
-                                        <CheckCircle className="h-8 w-8 text-white" />
-                                    ) : (
-                                        <AlertTriangle className="h-8 w-8 text-white" />
-                                    )}
-                                </div>
-                                <CardHeader className="p-4" style={{
-                                    background: totalSummary.margin >= 4 
-                                        ? "linear-gradient(to right, hsl(142.1 76.2% 36.3%), hsl(143.8 71.8% 29.2%))"
-                                        : "linear-gradient(to right, hsl(47.9 95.8% 53.1%), hsl(46 96.2% 48.3%))"
-                                }}>
-                                    <CardTitle className="text-sm flex items-center justify-between text-white">
-                                        TOTAL GERAL
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="p-4 pt-0 space-y-2" style={{
-                                    background: totalSummary.margin >= 4 
-                                        ? "linear-gradient(to right, hsl(142.1 76.2% 36.3%), hsl(143.8 71.8% 29.2%))"
-                                        : "linear-gradient(to right, hsl(47.9 95.8% 53.1%), hsl(46 96.2% 48.3%))"
-                                }}>
-                                    <div className="flex justify-between items-center text-xs text-white">
-                                        <span className="text-white/80">Pedidos</span>
-                                        <span>{totalSummary.count}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center text-xs text-white">
-                                        <span className="text-white/80">Fat.</span>
-                                        <span>{totalSummary.faturamento.toLocaleString('pt-BR', {
-                                            style: 'currency',
-                                            currency: 'BRL'
-                                        })}</span>
-                                    </div>
-                                    <div className="mt-2 p-2 rounded-md bg-white/10">
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-xs font-medium text-white">
-                                                Margem
-                                            </span>
-                                            <span className="text-sm font-bold text-white">
-                                                {totalSummary.margin.toFixed(2)}%
-                                            </span>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        )}
-
-                        {companySummaries.map((summary) => {
-                            const margin = (summary.faturamento - (summary.faturamento * 0.268 + summary.custo)) / summary.faturamento * 100;
-                            const marginStyle = getMarginStyle(margin);
-                            const isSelected = empresaFilter === summary.empresa;
-
-                            return (
+                <div className="relative">
+                    {scrollFade.left && (
+                        <>
+                            <div className="absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-background to-transparent pointer-events-none z-10 xl:hidden" />
+                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground/80 pointer-events-none z-10 animate-pulse-slow xl:hidden">
+                                <ChevronLeft className="h-8 w-8" />
+                            </div>
+                        </>
+                    )}
+                    
+                    {scrollFade.right && (
+                        <>
+                            <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-background to-transparent pointer-events-none z-10 xl:hidden" />
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground/80 pointer-events-none z-10 animate-pulse-slow xl:hidden">
+                                <ChevronRight className="h-8 w-8" />
+                            </div>
+                        </>
+                    )}
+                    
+                    <div 
+                        className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide xl:justify-center"
+                        onScroll={handleCardsScroll}
+                    >
+                        <div className="flex gap-4 px-6">
+                            {/* Card Total - Only show if there's data */}
+                            {totalSummary.count > 0 && (
                                 <Card
-                                    key={summary.empresa}
                                     className={cn(
-                                        "relative overflow-hidden cursor-pointer transition-all duration-200 snap-start shrink-0",
-                                        "w-[calc(40vw-1.5rem)] md:w-[200px]",
-                                        isSelected
-                                            ? "ring-2 ring-primary hover:ring-primary/70"
-                                            : "hover:ring-2 hover:ring-primary/50 opacity-70 hover:opacity-100",
-                                        empresaFilter !== 'all' && !isSelected && "opacity-50"
+                                        "relative overflow-hidden snap-start shrink-0",
+                                        "w-[calc(40vw-1.5rem)] md:w-[200px]"
                                     )}
-                                    onClick={() => handleEmpresaFilter(isSelected ? 'all' : summary.empresa)}
-                                    title={isSelected ? "Pressione ESC para desselecionar" : undefined}
                                 >
-                                    <div className={cn(
-                                        "absolute top-0 right-0 w-24 h-24 -translate-y-8 translate-x-8",
-                                        isSelected ? "opacity-30" : "opacity-20"
-                                    )}>
-                                        {marginStyle.icon}
+                                    <div className="absolute top-0 right-0 w-24 h-24 -translate-y-8 translate-x-8 opacity-30">
+                                        {totalSummary.margin >= 4 ? (
+                                            <CheckCircle className="h-8 w-8 text-white" />
+                                        ) : (
+                                            <AlertTriangle className="h-8 w-8 text-white" />
+                                        )}
                                     </div>
-                                    <CardHeader className="p-4">
-                                        <CardTitle className="text-sm flex items-center justify-between">
-                                            {summary.empresa}
-                                            {isSelected && (
-                                                <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-full">
-                                                    Filtrado
-                                                </span>
-                                            )}
+                                    <CardHeader className="p-4" style={{
+                                        background: totalSummary.margin >= 4 
+                                            ? "linear-gradient(to right, hsl(142.1 76.2% 36.3%), hsl(143.8 71.8% 29.2%))"
+                                            : "linear-gradient(to right, hsl(47.9 95.8% 53.1%), hsl(46 96.2% 48.3%))"
+                                    }}>
+                                        <CardTitle className="text-sm flex items-center justify-between text-white">
+                                            TOTAL GERAL
                                         </CardTitle>
                                     </CardHeader>
-                                    <CardContent className="p-4 pt-0 space-y-2">
-                                        <div className="flex justify-between items-center text-xs">
-                                            <span className="text-muted-foreground">Pedidos</span>
-                                            <span>{summary.count}</span>
+                                    <CardContent className="p-4 pt-0 space-y-2" style={{
+                                        background: totalSummary.margin >= 4 
+                                            ? "linear-gradient(to right, hsl(142.1 76.2% 36.3%), hsl(143.8 71.8% 29.2%))"
+                                            : "linear-gradient(to right, hsl(47.9 95.8% 53.1%), hsl(46 96.2% 48.3%))"
+                                    }}>
+                                        <div className="flex justify-between items-center text-xs text-white">
+                                            <span className="text-white/80">Pedidos</span>
+                                            <span>{totalSummary.count}</span>
                                         </div>
-                                        <div className="flex justify-between items-center text-xs">
-                                            <span className="text-muted-foreground">Fat.</span>
-                                            <span>{summary.faturamento.toLocaleString('pt-BR', {
+                                        <div className="flex justify-between items-center text-xs text-white">
+                                            <span className="text-white/80">Fat.</span>
+                                            <span>{totalSummary.faturamento.toLocaleString('pt-BR', {
                                                 style: 'currency',
                                                 currency: 'BRL'
                                             })}</span>
                                         </div>
-                                        <div className="mt-2 p-2 rounded-md" style={{ background: marginStyle.background }}>
+                                        <div className="mt-2 p-2 rounded-md bg-white/10">
                                             <div className="flex justify-between items-center">
-                                                <span className={cn("text-xs font-medium", marginStyle.textColor)}>
+                                                <span className="text-xs font-medium text-white">
                                                     Margem
                                                 </span>
-                                                <span className={cn("text-sm font-bold", marginStyle.textColor)}>
-                                                    {margin.toFixed(2)}%
+                                                <span className="text-sm font-bold text-white">
+                                                    {totalSummary.margin.toFixed(2)}%
                                                 </span>
                                             </div>
                                         </div>
                                     </CardContent>
                                 </Card>
-                            );
-                        })}
+                            )}
+
+                            {companySummaries.map((summary) => {
+                                const margin = (summary.faturamento - (summary.faturamento * 0.268 + summary.custo)) / summary.faturamento * 100;
+                                const marginStyle = getMarginStyle(margin);
+                                const isSelected = empresaFilter === summary.empresa;
+
+                                return (
+                                    <Card
+                                        key={summary.empresa}
+                                        className={cn(
+                                            "relative overflow-hidden cursor-pointer transition-all duration-200 snap-start shrink-0",
+                                            "w-[calc(40vw-1.5rem)] md:w-[200px]",
+                                            isSelected
+                                                ? "ring-2 ring-primary hover:ring-primary/70"
+                                                : "hover:ring-2 hover:ring-primary/50 opacity-70 hover:opacity-100",
+                                            empresaFilter !== 'all' && !isSelected && "opacity-50"
+                                        )}
+                                        onClick={() => handleEmpresaFilter(isSelected ? 'all' : summary.empresa)}
+                                        title={isSelected ? "Pressione ESC para desselecionar" : undefined}
+                                    >
+                                        <div className={cn(
+                                            "absolute top-0 right-0 w-24 h-24 -translate-y-8 translate-x-8",
+                                            isSelected ? "opacity-30" : "opacity-20"
+                                        )}>
+                                            {marginStyle.icon}
+                                        </div>
+                                        <CardHeader className="p-4">
+                                            <CardTitle className="text-xs flex items-center justify-between">
+                                                {summary.empresa}
+                                                {isSelected && (
+                                                    <span className={`text-[10px] bg-primary/20 text-primary px-2 py-0 rounded-full ${roboto.className}`}>
+                                                        Filtrado
+                                                    </span>
+                                                )}
+                                            </CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="p-4 pt-0 space-y-2">
+                                            <div className="flex justify-between items-center text-xs">
+                                                <span className="text-muted-foreground">Pedidos</span>
+                                                <span>{summary.count}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-xs">
+                                                <span className="text-muted-foreground">Fat.</span>
+                                                <span>{summary.faturamento.toLocaleString('pt-BR', {
+                                                    style: 'currency',
+                                                    currency: 'BRL'
+                                                })}</span>
+                                            </div>
+                                            <div className="mt-2 p-2 rounded-md" style={{ background: marginStyle.background }}>
+                                                <div className="flex justify-between items-center">
+                                                    <span className={cn("text-xs font-medium", marginStyle.textColor)}>
+                                                        Margem
+                                                    </span>
+                                                    <span className={cn("text-sm font-bold", marginStyle.textColor)}>
+                                                        {margin.toFixed(2)}%
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1117,6 +1160,11 @@ export default function DailySales() {
                                                     }
                                                     : undefined
                                             }))}
+                                            sorting={sorting}
+                                            onSort={(field) => {
+                                                const isDesc = sorting[0]?.id === field && !sorting[0]?.desc
+                                                setSorting([{ id: field, desc: isDesc }])
+                                            }}
                                         />
                                     ))}
                                 </div>
@@ -1154,7 +1202,7 @@ export default function DailySales() {
                                         Mostrando {Math.min(
                                             table.getState().pagination.pageSize * table.getState().pagination.pageIndex + 1,
                                             filteredData.length
-                                        )} até{" "}
+                                        )} at{" "}
                                         {Math.min(
                                             table.getState().pagination.pageSize * (table.getState().pagination.pageIndex + 1),
                                             filteredData.length
@@ -1164,13 +1212,13 @@ export default function DailySales() {
                                 </div>
                             </>
                         ) : (
-                            <Table className="[&_tr]:!py-1">
+                            <Table className="[&_tr]:!py-1 font-roboto">
                                 <TableHeader className="sticky top-0 bg-background z-10">
                                     <TableRow className="hover:bg-transparent">
                                         {table.getFlatHeaders().map((header) => (
                                             <TableHead 
                                                 key={header.id}
-                                                className="!py-2"
+                                                className="!py-2 text-xs md:text-sm"
                                             >
                                                 {flexRender(
                                                     header.column.columnDef.header,
@@ -1190,7 +1238,7 @@ export default function DailySales() {
                                                 {row.getVisibleCells().map((cell) => (
                                                     <TableCell 
                                                         key={cell.id}
-                                                        className="!py-1"
+                                                        className="!py-1 text-xs md:text-sm"
                                                     >
                                                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                                     </TableCell>
@@ -1199,7 +1247,7 @@ export default function DailySales() {
                                         ))
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={columns.length} className="h-24 text-center">
+                                            <TableCell colSpan={columns.length} className="h-24 text-center text-xs md:text-sm">
                                                 Nenhum resultado encontrado.
                                             </TableCell>
                                         </TableRow>
