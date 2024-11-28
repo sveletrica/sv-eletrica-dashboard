@@ -37,6 +37,8 @@ import { compressData, decompressData } from '@/lib/utils';
 import { useDebouncedCallback } from 'use-debounce';
 import Fuse from 'fuse.js';
 import { Roboto } from 'next/font/google'
+import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 const roboto = Roboto({
     weight: ['400', '500'],
@@ -87,9 +89,12 @@ const loadSavedColumnOrder = (): string[] => {
 };
 
 export default function Inventory() {
+    const router = useRouter()
+    const searchParams = useSearchParams()
+    
     const [isLoading, setIsLoading] = useState(true)
     const [isRefreshing, setIsRefreshing] = useState(false)
-    const [searchTerm, setSearchTerm] = useState('')
+    const [searchTerm, setSearchTerm] = useState(searchParams.get('q') || '')
     const [data, setData] = useState<InventoryItem[]>([])
     const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
     const [visibleColumns, setVisibleColumns] = useState<Set<ColumnId>>(getDefaultVisibleColumns())
@@ -274,7 +279,7 @@ export default function Inventory() {
         if (data.length > 0) {
             const options = {
                 keys: Array.from(visibleColumns),
-                threshold: 0.0, // Make the match more strict
+                threshold: 0.0,
                 ignoreLocation: true,
                 useExtendedSearch: true,
                 findAllMatches: true,
@@ -287,60 +292,80 @@ export default function Inventory() {
                 lastData: data
             };
             
-            setFilteredData(data);
+            // Initialize filtered data
+            if (searchTerm) {
+                // Trigger initial search if there's a search term
+                debouncedSearch(searchTerm);
+            } else {
+                setFilteredData(data);
+            }
         }
-    }, [data, visibleColumns]);
+    }, [data, visibleColumns, searchTerm]); // Add searchTerm as dependency
 
-    // Update the debounced search function for stricter matching
-    const debouncedSearch = useDebouncedCallback((searchValue: string) => {
-        if (!searchIndexRef.current) return;
+    // Update the debouncedSearch to be memoized with useCallback
+    const debouncedSearch = useCallback(
+        useDebouncedCallback((searchValue: string) => {
+            if (!searchIndexRef.current) return;
 
-        if (!searchValue.trim()) {
-            setFilteredData(data);
-            return;
-        }
+            if (!searchValue.trim()) {
+                setFilteredData(data);
+                return;
+            }
 
-        const searchTerms = searchValue.trim().toLowerCase().split(/\s+/);
-        
-        // First, do a simple filter to check if items contain all search terms
-        const filteredResults = data.filter(item => {
-            const itemString = Array.from(visibleColumns)
-                .map(columnId => {
-                    const value = item[columnId];
-                    if (value === null || value === undefined) return '';
-                    
-                    // Format the value based on column type
-                    if (columnId === 'Atualizacao' || columnId === 'DataInicio' || columnId === 'DataFim') {
-                        if (!value) return '';
-                        return new Date(value).toLocaleString('pt-BR', {
-                            timeZone: 'UTC'
-                        });
-                    }
-                    
-                    if (columnId.startsWith('VlPreco') || columnId === 'PrecoPromo' || columnId === 'PrecoDe') {
-                        return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                    }
-                    
-                    if (columnId.startsWith('QtEstoque') || columnId === 'StkTotal') {
-                        return value.toLocaleString('pt-BR');
-                    }
-                    
-                    return String(value);
-                })
-                .join(' ')
-                .toLowerCase();
+            const searchTerms = searchValue.trim().toLowerCase().split(/\s+/);
+            
+            const filteredResults = data.filter(item => {
+                const itemString = Array.from(visibleColumns)
+                    .map(columnId => {
+                        const value = item[columnId];
+                        if (value === null || value === undefined) return '';
+                        
+                        if (columnId === 'Atualizacao' || columnId === 'DataInicio' || columnId === 'DataFim') {
+                            if (!value) return '';
+                            return new Date(value).toLocaleString('pt-BR', {
+                                timeZone: 'UTC'
+                            });
+                        }
+                        
+                        if (columnId.startsWith('VlPreco') || columnId === 'PrecoPromo' || columnId === 'PrecoDe') {
+                            return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                        }
+                        
+                        if (columnId.startsWith('QtEstoque') || columnId === 'StkTotal') {
+                            return value.toLocaleString('pt-BR');
+                        }
+                        
+                        return String(value);
+                    })
+                    .join(' ')
+                    .toLowerCase();
 
-            // Check if all search terms are present in the item string
-            return searchTerms.every(term => itemString.includes(term));
-        });
+                return searchTerms.every(term => itemString.includes(term));
+            });
 
-        setFilteredData(filteredResults);
-    }, 150);
+            setFilteredData(filteredResults);
+        }, 150),
+        [data, visibleColumns]
+    ); // Add dependencies for useCallback
 
     // Update search term and trigger search
     const handleSearch = (value: string) => {
-        setSearchTerm(value);
-        debouncedSearch(value);
+        // Update local state
+        setSearchTerm(value)
+        
+        // Update URL with search parameter
+        const params = new URLSearchParams(searchParams)
+        if (value) {
+            params.set('q', value)
+        } else {
+            params.delete('q')
+        }
+        
+        // Replace current URL with new search params
+        router.replace(`/inventory?${params.toString()}`)
+        
+        // Trigger search
+        debouncedSearch(value)
     };
 
     // Format cell value for display (move outside component for better performance)
@@ -398,6 +423,22 @@ export default function Inventory() {
             cell: ({ getValue, row }: { getValue: () => any, row: any }) => {
                 const value = getValue()
                 const formattedValue = formatCellValue(value, columnId)
+                
+                // Add special handling for CdChamada column
+                if (columnId === 'CdChamada') {
+                    // Preserve current search query in the product link
+                    const currentParams = new URLSearchParams(searchParams)
+                    const returnUrl = `/inventory?${currentParams.toString()}`
+                    
+                    return (
+                        <Link
+                            href={`/produto/${value.trim()}?returnUrl=${encodeURIComponent(returnUrl)}`}
+                            className="text-blue-500 hover:text-blue-700 underline"
+                        >
+                            {formattedValue}
+                        </Link>
+                    )
+                }
                 
                 if (searchTerm && typeof formattedValue === 'string') {
                     return (

@@ -59,7 +59,7 @@ export function Sidebar() {
                 "min-h-screen h-full bg-card border-r",
                 "fixed lg:sticky top-0 left-0 z-40",
                 "transition-transform duration-300 ease-in-out",
-                "w-64 shrink-0",
+                "w-48 shrink-0",
                 "absolute lg:relative",
                 isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
             )}>

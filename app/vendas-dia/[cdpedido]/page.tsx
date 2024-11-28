@@ -201,11 +201,11 @@ export default function SaleDetails() {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Código</TableHead>
-                                <TableHead>Produto</TableHead>
-                                <TableHead>Grupo</TableHead>
+                                <TableHead className="text-[12px] sm:text-sm">Cód</TableHead>
+                                <TableHead className="text-[12px] sm:text-sm">Produto</TableHead>
+                                <TableHead className="text-[12px] sm:text-sm">Grupo</TableHead>
                                 <TableHead 
-                                    className="text-right cursor-pointer hover:bg-accent/50"
+                                    className="text-[12px] sm:text-sm text-right cursor-pointer hover:bg-accent/50"
                                     onClick={() => {
                                         const newData = [...data].sort((a, b) => {
                                             if (sortConfig.key === 'qtd' && sortConfig.direction === 'asc') {
@@ -225,7 +225,7 @@ export default function SaleDetails() {
                                     </div>
                                 </TableHead>
                                 <TableHead 
-                                    className="text-right cursor-pointer hover:bg-accent/50"
+                                    className="text-[12px] sm:text-sm text-right cursor-pointer hover:bg-accent/50"
                                     onClick={() => {
                                         const newData = [...data].sort((a, b) => {
                                             const aValue = a.vlfaturamento / a.qtbrutaproduto
@@ -247,7 +247,7 @@ export default function SaleDetails() {
                                     </div>
                                 </TableHead>
                                 <TableHead 
-                                    className="text-right cursor-pointer hover:bg-accent/50"
+                                    className="text-[12px] sm:text-sm text-right cursor-pointer hover:bg-accent/50"
                                     onClick={() => {
                                         const newData = [...data].sort((a, b) => {
                                             if (sortConfig.key === 'total' && sortConfig.direction === 'asc') {
@@ -267,7 +267,7 @@ export default function SaleDetails() {
                                     </div>
                                 </TableHead>
                                 <TableHead 
-                                    className="text-right cursor-pointer hover:bg-accent/50"
+                                    className="text-[12px] sm:text-sm text-right cursor-pointer hover:bg-accent/50"
                                     onClick={() => {
                                         const newData = [...data].sort((a, b) => {
                                             if (sortConfig.key === 'cost' && sortConfig.direction === 'asc') {
@@ -287,7 +287,7 @@ export default function SaleDetails() {
                                     </div>
                                 </TableHead>
                                 <TableHead 
-                                    className="text-right cursor-pointer hover:bg-accent/50"
+                                    className="text-[12px] sm:text-sm text-right cursor-pointer hover:bg-accent/50"
                                     onClick={() => {
                                         const newData = [...data].sort((a, b) => {
                                             const aMargin = parseFloat(a.margem)
@@ -328,7 +328,7 @@ export default function SaleDetails() {
                                             {item.cdproduto.trim()}
                                         </Link>
                                     </TableCell>
-                                    <TableCell className="text-xs sm:text-sm">{item.nmproduto}</TableCell>
+                                    <TableCell className="text-xs sm:text-sm min-w-64">{item.nmproduto}</TableCell>
                                     <TableCell className="text-xs sm:text-sm max-w-[100px] sm:max-w-none">
                                         <span className="block truncate sm:text-clip">
                                             {item.nmgrupoproduto}

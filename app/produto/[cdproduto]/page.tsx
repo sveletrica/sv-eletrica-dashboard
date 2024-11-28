@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
@@ -86,21 +86,21 @@ function AnimatedValue({ value, suffix = '', formatter }: {
 const getMarginStyle = (margin: number) => {
     if (margin >= 4) {
         return {
-            background: "bg-green-100",
-            icon: <Check className="h-4 w-4 text-green-600" />,
-            text: "text-green-600"
+            background: "bg-green-100 dark:bg-green-900",
+            icon: <Check className="h-4 w-4 text-green-600 dark:text-green-400" />,
+            text: "text-green-600 dark:text-green-400"
         }
     } else if (margin >= 0) {
         return {
-            background: "bg-yellow-100",
-            icon: <AlertTriangle className="h-4 w-4 text-yellow-600" />,
-            text: "text-yellow-600"
+            background: "bg-yellow-100 dark:bg-yellow-900",
+            icon: <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />,
+            text: "text-yellow-600 dark:text-yellow-400"
         }
     } else {
         return {
-            background: "bg-red-100",
-            icon: <XCircle className="h-4 w-4 text-red-600" />,
-            text: "text-red-600"
+            background: "bg-red-100 dark:bg-red-900",
+            icon: <XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />,
+            text: "text-red-600 dark:text-red-400"
         }
     }
 }
@@ -259,6 +259,7 @@ const SearchContent = ({
 export default function ProductSalesDetails() {
     const router = useRouter()
     const params = useParams()
+    const searchParams = useSearchParams()
     const [data, setData] = useState<ProductSale[]>([])
     const [filteredData, setFilteredData] = useState<ProductSale[]>([])
     const [isLoading, setIsLoading] = useState(true)
@@ -395,6 +396,15 @@ export default function ProductSalesDetails() {
         router.push(`/produto/${product.cdproduto}`)
     }
 
+    const handleBack = () => {
+        const returnUrl = searchParams.get('returnUrl')
+        if (returnUrl) {
+            router.push(returnUrl)
+        } else {
+            router.back()
+        }
+    }
+
     if (isLoading) return <Loading />
 
     if (!data.length) {
@@ -402,7 +412,7 @@ export default function ProductSalesDetails() {
             <div className="space-y-6">
                 <Button
                     variant="ghost"
-                    onClick={() => router.back()}
+                    onClick={handleBack}
                     className="mb-4"
                 >
                     <ArrowLeft className="mr-2 h-4 w-4" />
@@ -462,7 +472,7 @@ export default function ProductSalesDetails() {
         <div className="space-y-2">
             <Button
                 variant="ghost"
-                onClick={() => router.back()}
+                onClick={handleBack}
                 className="mb-0 w-full justify-end"
             >
                 <ArrowLeft className="mr-2 h-4 w-4" />
@@ -644,10 +654,11 @@ export default function ProductSalesDetails() {
                                         </TableCell>
                                         <TableCell className="text-right py-2">
                                             {margin >= 0 ? (
-                                                <div className="inline-flex">
+                                                <div className="flex justify-end">
                                                     <div className={cn(
-                                                        "flex items-center justify-end gap-1 rounded-full px-2 py-1 min-w-[90px]",
-                                                        getMarginStyle(margin).background
+                                                        "inline-flex items-center gap-1 rounded-full px-2 py-1",
+                                                        getMarginStyle(margin).background,
+                                                        getMarginStyle(margin).text
                                                     )}>
                                                         <AnimatedValue 
                                                             value={margin}
@@ -658,10 +669,11 @@ export default function ProductSalesDetails() {
                                                     </div>
                                                 </div>
                                             ) : (
-                                                <div className="inline-flex">
+                                                <div className="flex justify-end">
                                                     <div className={cn(
-                                                        "flex items-center justify-end gap-1 rounded-full px-2 py-1 min-w-[90px]",
-                                                        getMarginStyle(margin).background
+                                                        "inline-flex items-center gap-1 rounded-full px-2 py-1",
+                                                        getMarginStyle(margin).background,
+                                                        getMarginStyle(margin).text
                                                     )}>
                                                         {getMarginStyle(margin).icon}
                                                         <AnimatedValue 
@@ -711,10 +723,11 @@ export default function ProductSalesDetails() {
                                 </TableCell>
                                 <TableCell className="text-right">
                                     {calculateMargin(totals.faturamento, data.reduce((acc, item) => acc + item.vltotalcustoproduto, 0)) >= 0 ? (
-                                        <div className="inline-flex">
+                                        <div className="flex justify-end">
                                             <div className={cn(
-                                                "flex items-center justify-end gap-1 rounded-full px-2 py-1 min-w-[90px]",
-                                                getMarginStyle(calculateMargin(totals.faturamento, data.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).background
+                                                "inline-flex items-center gap-1 rounded-full px-2 py-1",
+                                                getMarginStyle(calculateMargin(totals.faturamento, data.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).background,
+                                                getMarginStyle(calculateMargin(totals.faturamento, data.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).text
                                             )}>
                                                 <AnimatedValue 
                                                     value={calculateMargin(totals.faturamento, data.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))}
@@ -725,10 +738,11 @@ export default function ProductSalesDetails() {
                                             </div>
                                         </div>
                                     ) : (
-                                        <div className="inline-flex">
+                                        <div className="flex justify-end">
                                             <div className={cn(
-                                                "flex items-center justify-end gap-1 rounded-full px-2 py-1 min-w-[90px]",
-                                                getMarginStyle(calculateMargin(totals.faturamento, data.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).background
+                                                "inline-flex items-center gap-1 rounded-full px-2 py-1",
+                                                getMarginStyle(calculateMargin(totals.faturamento, data.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).background,
+                                                getMarginStyle(calculateMargin(totals.faturamento, data.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).text
                                             )}>
                                                 {getMarginStyle(calculateMargin(totals.faturamento, data.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).icon}
                                                 <AnimatedValue 
