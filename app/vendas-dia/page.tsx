@@ -572,26 +572,38 @@ export default function DailySales() {
             return;
         }
 
-        // Normalize dates to noon to avoid timezone issues
-        const normalizedRange = {
-            from: range.from ? new Date(range.from.setHours(12, 0, 0, 0)) : undefined,
-            to: range.to ? new Date(range.to.setHours(12, 0, 0, 0)) : undefined
-        }
-
-        // If selecting a single day or if end date is before start date
-        if (!normalizedRange.to || (normalizedRange.from && normalizedRange.to && normalizedRange.to < normalizedRange.from)) {
-            const newRange = {
-                from: normalizedRange.from,
+        // If clicking on a date that matches the start of an existing range
+        if (range.from && !range.to && dateRange.from && dateRange.to && 
+            isSameDay(range.from, dateRange.from)) {
+            // Collapse to single date
+            setDateRange({
+                from: range.from,
                 to: undefined
-            }
-            setDateRange(newRange)
-            updateSearchParams(normalizedRange.from, searchTerm, empresaFilter, sorting)
+            })
+            updateSearchParams(range.from, searchTerm, empresaFilter, sorting)
             return;
         }
 
         // Normal range selection
-        setDateRange(normalizedRange)
-        updateSearchParams(normalizedRange.from, searchTerm, empresaFilter, sorting, normalizedRange.to)
+        setDateRange(range)
+        updateSearchParams(
+            range.from!, 
+            searchTerm, 
+            empresaFilter, 
+            sorting, 
+            range.to
+        )
+    }
+
+    const handleDayClick: DayClickEventHandler = (day, modifiers) => {
+        if (dateRange.from && dateRange.to && isSameDay(day, dateRange.from)) {
+            // If clicking on start date of a range, collapse to single date
+            setDateRange({
+                from: day,
+                to: undefined
+            })
+            updateSearchParams(day, searchTerm, empresaFilter, sorting)
+        }
     }
 
     const handlePreviousDay = () => {
@@ -855,11 +867,12 @@ export default function DailySales() {
                                 mode="range"
                                 selected={dateRange}
                                 onSelect={handleDateChange}
+                                onDayClick={handleDayClick}
                                 initialFocus
                                 locale={ptBR}
                                 numberOfMonths={1}
-                                disabled={{ after: new Date() }} // Prevent future date selection
-                                defaultMonth={dateRange.from} // Keep the calendar centered on the selected month
+                                disabled={{ after: new Date() }}
+                                defaultMonth={dateRange.from}
                                 className="rounded-md border"
                                 classNames={{
                                     month: "space-y-4",
@@ -873,17 +886,17 @@ export default function DailySales() {
                                     head_row: "flex",
                                     head_cell: "text-muted-foreground rounded-md w-8 font-normal text-[0.8rem]",
                                     row: "flex w-full mt-2",
-                                    cell: "text-center text-sm p-0 relative [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+                                    cell: "text-xs p-0 relative [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
                                     day: cn(
                                         "h-8 w-8 p-0 font-normal aria-selected:opacity-100 hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                                     ),
                                     day_selected:
                                         "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground rounded-md",
                                     day_today: "bg-accent text-accent-foreground",
-                                    day_outside: "text-muted-foreground opacity-50",
-                                    day_disabled: "text-muted-foreground opacity-50",
+                                    day_outside: "text-muted-foreground opacity-30",
+                                    day_disabled: "text-muted-foreground opacity-30",
                                     day_range_middle:
-                                        "aria-selected:bg-accent aria-selected:text-accent-foreground",
+                                        " aria-selected:bg-accent aria-selected:text-accent-foreground",
                                     day_hidden: "invisible",
                                 }}
                             />
