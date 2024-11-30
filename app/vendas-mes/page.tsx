@@ -157,11 +157,11 @@ export default function MonthlySales() {
 
     const formatCurrency = (value: number) => {
         if (value >= 1000000) {
-            return `${(value / 1000000).toFixed(2)}M`
+            return `${(value / 1000000).toFixed(1)}M`
         } else if (value >= 1000) {
             return `${(value / 1000).toFixed(0)}K`
         }
-        return value.toFixed(0)
+        return value.toString()
     }
 
     const calculateMonthTotal = (data: ChartDataEntry[]) => {
@@ -299,15 +299,19 @@ export default function MonthlySales() {
                                 <YAxis
                                     tickLine={false}
                                     axisLine={false}
-                                    tick={{ fill: 'hsl(var(--muted-foreground))' }}
-                                    tickFormatter={(value) => 
-                                        new Intl.NumberFormat('pt-BR', {
-                                            style: 'currency',
-                                            currency: 'BRL',
-                                            notation: 'compact',
-                                            maximumFractionDigits: 1
-                                        }).format(value)
-                                    }
+                                    tick={{ 
+                                        fill: 'hsl(var(--muted-foreground))',
+                                        fontSize: 12
+                                    }}
+                                    tickFormatter={(value) => {
+                                        if (value >= 1000000) {
+                                            return `${(value / 1000000).toFixed(1)}M`
+                                        }
+                                        if (value >= 1000) {
+                                            return `${(value / 1000).toFixed(0)}K`
+                                        }
+                                        return value.toString()
+                                    }}
                                 />
                                 <Tooltip content={<CustomTooltip />} />
                                 {selectedFilials.map((filial, index) => (
