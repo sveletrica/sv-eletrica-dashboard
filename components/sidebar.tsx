@@ -2,11 +2,54 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { Home, BarChart2, Package, Menu, X, ShoppingCart } from 'lucide-react'
+import { Home, BarChart2, Package, Menu, X, ShoppingCart, BarChart3, CalendarDays, TrendingUp } from 'lucide-react'
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Button } from "@/components/ui/button"
 import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
+
+const sidebarLinks = [
+    {
+        href: '/',
+        label: 'Dashboard',
+        icon: Home,
+    },
+    {
+        href: '/inventory',
+        label: 'Estoque',
+        icon: Package,
+    },
+    {
+        href: '/vendas-dia',
+        label: 'Vendas do Dia',
+        icon: CalendarDays,
+    },
+    {
+        href: '/vendas-mes',
+        label: 'Vendas do Mês',
+        icon: TrendingUp,
+    },
+    {
+        href: '/produtos',
+        label: 'Produtos',
+        icon: BarChart3,
+    },
+    {
+        href: '/sobral',
+        label: 'Sobral',
+        icon: BarChart2,
+    },
+    {
+        href: '/maracanau',
+        label: 'Maracanau',
+        icon: BarChart2,
+    },
+    {
+        href: '/caucaia',
+        label: 'Caucaia',
+        icon: BarChart2,
+    },
+] as const
 
 export function Sidebar() {
     const [isOpen, setIsOpen] = useState(false)
@@ -78,55 +121,17 @@ export function Sidebar() {
                     </div>
                 </div>
                 <nav className="p-2">
-                    <Link 
-                        href="/" 
-                        className="flex items-center gap-2 px-4 py-3 text-foreground rounded-md hover:bg-accent hover:text-accent-foreground"
-                        onClick={() => isMobile && setIsOpen(false)}
-                    >
-                        <Home size={20} />
-                        <span>Dashboard</span>
-                    </Link>
-                    <Link 
-                        href="/inventory" 
-                        className="flex items-center gap-2 px-4 py-3 text-foreground rounded-md hover:bg-accent hover:text-accent-foreground"
-                        onClick={() => isMobile && setIsOpen(false)}
-                    >
-                        <Package size={20} />
-                        <span>Estoque</span>
-                    </Link>
-                    <Link 
-                        href="/vendas-dia" 
-                        className="flex items-center gap-2 px-4 py-3 text-foreground rounded-md hover:bg-accent hover:text-accent-foreground"
-                        onClick={() => isMobile && setIsOpen(false)}
-                    >
-                        <ShoppingCart size={20} />
-                        <span>Vendas Dia</span>
-                    </Link>
-                    <div className="px-4 py-3 font-semibold text-muted-foreground text-sm">Lojas</div>
-                    <Link 
-                        href="/sobral" 
-                        className="flex items-center gap-2 px-4 py-2 text-foreground rounded-md hover:bg-accent hover:text-accent-foreground"
-                        onClick={() => isMobile && setIsOpen(false)}
-                    >
-                        <BarChart2 size={20} />
-                        <span>Sobral</span>
-                    </Link>
-                    <Link 
-                        href="/maracanau" 
-                        className="flex items-center gap-2 px-4 py-2 text-foreground rounded-md hover:bg-accent hover:text-accent-foreground"
-                        onClick={() => isMobile && setIsOpen(false)}
-                    >
-                        <BarChart2 size={20} />
-                        <span>Maracanau</span>
-                    </Link>
-                    <Link 
-                        href="/caucaia" 
-                        className="flex items-center gap-2 px-4 py-2 text-foreground rounded-md hover:bg-accent hover:text-accent-foreground"
-                        onClick={() => isMobile && setIsOpen(false)}
-                    >
-                        <BarChart2 size={20} />
-                        <span>Caucaia</span>
-                    </Link>
+                    {sidebarLinks.map((link) => (
+                        <Link 
+                            key={link.href}
+                            href={link.href} 
+                            className="flex items-center gap-2 px-4 py-3 text-foreground rounded-md hover:bg-accent hover:text-accent-foreground"
+                            onClick={() => isMobile && setIsOpen(false)}
+                        >
+                            <link.icon size={20} />
+                            <span>{link.label}</span>
+                        </Link>
+                    ))}
                 </nav>
             </div>
         </>
