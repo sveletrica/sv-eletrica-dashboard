@@ -280,6 +280,18 @@ export default function MonthlySales() {
         return `hsl(${hue}, 85%, 50%)`
     }
 
+    // Add this function to get consistently sorted filials
+    const getSortedFilials = (data: ChartDataEntry[]) => {
+        return Object.keys(data[0] || {})
+            .filter(key => key !== 'date')
+            .map(filial => ({
+                filial,
+                total: calculateFilialTotal(data, filial)
+            }))
+            .sort((a, b) => b.total - a.total)
+            .map(item => item.filial);
+    };
+
     return (
         <div className="space-y-4">
             {error && (
@@ -433,47 +445,41 @@ export default function MonthlySales() {
                                     }}
                                 />
                                 <Tooltip content={<CustomTooltip />} />
-                                {selectedFilials.map((filial, index) => {
-                                    const sortedFilials = Object.keys(chartData[0] || {})
-                                        .filter(key => key !== 'date')
-                                        .map(f => ({
-                                            filial: f,
-                                            total: calculateFilialTotal(chartData, f)
-                                        }))
-                                        .sort((a, b) => b.total - a.total)
-
-                                    const filialIndex = sortedFilials.findIndex(f => f.filial === filial)
-                                    const color = generateFilialColor(filialIndex, sortedFilials.length)
-                                    
-                                    return (
-                                        <Bar
-                                            key={filial}
-                                            dataKey={filial}
-                                            name={filial}
-                                            stackId="a"
-                                            fill={color}
-                                            isAnimationActive={false}
-                                            radius={[4, 4, 0, 0]}
-                                        >
-                                            {index === selectedFilials.length - 1 && (
-                                                <LabelList
-                                                    dataKey={(entry: ChartDataEntry) => {
-                                                        return selectedFilials.reduce((sum, fil) => 
-                                                            sum + (Number(entry[fil]) || 0), 0
-                                                        );
-                                                    }}
-                                                    position="top"
-                                                    offset={20}
-                                                    fill="hsl(var(--foreground))"
-                                                    fontSize={12}
-                                                    formatter={(value: number) => formatCurrency(value)}
-                                                    angle={-90}
-                                                    dx={5}
-                                                />
-                                            )}
-                                        </Bar>
-                                    )
-                                })}
+                                {getSortedFilials(chartData)
+                                    .filter(filial => selectedFilials.includes(filial))
+                                    .map((filial, index, array) => {
+                                        const sortedIndex = getSortedFilials(chartData).indexOf(filial);
+                                        const color = generateFilialColor(sortedIndex, getSortedFilials(chartData).length);
+                                        
+                                        return (
+                                            <Bar
+                                                key={filial}
+                                                dataKey={filial}
+                                                name={filial}
+                                                stackId="a"
+                                                fill={color}
+                                                isAnimationActive={false}
+                                                radius={[4, 4, 4, 4]}
+                                            >
+                                                {index === array.length - 1 && (
+                                                    <LabelList
+                                                        dataKey={(entry: ChartDataEntry) => {
+                                                            return selectedFilials.reduce((sum, fil) => 
+                                                                sum + (Number(entry[fil]) || 0), 0
+                                                            );
+                                                        }}
+                                                        position="top"
+                                                        offset={20}
+                                                        fill="hsl(var(--foreground))"
+                                                        fontSize={12}
+                                                        formatter={(value: number) => formatCurrency(value)}
+                                                        angle={-90}
+                                                        dx={5}
+                                                    />
+                                                )}
+                                            </Bar>
+                                        );
+                                    })}
                             </BarChart>
                         </ResponsiveContainer>
                     </CardContent>
