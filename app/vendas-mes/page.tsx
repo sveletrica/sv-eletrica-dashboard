@@ -11,7 +11,7 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover"
-import { CalendarIcon, RefreshCw } from "lucide-react"
+import { CalendarIcon, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react"
 import { cn } from '@/lib/utils'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Loading from './loading'
@@ -115,7 +115,17 @@ export default function MonthlySales() {
     }, [data]);
 
     const chartData = useMemo(() => {
+        // Return empty array if no data or invalid data structure
+        if (!data.length || !data[0].Detalhes?.length) {
+            return [];
+        }
+
         const dailyTotals = data.reduce((acc, day) => {
+            // Skip if DataVenda is undefined or invalid
+            if (!day.DataVenda) {
+                return acc;
+            }
+
             const date = parseISO(day.DataVenda)
             date.setDate(date.getDate() + 1)
             const formattedDate = format(date, 'dd/MM')
@@ -125,13 +135,17 @@ export default function MonthlySales() {
             }
 
             day.Detalhes.forEach(detail => {
+                // Skip if required properties are missing
+                if (!detail.TotalVendasDia || !detail.NmEmpresaCurtoVenda) {
+                    return;
+                }
                 const value = parseFloat(detail.TotalVendasDia.replace('R$ ', '').replace('.', '').replace(',', '.'))
                 dayData[detail.NmEmpresaCurtoVenda] = value
             })
 
             acc.push(dayData)
             return acc
-        }, [] as any[])
+        }, [] as ChartDataEntry[])
 
         return dailyTotals.sort((a, b) => {
             const [dayA, monthA] = a.date.split('/').map(Number)
@@ -208,6 +222,18 @@ export default function MonthlySales() {
                 throw new Error('Invalid data format received from API')
             }
             
+            const hasNoData = salesData.length === 0 || 
+                (salesData.length === 1 && 
+                 (!salesData[0].Detalhes?.length || 
+                  Object.keys(salesData[0].Detalhes[0]).length === 0))
+
+            if (hasNoData) {
+                console.log('No sales data available for the selected period')
+                setData([])
+                setError('Nenhum dado de vendas disponível para o período selecionado')
+                return
+            }
+            
             console.log('Received data from API:', {
                 records: salesData.length,
                 firstDate: salesData[0]?.DataVenda,
@@ -215,6 +241,7 @@ export default function MonthlySales() {
             })
             
             setData(salesData)
+            setError(null)
             
             if (!isRefreshing) {
                 console.log('Updating cache with new data')
@@ -308,58 +335,92 @@ export default function MonthlySales() {
             .map(item => item.filial);
     };
 
+    const changeMonth = (date: Date, amount: number): Date => {
+        const newDate = new Date(date)
+        newDate.setMonth(newDate.getMonth() + amount)
+        return startOfMonth(newDate)
+    }
+
     return (
         <div className="space-y-4">
             {error && (
-                <div className="bg-destructive/15 text-destructive px-4 py-3 rounded-lg">
-                    {error}
+                <div className="bg-muted rounded-lg p-8 text-center">
+                    <p className="text-muted-foreground">{error}</p>
                 </div>
             )}
             <div className="flex justify-between items-center">
                 <h1 className="text-3xl font-bold">Vendas do Mês</h1>
                 <div className="flex items-center gap-4">
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button
-                                variant="outline"
-                                className={cn(
-                                    "justify-start text-left font-normal",
-                                    !date && "text-muted-foreground"
-                                )}
-                            >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {format(date, "MMMM 'de' yyyy", { locale: ptBR })}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                                mode="single"
-                                selected={date}
-                                onSelect={(newDate) => {
-                                    if (newDate) {
-                                        const monthStart = startOfMonth(newDate)
-                                        console.log('Calendar selection:', {
-                                            selected: format(newDate, 'yyyy-MM-dd'),
-                                            monthStart: format(monthStart, 'yyyy-MM-dd')
-                                        })
-                                        setDate(monthStart)
-                                        router.push(`/vendas-mes?date=${format(monthStart, 'yyyy-MM-dd')}`)
-                                    }
-                                }}
-                                initialFocus
-                                locale={ptBR}
-                                showOutsideDays={false}
-                                ISOWeek
-                                fromMonth={new Date(2024, 0)}
-                                toMonth={new Date()}
-                                defaultMonth={date}
-                                formatters={{
-                                    formatCaption: (date, options) => 
-                                        format(date, "MMMM yyyy", { locale: options?.locale })
-                                }}
-                            />
-                        </PopoverContent>
-                    </Popover>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => {
+                                const newDate = changeMonth(date, -1)
+                                setDate(newDate)
+                                router.push(`/vendas-mes?date=${format(newDate, 'yyyy-MM-dd')}`)
+                            }}
+                            disabled={date <= new Date(2024, 0)} // Disable if before January 2024
+                        >
+                            <ChevronLeft className="h-4 w-4" />
+                        </Button>
+
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    className={cn(
+                                        "justify-start text-left font-normal min-w-[200px]",
+                                        !date && "text-muted-foreground"
+                                    )}
+                                >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {format(date, "MMMM 'de' yyyy", { locale: ptBR })}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                    mode="single"
+                                    selected={date}
+                                    onSelect={(newDate) => {
+                                        if (newDate) {
+                                            const monthStart = startOfMonth(newDate)
+                                            console.log('Calendar selection:', {
+                                                selected: format(newDate, 'yyyy-MM-dd'),
+                                                monthStart: format(monthStart, 'yyyy-MM-dd')
+                                            })
+                                            setDate(monthStart)
+                                            router.push(`/vendas-mes?date=${format(monthStart, 'yyyy-MM-dd')}`)
+                                        }
+                                    }}
+                                    initialFocus
+                                    locale={ptBR}
+                                    showOutsideDays={false}
+                                    ISOWeek
+                                    fromMonth={new Date(2024, 0)}
+                                    toMonth={new Date()}
+                                    defaultMonth={date}
+                                    formatters={{
+                                        formatCaption: (date, options) => 
+                                            format(date, "MMMM yyyy", { locale: options?.locale })
+                                    }}
+                                />
+                            </PopoverContent>
+                        </Popover>
+
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => {
+                                const newDate = changeMonth(date, 1)
+                                setDate(newDate)
+                                router.push(`/vendas-mes?date=${format(newDate, 'yyyy-MM-dd')}`)
+                            }}
+                            disabled={date >= new Date()} // Disable if after current month
+                        >
+                            <ChevronRight className="h-4 w-4" />
+                        </Button>
+                    </div>
 
                     <Button
                         variant="outline"
@@ -381,125 +442,137 @@ export default function MonthlySales() {
                         <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
                             <div className="space-y-1.5">
                                 <CardTitle>Vendas por Filial</CardTitle>
-                                <p className="text-sm text-muted-foreground">
-                                    Total do mês: {new Intl.NumberFormat('pt-BR', {
-                                        style: 'currency',
-                                        currency: 'BRL'
-                                    }).format(calculateMonthTotal(chartData))}
-                                </p>
+                                {data.length > 0 && (
+                                    <p className="text-sm text-muted-foreground">
+                                        Total do mês: {new Intl.NumberFormat('pt-BR', {
+                                            style: 'currency',
+                                            currency: 'BRL'
+                                        }).format(calculateMonthTotal(chartData))}
+                                    </p>
+                                )}
                             </div>
-                            <div className="flex flex-wrap gap-2">
-                                {Object.keys(chartData[0] || {})
-                                    .filter(key => key !== 'date')
-                                    .map(filial => ({
-                                        filial,
-                                        total: calculateFilialTotal(chartData, filial)
-                                    }))
-                                    .sort((a, b) => b.total - a.total)
-                                    .map((item, index, array) => {
-                                        const color = generateFilialColor(index, array.length)
-                                        
-                                        return (
-                                            <Button
-                                                key={item.filial}
-                                                variant={selectedFilials.includes(item.filial) ? "default" : "outline"}
-                                                onClick={() => toggleFilial(item.filial)}
-                                                className="text-xs flex flex-col gap-1 h-auto py-2"
-                                                style={{
-                                                    backgroundColor: selectedFilials.includes(item.filial) ? color : undefined,
-                                                    borderColor: color,
-                                                }}
-                                            >
-                                                <span>{item.filial}</span>
-                                                <span className="text-[10px] opacity-80">
-                                                    {new Intl.NumberFormat('pt-BR', {
-                                                        style: 'currency',
-                                                        currency: 'BRL',
-                                                        notation: 'compact',
-                                                        maximumFractionDigits: 1
-                                                    }).format(item.total)}
-                                                </span>
-                                            </Button>
-                                        )
-                                    })}
-                            </div>
+                            {data.length > 0 && chartData.length > 0 && (
+                                <div className="flex flex-wrap gap-2">
+                                    {Object.keys(chartData[0] || {})
+                                        .filter(key => key !== 'date')
+                                        .map(filial => ({
+                                            filial,
+                                            total: calculateFilialTotal(chartData, filial)
+                                        }))
+                                        .sort((a, b) => b.total - a.total)
+                                        .map((item, index, array) => {
+                                            const color = generateFilialColor(index, array.length)
+                                            
+                                            return (
+                                                <Button
+                                                    key={item.filial}
+                                                    variant={selectedFilials.includes(item.filial) ? "default" : "outline"}
+                                                    onClick={() => toggleFilial(item.filial)}
+                                                    className="text-xs flex flex-col gap-1 h-auto py-2"
+                                                    style={{
+                                                        backgroundColor: selectedFilials.includes(item.filial) ? color : undefined,
+                                                        borderColor: color,
+                                                    }}
+                                                >
+                                                    <span>{item.filial}</span>
+                                                    <span className="text-[10px] opacity-80">
+                                                        {new Intl.NumberFormat('pt-BR', {
+                                                            style: 'currency',
+                                                            currency: 'BRL',
+                                                            notation: 'compact',
+                                                            maximumFractionDigits: 1
+                                                        }).format(item.total)}
+                                                    </span>
+                                                </Button>
+                                            )
+                                        })}
+                                </div>
+                            )}
                         </div>
                     </CardHeader>
                     <CardContent className="overflow-x-auto">
-                        <div className="min-w-[800px]">
-                            <ResponsiveContainer width="100%" height={400}>
-                                <BarChart 
-                                    data={chartData} 
-                                    margin={{ top: 40, right: 30, left: 20, bottom: 5 }}
-                                >
-                                    <CartesianGrid 
-                                        strokeDasharray="3 3" 
-                                        vertical={false}
-                                        stroke="hsl(var(--border))"
-                                    />
-                                    <XAxis
-                                        dataKey="date"
-                                        tickLine={false}
-                                        axisLine={false}
-                                        tick={{ fill: 'hsl(var(--muted-foreground))' }}
-                                        tickFormatter={(value) => value.split('/')[0]}
-                                    />
-                                    <YAxis
-                                        tickLine={false}
-                                        axisLine={false}
-                                        tick={{ 
-                                            fill: 'hsl(var(--muted-foreground))',
-                                            fontSize: 12
-                                        }}
-                                        tickFormatter={(value) => {
-                                            if (value >= 1000000) {
-                                                return `${(value / 1000000).toFixed(1)}M`
-                                            }
-                                            if (value >= 1000) {
-                                                return `${(value / 1000).toFixed(0)}K`
-                                            }
-                                            return value.toString()
-                                        }}
-                                    />
-                                    <Tooltip content={<CustomTooltip />} />
-                                    {getSortedFilials(chartData)
-                                        .filter(filial => selectedFilials.includes(filial))
-                                        .map((filial, index, array) => {
-                                            const sortedIndex = getSortedFilials(chartData).indexOf(filial);
-                                            const color = generateFilialColor(sortedIndex, getSortedFilials(chartData).length);
-                                            
-                                            return (
-                                                <Bar
-                                                    key={filial}
-                                                    dataKey={filial}
-                                                    name={filial}
-                                                    stackId="a"
-                                                    fill={color}
-                                                    isAnimationActive={false}
-                                                    radius={[4, 4, 4, 4]}
-                                                >
-                                                    {index === array.length - 1 && (
-                                                        <LabelList
-                                                            dataKey={(entry: ChartDataEntry) => {
-                                                                return selectedFilials.reduce((sum, fil) => 
-                                                                    sum + (Number(entry[fil]) || 0), 0
-                                                                );
-                                                            }}
-                                                            position="top"
-                                                            offset={20}
-                                                            fill="hsl(var(--foreground))"
-                                                            fontSize={12}
-                                                            formatter={(value: number) => formatCurrency(value)}
-                                                            angle={-90}
-                                                            dx={5}
-                                                        />
-                                                    )}
-                                                </Bar>
-                                            );
-                                        })}
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
+                        {data.length > 0 && chartData.length > 0 ? (
+                            <div className="min-w-[800px]">
+                                <ResponsiveContainer width="100%" height={400}>
+                                    <BarChart 
+                                        data={chartData} 
+                                        margin={{ top: 40, right: 30, left: 20, bottom: 5 }}
+                                    >
+                                        <CartesianGrid 
+                                            strokeDasharray="3 3" 
+                                            vertical={false}
+                                            stroke="hsl(var(--border))"
+                                        />
+                                        <XAxis
+                                            dataKey="date"
+                                            tickLine={false}
+                                            axisLine={false}
+                                            tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                                            tickFormatter={(value) => value.split('/')[0]}
+                                        />
+                                        <YAxis
+                                            tickLine={false}
+                                            axisLine={false}
+                                            tick={{ 
+                                                fill: 'hsl(var(--muted-foreground))',
+                                                fontSize: 12
+                                            }}
+                                            tickFormatter={(value) => {
+                                                if (value >= 1000000) {
+                                                    return `${(value / 1000000).toFixed(1)}M`
+                                                }
+                                                if (value >= 1000) {
+                                                    return `${(value / 1000).toFixed(0)}K`
+                                                }
+                                                return value.toString()
+                                            }}
+                                        />
+                                        <Tooltip content={<CustomTooltip />} />
+                                        {getSortedFilials(chartData)
+                                            .filter(filial => selectedFilials.includes(filial))
+                                            .map((filial, index, array) => {
+                                                const sortedIndex = getSortedFilials(chartData).indexOf(filial);
+                                                const color = generateFilialColor(sortedIndex, getSortedFilials(chartData).length);
+                                                
+                                                return (
+                                                    <Bar
+                                                        key={filial}
+                                                        dataKey={filial}
+                                                        name={filial}
+                                                        stackId="a"
+                                                        fill={color}
+                                                        isAnimationActive={false}
+                                                        radius={[4, 4, 4, 4]}
+                                                    >
+                                                        {index === array.length - 1 && (
+                                                            <LabelList
+                                                                dataKey={(entry: ChartDataEntry) => {
+                                                                    return selectedFilials.reduce((sum, fil) => 
+                                                                        sum + (Number(entry[fil]) || 0), 0
+                                                                    );
+                                                                }}
+                                                                position="top"
+                                                                offset={20}
+                                                                fill="hsl(var(--foreground))"
+                                                                fontSize={12}
+                                                                formatter={(value: number) => formatCurrency(value)}
+                                                                angle={-90}
+                                                                dx={5}
+                                                            />
+                                                        )}
+                                                    </Bar>
+                                                );
+                                            })}
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                        ) : !error && (
+                            <div className="flex items-center justify-center h-[400px]">
+                                <p className="text-muted-foreground">
+                                    Nenhum dado de vendas disponível para o período selecionado
+                                </p>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             </div>
