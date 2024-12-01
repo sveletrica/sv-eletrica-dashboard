@@ -66,7 +66,7 @@ export default function Dashboard() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Quick Overview</CardTitle>
+          <CardTitle>Visão Geral</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground">
