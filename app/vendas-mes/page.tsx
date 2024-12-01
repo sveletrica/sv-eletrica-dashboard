@@ -32,14 +32,6 @@ interface DailySale {
     Detalhes: SaleDetail[]
 }
 
-const filialColors = {
-    'SV BM EXPRESS': 'hsl(0, 85%, 50%)',
-    'SV FILIAL': 'hsl(10, 85%, 50%)',
-    'SV MATRIZ': 'hsl(20, 85%, 50%)',
-    'SV SOBRAL': 'hsl(30, 85%, 50%)',
-    'SV WS EXPRESS': 'hsl(40, 85%, 50%)',
-} as const;
-
 interface ChartDataEntry {
     date: string;
     [key: string]: string | number;
@@ -55,12 +47,23 @@ export default function MonthlySales() {
         const dateParam = searchParams.get('date')
         return dateParam ? new Date(dateParam) : new Date()
     })
-    const [selectedFilials, setSelectedFilials] = useState<string[]>(Object.keys(filialColors))
+    const [selectedFilials, setSelectedFilials] = useState<string[]>(() => {
+        if (data.length && data[0].Detalhes.length) {
+            return data[0].Detalhes.map(detail => detail.NmEmpresaCurtoVenda);
+        }
+        return [];
+    });
     const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
         fetchData()
     }, [date])
+
+    useEffect(() => {
+        if (data.length && data[0].Detalhes.length) {
+            setSelectedFilials(data[0].Detalhes.map(detail => detail.NmEmpresaCurtoVenda));
+        }
+    }, [data]);
 
     const chartData = useMemo(() => {
         const dailyTotals = data.reduce((acc, day) => {
@@ -179,6 +182,12 @@ export default function MonthlySales() {
         );
     };
 
+    const getColorForValue = (value: number, minValue: number, maxValue: number) => {
+        const position = 1 - ((value - minValue) / (maxValue - minValue))
+        const hue = position * 40
+        return `hsl(${hue}, 85%, 50%)`
+    }
+
     return (
         <div className="space-y-4">
             {error && (
@@ -246,35 +255,41 @@ export default function MonthlySales() {
                                 </p>
                             </div>
                             <div className="flex gap-2">
-                                {Object.entries(filialColors)
-                                    .map(([filial, color]) => ({
+                                {Object.keys(chartData[0] || {})
+                                    .filter(key => key !== 'date')
+                                    .map(filial => ({
                                         filial,
-                                        color,
                                         total: calculateFilialTotal(chartData, filial)
                                     }))
                                     .sort((a, b) => b.total - a.total)
-                                    .map(({ filial, color, total }) => (
-                                        <Button
-                                            key={filial}
-                                            variant={selectedFilials.includes(filial) ? "default" : "outline"}
-                                            onClick={() => toggleFilial(filial)}
-                                            className="text-xs flex flex-col gap-1 h-auto py-2"
-                                            style={{
-                                                backgroundColor: selectedFilials.includes(filial) ? color : undefined,
-                                                borderColor: color,
-                                            }}
-                                        >
-                                            <span>{filial}</span>
-                                            <span className="text-[10px] opacity-80">
-                                                {new Intl.NumberFormat('pt-BR', {
-                                                    style: 'currency',
-                                                    currency: 'BRL',
-                                                    notation: 'compact',
-                                                    maximumFractionDigits: 1
-                                                }).format(total)}
-                                            </span>
-                                        </Button>
-                                    ))}
+                                    .map((item, index, array) => {
+                                        const maxTotal = array[0].total
+                                        const minTotal = array[array.length - 1].total
+                                        const color = getColorForValue(item.total, minTotal, maxTotal)
+                                        
+                                        return (
+                                            <Button
+                                                key={item.filial}
+                                                variant={selectedFilials.includes(item.filial) ? "default" : "outline"}
+                                                onClick={() => toggleFilial(item.filial)}
+                                                className="text-xs flex flex-col gap-1 h-auto py-2"
+                                                style={{
+                                                    backgroundColor: selectedFilials.includes(item.filial) ? color : undefined,
+                                                    borderColor: color,
+                                                }}
+                                            >
+                                                <span>{item.filial}</span>
+                                                <span className="text-[10px] opacity-80">
+                                                    {new Intl.NumberFormat('pt-BR', {
+                                                        style: 'currency',
+                                                        currency: 'BRL',
+                                                        notation: 'compact',
+                                                        maximumFractionDigits: 1
+                                                    }).format(item.total)}
+                                                </span>
+                                            </Button>
+                                        )
+                                    })}
                             </div>
                         </div>
                     </CardHeader>
@@ -314,32 +329,39 @@ export default function MonthlySales() {
                                     }}
                                 />
                                 <Tooltip content={<CustomTooltip />} />
-                                {selectedFilials.map((filial, index) => (
-                                    <Bar
-                                        key={filial}
-                                        dataKey={filial}
-                                        name={filial}
-                                        stackId="a"
-                                        fill={filialColors[filial as keyof typeof filialColors]}
-                                        isAnimationActive={false}
-                                        radius={[4, 4, 0, 0]}
-                                    >
-                                        {index === selectedFilials.length - 1 && (
-                                            <LabelList
-                                                dataKey={(entry: ChartDataEntry) => {
-                                                    return selectedFilials.reduce((sum, fil) => 
-                                                        sum + (Number(entry[fil]) || 0), 0
-                                                    );
-                                                }}
-                                                position="top"
-                                                offset={12}
-                                                fill="hsl(var(--foreground))"
-                                                fontSize={12}
-                                                formatter={(value: number) => formatCurrency(value)}
-                                            />
-                                        )}
-                                    </Bar>
-                                ))}
+                                {selectedFilials.map((filial, index) => {
+                                    const total = calculateFilialTotal(chartData, filial)
+                                    const maxTotal = Math.max(...selectedFilials.map(f => calculateFilialTotal(chartData, f)))
+                                    const minTotal = Math.min(...selectedFilials.map(f => calculateFilialTotal(chartData, f)))
+                                    const color = getColorForValue(total, minTotal, maxTotal)
+                                    
+                                    return (
+                                        <Bar
+                                            key={filial}
+                                            dataKey={filial}
+                                            name={filial}
+                                            stackId="a"
+                                            fill={color}
+                                            isAnimationActive={false}
+                                            radius={[4, 4, 0, 0]}
+                                        >
+                                            {index === selectedFilials.length - 1 && (
+                                                <LabelList
+                                                    dataKey={(entry: ChartDataEntry) => {
+                                                        return selectedFilials.reduce((sum, fil) => 
+                                                            sum + (Number(entry[fil]) || 0), 0
+                                                        );
+                                                    }}
+                                                    position="top"
+                                                    offset={12}
+                                                    fill="hsl(var(--foreground))"
+                                                    fontSize={12}
+                                                    formatter={(value: number) => formatCurrency(value)}
+                                                />
+                                            )}
+                                        </Bar>
+                                    )
+                                })}
                             </BarChart>
                         </ResponsiveContainer>
                     </CardContent>
