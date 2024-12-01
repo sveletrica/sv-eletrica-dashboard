@@ -37,6 +37,11 @@ interface ChartDataEntry {
     [key: string]: string | number;
 }
 
+interface DynamicDataEntry {
+    [key: string]: any;
+    date: string;
+}
+
 interface CacheData {
     data: DailySale[];
     timestamp: number;
@@ -44,6 +49,13 @@ interface CacheData {
 
 interface Cache {
     [key: string]: CacheData;
+}
+
+interface ChartConfig {
+    [key: string]: {
+        label: string;
+        color: string;
+    };
 }
 
 export default function MonthlySales() {
@@ -173,12 +185,18 @@ export default function MonthlySales() {
                 date: formattedDate,
             }
 
+            // Calculate total for this day while adding individual filial data
+            let dayTotal = 0;
             day.Detalhes.forEach(detail => {
                 if (!detail.NmEmpresaCurtoVenda) {
                     return;
                 }
                 dayData[detail.NmEmpresaCurtoVenda] = detail.TotalPedidosAtendidos
+                dayTotal += detail.TotalPedidosAtendidos;
             })
+            
+            // Add the total
+            dayData.total = dayTotal;
 
             acc.push(dayData)
             return acc
@@ -382,7 +400,7 @@ export default function MonthlySales() {
     // Add this function to get consistently sorted filials
     const getSortedFilials = (data: ChartDataEntry[]) => {
         return Object.keys(data[0] || {})
-            .filter(key => key !== 'date')
+            .filter(key => key !== 'date' && key !== 'total')
             .map(filial => ({
                 filial,
                 total: calculateFilialTotal(data, filial)
@@ -396,6 +414,16 @@ export default function MonthlySales() {
         newDate.setMonth(newDate.getMonth() + amount)
         return startOfMonth(newDate)
     }
+
+    const generateChartConfig = (filials: string[]): ChartConfig => {
+        return filials.reduce((config, filial, index) => {
+            config[filial] = {
+                label: filial,
+                color: `hsl(var(--chart-${(index % 5) + 1}))`,
+            };
+            return config;
+        }, {} as ChartConfig);
+    };
 
     return (
         <div className="space-y-4">
@@ -650,7 +678,7 @@ export default function MonthlySales() {
                             {data.length > 0 && ordersChartData.length > 0 && (
                                 <div className="flex flex-wrap gap-2">
                                     {Object.keys(ordersChartData[0] || {})
-                                        .filter(key => key !== 'date')
+                                        .filter(key => key !== 'date' && key !== 'total')
                                         .map(filial => ({
                                             filial,
                                             total: ordersChartData.reduce((sum, day) => 
@@ -702,6 +730,7 @@ export default function MonthlySales() {
                                             axisLine={false}
                                             tick={{ fill: 'hsl(var(--muted-foreground))' }}
                                             tickFormatter={(value) => value.split('/')[0]}
+                                            tickMargin={8}
                                         />
                                         <YAxis
                                             tickLine={false}
@@ -711,24 +740,56 @@ export default function MonthlySales() {
                                                 fontSize: 12
                                             }}
                                         />
-                                        <Tooltip content={<OrdersTooltip />} />
+                                        <Tooltip content={<OrdersTooltip />} cursor={false} />
+                                        {/* Add the total line first so it appears behind the other lines */}
+                                        <Line
+                                            key="total"
+                                            type="natural"
+                                            dataKey={(entry) => {
+                                                // Calculate total based on selected filials
+                                                return selectedFilials.reduce((sum, filial) => 
+                                                    sum + (Number(entry[filial]) || 0), 0
+                                                );
+                                            }}
+                                            name="Total"
+                                            stroke="hsl(var(--muted-foreground))"
+                                            strokeWidth={2}
+                                            strokeDasharray="5 5"
+                                            dot={false}
+                                            activeDot={{
+                                                r: 5,
+                                                strokeWidth: 0
+                                            }}
+                                            isAnimationActive={false}
+                                        >
+                                            <LabelList
+                                                dataKey={(entry) => {
+                                                    return selectedFilials.reduce((sum, filial) => 
+                                                        sum + (Number(entry[filial]) || 0), 0
+                                                    );
+                                                }}
+                                                position="top"
+                                                offset={12}
+                                                className="fill-muted-foreground"
+                                                fontSize={12}
+                                            />
+                                        </Line>
+                                        {/* Existing filial lines */}
                                         {getSortedFilials(chartData)
                                             .filter(filial => selectedFilials.includes(filial))
-                                            .map((filial, index, array) => {
-                                                const sortedIndex = getSortedFilials(chartData).indexOf(filial);
-                                                const color = generateFilialColor(sortedIndex, getSortedFilials(chartData).length);
-                                                
+                                            .map((filial, index) => {
+                                                const chartIndex = (index % 5) + 1;
                                                 return (
                                                     <Line
                                                         key={filial}
-                                                        type="monotone"
+                                                        type="natural"
                                                         dataKey={filial}
                                                         name={filial}
-                                                        stroke={color}
+                                                        stroke={`hsl(var(--chart-${chartIndex}))`}
                                                         strokeWidth={2}
                                                         dot={{
                                                             r: 3,
-                                                            fill: color,
+                                                            fill: `hsl(var(--chart-${chartIndex}))`,
                                                             strokeWidth: 0
                                                         }}
                                                         activeDot={{
@@ -736,7 +797,15 @@ export default function MonthlySales() {
                                                             strokeWidth: 0
                                                         }}
                                                         isAnimationActive={false}
-                                                    />
+                                                    >
+                                                        <LabelList
+                                                            dataKey={filial as keyof DynamicDataEntry}
+                                                            position="top"
+                                                            offset={12}
+                                                            className="fill-foreground"
+                                                            fontSize={12}
+                                                        />
+                                                    </Line>
                                                 );
                                             })}
                                     </LineChart>
