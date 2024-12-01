@@ -275,9 +275,8 @@ export default function MonthlySales() {
         );
     };
 
-    const getColorForValue = (value: number, minValue: number, maxValue: number) => {
-        const position = 1 - ((value - minValue) / (maxValue - minValue))
-        const hue = position * 40
+    const generateFilialColor = (index: number, total: number) => {
+        const hue = (index / (total - 1)) * 40
         return `hsl(${hue}, 85%, 50%)`
     }
 
@@ -370,9 +369,7 @@ export default function MonthlySales() {
                                     }))
                                     .sort((a, b) => b.total - a.total)
                                     .map((item, index, array) => {
-                                        const maxTotal = array[0].total
-                                        const minTotal = array[array.length - 1].total
-                                        const color = getColorForValue(item.total, minTotal, maxTotal)
+                                        const color = generateFilialColor(index, array.length)
                                         
                                         return (
                                             <Button
@@ -437,10 +434,16 @@ export default function MonthlySales() {
                                 />
                                 <Tooltip content={<CustomTooltip />} />
                                 {selectedFilials.map((filial, index) => {
-                                    const total = calculateFilialTotal(chartData, filial)
-                                    const maxTotal = Math.max(...selectedFilials.map(f => calculateFilialTotal(chartData, f)))
-                                    const minTotal = Math.min(...selectedFilials.map(f => calculateFilialTotal(chartData, f)))
-                                    const color = getColorForValue(total, minTotal, maxTotal)
+                                    const sortedFilials = Object.keys(chartData[0] || {})
+                                        .filter(key => key !== 'date')
+                                        .map(f => ({
+                                            filial: f,
+                                            total: calculateFilialTotal(chartData, f)
+                                        }))
+                                        .sort((a, b) => b.total - a.total)
+
+                                    const filialIndex = sortedFilials.findIndex(f => f.filial === filial)
+                                    const color = generateFilialColor(filialIndex, sortedFilials.length)
                                     
                                     return (
                                         <Bar
