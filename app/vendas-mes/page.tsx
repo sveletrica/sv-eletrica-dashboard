@@ -432,91 +432,89 @@ export default function MonthlySales() {
                     <p className="text-muted-foreground">{error}</p>
                 </div>
             )}
-            <div className="flex justify-between items-center">
-                <h1 className="text-3xl font-bold">Vendas do Mês</h1>
-                <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
+                <h1 className="text-3xl font-bold text-center sm:text-left">Vendas do Mês</h1>
+                <div className="flex justify-center sm:justify-end">
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => {
+                                    const newDate = changeMonth(date, -1)
+                                    setDate(newDate)
+                                    router.push(`/vendas-mes?date=${format(newDate, 'yyyy-MM-dd')}`)
+                                }}
+                                disabled={date <= new Date(2024, 0)}
+                            >
+                                <ChevronLeft className="h-4 w-4" />
+                            </Button>
+
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        className={cn(
+                                            "justify-start text-left font-normal min-w-[200px]",
+                                            !date && "text-muted-foreground"
+                                        )}
+                                    >
+                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                        {format(date, "MMMM 'de' yyyy", { locale: ptBR })}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar
+                                        mode="single"
+                                        selected={date}
+                                        onSelect={(newDate) => {
+                                            if (newDate) {
+                                                const monthStart = startOfMonth(newDate)
+                                                setDate(monthStart)
+                                                router.push(`/vendas-mes?date=${format(monthStart, 'yyyy-MM-dd')}`)
+                                            }
+                                        }}
+                                        initialFocus
+                                        locale={ptBR}
+                                        showOutsideDays={false}
+                                        ISOWeek
+                                        fromMonth={new Date(2024, 0)}
+                                        toMonth={new Date()}
+                                        defaultMonth={date}
+                                        formatters={{
+                                            formatCaption: (date, options) => 
+                                                format(date, "MMMM yyyy", { locale: options?.locale })
+                                        }}
+                                    />
+                                </PopoverContent>
+                            </Popover>
+
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => {
+                                    const newDate = changeMonth(date, 1)
+                                    setDate(newDate)
+                                    router.push(`/vendas-mes?date=${format(newDate, 'yyyy-MM-dd')}`)
+                                }}
+                                disabled={date >= new Date()}
+                            >
+                                <ChevronRight className="h-4 w-4" />
+                            </Button>
+                        </div>
+
                         <Button
                             variant="outline"
                             size="icon"
-                            onClick={() => {
-                                const newDate = changeMonth(date, -1)
-                                setDate(newDate)
-                                router.push(`/vendas-mes?date=${format(newDate, 'yyyy-MM-dd')}`)
-                            }}
-                            disabled={date <= new Date(2024, 0)} // Disable if before January 2024
+                            onClick={handleRefresh}
+                            disabled={isRefreshing}
                         >
-                            <ChevronLeft className="h-4 w-4" />
-                        </Button>
-
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button
-                                    variant="outline"
-                                    className={cn(
-                                        "justify-start text-left font-normal min-w-[200px]",
-                                        !date && "text-muted-foreground"
-                                    )}
-                                >
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {format(date, "MMMM 'de' yyyy", { locale: ptBR })}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar
-                                    mode="single"
-                                    selected={date}
-                                    onSelect={(newDate) => {
-                                        if (newDate) {
-                                            const monthStart = startOfMonth(newDate)
-                                            console.log('Calendar selection:', {
-                                                selected: format(newDate, 'yyyy-MM-dd'),
-                                                monthStart: format(monthStart, 'yyyy-MM-dd')
-                                            })
-                                            setDate(monthStart)
-                                            router.push(`/vendas-mes?date=${format(monthStart, 'yyyy-MM-dd')}`)
-                                        }
-                                    }}
-                                    initialFocus
-                                    locale={ptBR}
-                                    showOutsideDays={false}
-                                    ISOWeek
-                                    fromMonth={new Date(2024, 0)}
-                                    toMonth={new Date()}
-                                    defaultMonth={date}
-                                    formatters={{
-                                        formatCaption: (date, options) => 
-                                            format(date, "MMMM yyyy", { locale: options?.locale })
-                                    }}
-                                />
-                            </PopoverContent>
-                        </Popover>
-
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => {
-                                const newDate = changeMonth(date, 1)
-                                setDate(newDate)
-                                router.push(`/vendas-mes?date=${format(newDate, 'yyyy-MM-dd')}`)
-                            }}
-                            disabled={date >= new Date()} // Disable if after current month
-                        >
-                            <ChevronRight className="h-4 w-4" />
+                            <RefreshCw className={cn(
+                                "h-4 w-4",
+                                isRefreshing && "animate-spin"
+                            )} />
                         </Button>
                     </div>
-
-                    <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={handleRefresh}
-                        disabled={isRefreshing}
-                    >
-                        <RefreshCw className={cn(
-                            "h-4 w-4",
-                            isRefreshing && "animate-spin"
-                        )} />
-                    </Button>
                 </div>
             </div>
 
