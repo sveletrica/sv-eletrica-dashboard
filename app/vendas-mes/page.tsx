@@ -181,8 +181,24 @@ export default function MonthlySales() {
                 console.log('Cache miss - fetching fresh data')
             }
             
-            console.log('Fetching data from API...')
-            const response = await fetch('https://wh.sveletrica.com/webhook/ios-resumomes')
+            // Calculate the first and last day of the selected month
+            const firstDayOfMonth = startOfMonth(date)
+            const lastDayOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0)
+            
+            const requestBody = {
+                de: format(firstDayOfMonth, 'yyyy-MM-dd'),
+                ate: format(lastDayOfMonth, 'yyyy-MM-dd')
+            }
+            
+            console.log('Fetching data from API with date range:', requestBody)
+            const response = await fetch('https://wh.sveletrica.com/webhook/ios-resumomes-filtro', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestBody)
+            })
+            
             if (!response.ok) {
                 throw new Error(`API error: ${response.status} ${response.statusText}`)
             }
