@@ -353,10 +353,12 @@ export default function MonthlySales() {
                                                         );
                                                     }}
                                                     position="top"
-                                                    offset={12}
+                                                    offset={20}
                                                     fill="hsl(var(--foreground))"
                                                     fontSize={12}
                                                     formatter={(value: number) => formatCurrency(value)}
+                                                    angle={-90}
+                                                    dx={5}
                                                 />
                                             )}
                                         </Bar>
