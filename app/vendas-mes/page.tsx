@@ -636,7 +636,7 @@ export default function MonthlySales() {
                     <CardHeader>
                         <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
                             <div className="space-y-1.5">
-                                <CardTitle>Pedidos Atendidos por Filial</CardTitle>
+                                <CardTitle>Pedidos por Filial</CardTitle>
                                 {data.length > 0 && ordersChartData.length > 0 && (
                                     <p className="text-sm text-muted-foreground">
                                         Total de pedidos: {selectedFilials.reduce((total, filial) => 
