@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { format, parseISO } from 'date-fns'
+import { format, parseISO, startOfMonth } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
@@ -37,6 +37,15 @@ interface ChartDataEntry {
     [key: string]: string | number;
 }
 
+interface CacheData {
+    data: DailySale[];
+    timestamp: number;
+}
+
+interface Cache {
+    [key: string]: CacheData;
+}
+
 export default function MonthlySales() {
     const router = useRouter()
     const searchParams = useSearchParams()
@@ -45,7 +54,10 @@ export default function MonthlySales() {
     const [data, setData] = useState<DailySale[]>([])
     const [date, setDate] = useState<Date>(() => {
         const dateParam = searchParams.get('date')
-        return dateParam ? new Date(dateParam) : new Date()
+        console.log('Initial date param:', dateParam)
+        const initialDate = startOfMonth(dateParam ? new Date(dateParam) : new Date())
+        console.log('Setting initial date to:', format(initialDate, 'yyyy-MM-dd'))
+        return initialDate
     })
     const [selectedFilials, setSelectedFilials] = useState<string[]>(() => {
         if (data.length && data[0].Detalhes.length) {
@@ -54,6 +66,43 @@ export default function MonthlySales() {
         return [];
     });
     const [error, setError] = useState<string | null>(null)
+
+    const CACHE_KEY = 'vendas-mes-cache';
+    const CACHE_DURATION = 60 * 60 * 1000; // 60 minutes in milliseconds
+
+    const getCache = (): Cache => {
+        if (typeof window === 'undefined') return {};
+        const cache = localStorage.getItem(CACHE_KEY);
+        return cache ? JSON.parse(cache) : {};
+    };
+
+    const setCache = (key: string, data: DailySale[]) => {
+        if (typeof window === 'undefined') return;
+        const cache = getCache();
+        cache[key] = {
+            data,
+            timestamp: Date.now(),
+        };
+        localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+    };
+
+    const getCachedData = (key: string): DailySale[] | null => {
+        const cache = getCache();
+        const cachedData = cache[key];
+        
+        if (!cachedData) return null;
+        
+        const isExpired = Date.now() - cachedData.timestamp > CACHE_DURATION;
+        if (isExpired) {
+            // Clean up expired cache
+            const newCache = getCache();
+            delete newCache[key];
+            localStorage.setItem(CACHE_KEY, JSON.stringify(newCache));
+            return null;
+        }
+        
+        return cachedData.data;
+    };
 
     useEffect(() => {
         fetchData()
@@ -93,33 +142,77 @@ export default function MonthlySales() {
     }, [data])
 
     const handleRefresh = async () => {
+        console.log('Refresh clicked - starting refresh...')
         setIsRefreshing(true)
-        await fetchData()
-        setIsRefreshing(false)
+        try {
+            console.log('Calling fetchData with isRefreshing=true')
+            await fetchData()
+            console.log('Refresh completed successfully')
+        } catch (error) {
+            console.error('Error during refresh:', error)
+        } finally {
+            console.log('Resetting isRefreshing state')
+            setIsRefreshing(false)
+        }
     }
 
     const fetchData = async () => {
         try {
+            console.log('fetchData started', { isRefreshing, date: format(date, 'yyyy-MM') })
             setError(null)
-            setIsLoading(true)
             
+            if (!isRefreshing) {
+                setIsLoading(true)
+            }
+            
+            const cacheKey = format(date, 'yyyy-MM')
+            console.log('Cache key:', cacheKey)
+            
+            if (isRefreshing) {
+                console.log('Refresh mode: bypassing cache')
+            } else {
+                const cachedData = getCachedData(cacheKey)
+                if (cachedData) {
+                    console.log('Cache hit - using cached data')
+                    setData(cachedData)
+                    setIsLoading(false)
+                    return
+                }
+                console.log('Cache miss - fetching fresh data')
+            }
+            
+            console.log('Fetching data from API...')
             const response = await fetch('https://wh.sveletrica.com/webhook/ios-resumomes')
             if (!response.ok) {
-                throw new Error('Failed to fetch data')
+                throw new Error(`API error: ${response.status} ${response.statusText}`)
             }
             
             const salesData = await response.json()
             if (!Array.isArray(salesData)) {
-                throw new Error('Invalid data format received')
+                throw new Error('Invalid data format received from API')
             }
             
-            console.log('Received data:', salesData.length, 'records')
+            console.log('Received data from API:', {
+                records: salesData.length,
+                firstDate: salesData[0]?.DataVenda,
+                lastDate: salesData[salesData.length - 1]?.DataVenda
+            })
+            
             setData(salesData)
+            
+            if (!isRefreshing) {
+                console.log('Updating cache with new data')
+                setCache(cacheKey, salesData)
+            }
+            
         } catch (error) {
-            console.error('Error fetching monthly sales:', error)
+            console.error('Error in fetchData:', error)
             setError(error instanceof Error ? error.message : 'Failed to fetch data')
         } finally {
-            setIsLoading(false)
+            if (!isRefreshing) {
+                setIsLoading(false)
+            }
+            console.log('fetchData completed', { isRefreshing })
         }
     }
 
@@ -217,12 +310,26 @@ export default function MonthlySales() {
                                 selected={date}
                                 onSelect={(newDate) => {
                                     if (newDate) {
-                                        setDate(newDate)
-                                        router.push(`/vendas-mes?date=${format(newDate, 'yyyy-MM-dd')}`)
+                                        const monthStart = startOfMonth(newDate)
+                                        console.log('Calendar selection:', {
+                                            selected: format(newDate, 'yyyy-MM-dd'),
+                                            monthStart: format(monthStart, 'yyyy-MM-dd')
+                                        })
+                                        setDate(monthStart)
+                                        router.push(`/vendas-mes?date=${format(monthStart, 'yyyy-MM-dd')}`)
                                     }
                                 }}
                                 initialFocus
                                 locale={ptBR}
+                                showOutsideDays={false}
+                                ISOWeek
+                                fromMonth={new Date(2024, 0)}
+                                toMonth={new Date()}
+                                defaultMonth={date}
+                                formatters={{
+                                    formatCaption: (date, options) => 
+                                        format(date, "MMMM yyyy", { locale: options?.locale })
+                                }}
                             />
                         </PopoverContent>
                     </Popover>
@@ -244,7 +351,7 @@ export default function MonthlySales() {
             <div className="grid gap-4 grid-cols-1">
                 <Card>
                     <CardHeader>
-                        <div className="flex justify-between items-center">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
                             <div className="space-y-1.5">
                                 <CardTitle>Vendas por Filial</CardTitle>
                                 <p className="text-sm text-muted-foreground">
@@ -254,7 +361,7 @@ export default function MonthlySales() {
                                     }).format(calculateMonthTotal(chartData))}
                                 </p>
                             </div>
-                            <div className="flex gap-2">
+                            <div className="flex flex-wrap gap-2">
                                 {Object.keys(chartData[0] || {})
                                     .filter(key => key !== 'date')
                                     .map(filial => ({
