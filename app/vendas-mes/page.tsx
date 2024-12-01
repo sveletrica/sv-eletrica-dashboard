@@ -15,7 +15,7 @@ import { CalendarIcon, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react
 import { cn } from '@/lib/utils'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Loading from './loading'
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, LabelList } from 'recharts'
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, LabelList, Line, LineChart } from 'recharts'
 
 interface SaleDetail {
     MaiorVendaDia: string
@@ -155,6 +155,43 @@ export default function MonthlySales() {
         })
     }, [data])
 
+    const ordersChartData = useMemo(() => {
+        if (!data.length || !data[0].Detalhes?.length) {
+            return [];
+        }
+
+        const dailyOrders = data.reduce((acc, day) => {
+            if (!day.DataVenda) {
+                return acc;
+            }
+
+            const date = parseISO(day.DataVenda)
+            date.setDate(date.getDate() + 1)
+            const formattedDate = format(date, 'dd/MM')
+            
+            const dayData = {
+                date: formattedDate,
+            }
+
+            day.Detalhes.forEach(detail => {
+                if (!detail.NmEmpresaCurtoVenda) {
+                    return;
+                }
+                dayData[detail.NmEmpresaCurtoVenda] = detail.TotalPedidosAtendidos
+            })
+
+            acc.push(dayData)
+            return acc
+        }, [] as ChartDataEntry[])
+
+        return dailyOrders.sort((a, b) => {
+            const [dayA, monthA] = a.date.split('/').map(Number)
+            const [dayB, monthB] = b.date.split('/').map(Number)
+            if (monthA !== monthB) return monthA - monthB
+            return dayA - dayB
+        })
+    }, [data])
+
     const handleRefresh = async () => {
         console.log('Refresh clicked - starting refresh...')
         setIsRefreshing(true)
@@ -287,6 +324,25 @@ export default function MonthlySales() {
                             style: 'currency',
                             currency: 'BRL'
                         }).format(payload.reduce((sum: number, entry: any) => sum + entry.value, 0))}
+                    </p>
+                </div>
+            )
+        }
+        return null
+    }
+
+    const OrdersTooltip = ({ active, payload, label }: any) => {
+        if (active && payload && payload.length) {
+            return (
+                <div className="bg-background border rounded-lg shadow-lg p-2">
+                    <p className="font-medium">Dia {label}</p>
+                    {payload.map((entry: any, index: number) => (
+                        <p key={index} className="text-sm">
+                            {entry.name}: {entry.value} pedidos
+                        </p>
+                    ))}
+                    <p className="text-sm font-medium border-t mt-1 pt-1">
+                        Total: {payload.reduce((sum: number, entry: any) => sum + entry.value, 0)} pedidos
                     </p>
                 </div>
             )
@@ -570,6 +626,126 @@ export default function MonthlySales() {
                             <div className="flex items-center justify-center h-[400px]">
                                 <p className="text-muted-foreground">
                                     Nenhum dado de vendas disponível para o período selecionado
+                                </p>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
+                            <div className="space-y-1.5">
+                                <CardTitle>Pedidos Atendidos por Filial</CardTitle>
+                                {data.length > 0 && ordersChartData.length > 0 && (
+                                    <p className="text-sm text-muted-foreground">
+                                        Total de pedidos: {selectedFilials.reduce((total, filial) => 
+                                            total + ordersChartData.reduce((sum, day) => 
+                                                sum + (Number(day[filial]) || 0), 0
+                                            ), 0
+                                        ).toLocaleString('pt-BR')}
+                                    </p>
+                                )}
+                            </div>
+                            {data.length > 0 && ordersChartData.length > 0 && (
+                                <div className="flex flex-wrap gap-2">
+                                    {Object.keys(ordersChartData[0] || {})
+                                        .filter(key => key !== 'date')
+                                        .map(filial => ({
+                                            filial,
+                                            total: ordersChartData.reduce((sum, day) => 
+                                                sum + (Number(day[filial]) || 0), 0
+                                            )
+                                        }))
+                                        .sort((a, b) => b.total - a.total)
+                                        .map((item, index, array) => {
+                                            const color = generateFilialColor(index, array.length)
+                                            
+                                            return (
+                                                <Button
+                                                    key={item.filial}
+                                                    variant={selectedFilials.includes(item.filial) ? "default" : "outline"}
+                                                    onClick={() => toggleFilial(item.filial)}
+                                                    className="text-xs flex flex-col gap-1 h-auto py-2"
+                                                    style={{
+                                                        backgroundColor: selectedFilials.includes(item.filial) ? color : undefined,
+                                                        borderColor: color,
+                                                    }}
+                                                >
+                                                    <span>{item.filial}</span>
+                                                    <span className="text-[10px] opacity-80">
+                                                        {item.total.toLocaleString('pt-BR')} pedidos
+                                                    </span>
+                                                </Button>
+                                            )
+                                        })}
+                                </div>
+                            )}
+                        </div>
+                    </CardHeader>
+                    <CardContent className="overflow-x-auto">
+                        {data.length > 0 && ordersChartData.length > 0 ? (
+                            <div className="min-w-[800px]">
+                                <ResponsiveContainer width="100%" height={400}>
+                                    <LineChart
+                                        data={ordersChartData}
+                                        margin={{ top: 40, right: 30, left: 20, bottom: 5 }}
+                                    >
+                                        <CartesianGrid
+                                            strokeDasharray="3 3"
+                                            vertical={false}
+                                            stroke="hsl(var(--border))"
+                                        />
+                                        <XAxis
+                                            dataKey="date"
+                                            tickLine={false}
+                                            axisLine={false}
+                                            tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                                            tickFormatter={(value) => value.split('/')[0]}
+                                        />
+                                        <YAxis
+                                            tickLine={false}
+                                            axisLine={false}
+                                            tick={{
+                                                fill: 'hsl(var(--muted-foreground))',
+                                                fontSize: 12
+                                            }}
+                                        />
+                                        <Tooltip content={<OrdersTooltip />} />
+                                        {getSortedFilials(chartData)
+                                            .filter(filial => selectedFilials.includes(filial))
+                                            .map((filial, index, array) => {
+                                                const sortedIndex = getSortedFilials(chartData).indexOf(filial);
+                                                const color = generateFilialColor(sortedIndex, getSortedFilials(chartData).length);
+                                                
+                                                return (
+                                                    <Line
+                                                        key={filial}
+                                                        type="monotone"
+                                                        dataKey={filial}
+                                                        name={filial}
+                                                        stroke={color}
+                                                        strokeWidth={2}
+                                                        dot={{
+                                                            r: 3,
+                                                            fill: color,
+                                                            strokeWidth: 0
+                                                        }}
+                                                        activeDot={{
+                                                            r: 5,
+                                                            strokeWidth: 0
+                                                        }}
+                                                        isAnimationActive={false}
+                                                    />
+                                                );
+                                            })}
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                        ) : !error && (
+                            <div className="flex items-center justify-center h-[400px]">
+                                <p className="text-muted-foreground">
+                                    Nenhum dado de pedidos disponível para o período selecionado
                                 </p>
                             </div>
                         )}
