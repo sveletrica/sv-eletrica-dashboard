@@ -4,8 +4,8 @@ import { MonthlySalesMetrics } from "@/components/monthly-sales-metrics"
 
 const sections = [
   {
-    title: "Inventory Management",
-    description: "Track and manage RFID tagged items, view stock levels, and identify tagging issues.",
+    title: "Estoque",
+    description: "Ferramenta para gerenciar o estoque de produtos.",
     link: "/inventory",
     metrics: [
       { label: "Total Items", value: "2,500" },
@@ -13,18 +13,18 @@ const sections = [
     ]
   },
   {
-    title: "Monthly Sales",
-    description: "Analyze monthly sales performance, trends, and comparisons across stores.",
+    title: "Vendas Mensais",
+    description: "Analise o desempenho mensal de vendas, tendências e comparações entre lojas.",
     link: "/vendas-mes",
     type: "monthly-sales"
   },
   {
-    title: "Daily Sales",
-    description: "Monitor daily sales activities and performance metrics.",
+    title: "Vendas Diárias",
+    description: "Monitore atividades e métricas de desempenho das vendas diárias.",
     link: "/vendas-dia",
     metrics: [
-      { label: "Today", value: "R$ 4.2K" },
-      { label: "vs Yesterday", value: "+5%" },
+      { label: "Hoje", value: "R$ 4.2K" },
+      { label: "vs Ontem", value: "+5%" },
     ]
   }
 ]
@@ -70,9 +70,9 @@ export default function Dashboard() {
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground">
-            Welcome to the SV Elétrica Dashboard. Use the cards above to navigate to detailed views of inventory management, 
-            monthly sales analysis, and daily sales tracking. Each section provides comprehensive tools and visualizations 
-            to help monitor and analyze business performance.
+            Bem-vindo ao Painel da SV Elétrica. Use os cartões acima para navegar para visualizações detalhadas do gerenciamento de estoque,
+            análise de vendas mensais e acompanhamento de vendas diárias. Cada seção fornece ferramentas e visualizações abrangentes
+            para ajudar a monitorar e analisar o desempenho do negócio.
           </p>
         </CardContent>
       </Card>
