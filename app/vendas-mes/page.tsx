@@ -409,79 +409,81 @@ export default function MonthlySales() {
                             </div>
                         </div>
                     </CardHeader>
-                    <CardContent>
-                        <ResponsiveContainer width="100%" height={400}>
-                            <BarChart 
-                                data={chartData} 
-                                margin={{ top: 40, right: 30, left: 20, bottom: 5 }}
-                            >
-                                <CartesianGrid 
-                                    strokeDasharray="3 3" 
-                                    vertical={false}
-                                    stroke="hsl(var(--border))"
-                                />
-                                <XAxis
-                                    dataKey="date"
-                                    tickLine={false}
-                                    axisLine={false}
-                                    tick={{ fill: 'hsl(var(--muted-foreground))' }}
-                                    tickFormatter={(value) => value.split('/')[0]}
-                                />
-                                <YAxis
-                                    tickLine={false}
-                                    axisLine={false}
-                                    tick={{ 
-                                        fill: 'hsl(var(--muted-foreground))',
-                                        fontSize: 12
-                                    }}
-                                    tickFormatter={(value) => {
-                                        if (value >= 1000000) {
-                                            return `${(value / 1000000).toFixed(1)}M`
-                                        }
-                                        if (value >= 1000) {
-                                            return `${(value / 1000).toFixed(0)}K`
-                                        }
-                                        return value.toString()
-                                    }}
-                                />
-                                <Tooltip content={<CustomTooltip />} />
-                                {getSortedFilials(chartData)
-                                    .filter(filial => selectedFilials.includes(filial))
-                                    .map((filial, index, array) => {
-                                        const sortedIndex = getSortedFilials(chartData).indexOf(filial);
-                                        const color = generateFilialColor(sortedIndex, getSortedFilials(chartData).length);
-                                        
-                                        return (
-                                            <Bar
-                                                key={filial}
-                                                dataKey={filial}
-                                                name={filial}
-                                                stackId="a"
-                                                fill={color}
-                                                isAnimationActive={false}
-                                                radius={[4, 4, 4, 4]}
-                                            >
-                                                {index === array.length - 1 && (
-                                                    <LabelList
-                                                        dataKey={(entry: ChartDataEntry) => {
-                                                            return selectedFilials.reduce((sum, fil) => 
-                                                                sum + (Number(entry[fil]) || 0), 0
-                                                            );
-                                                        }}
-                                                        position="top"
-                                                        offset={20}
-                                                        fill="hsl(var(--foreground))"
-                                                        fontSize={12}
-                                                        formatter={(value: number) => formatCurrency(value)}
-                                                        angle={-90}
-                                                        dx={5}
-                                                    />
-                                                )}
-                                            </Bar>
-                                        );
-                                    })}
-                            </BarChart>
-                        </ResponsiveContainer>
+                    <CardContent className="overflow-x-auto">
+                        <div className="min-w-[800px]">
+                            <ResponsiveContainer width="100%" height={400}>
+                                <BarChart 
+                                    data={chartData} 
+                                    margin={{ top: 40, right: 30, left: 20, bottom: 5 }}
+                                >
+                                    <CartesianGrid 
+                                        strokeDasharray="3 3" 
+                                        vertical={false}
+                                        stroke="hsl(var(--border))"
+                                    />
+                                    <XAxis
+                                        dataKey="date"
+                                        tickLine={false}
+                                        axisLine={false}
+                                        tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                                        tickFormatter={(value) => value.split('/')[0]}
+                                    />
+                                    <YAxis
+                                        tickLine={false}
+                                        axisLine={false}
+                                        tick={{ 
+                                            fill: 'hsl(var(--muted-foreground))',
+                                            fontSize: 12
+                                        }}
+                                        tickFormatter={(value) => {
+                                            if (value >= 1000000) {
+                                                return `${(value / 1000000).toFixed(1)}M`
+                                            }
+                                            if (value >= 1000) {
+                                                return `${(value / 1000).toFixed(0)}K`
+                                            }
+                                            return value.toString()
+                                        }}
+                                    />
+                                    <Tooltip content={<CustomTooltip />} />
+                                    {getSortedFilials(chartData)
+                                        .filter(filial => selectedFilials.includes(filial))
+                                        .map((filial, index, array) => {
+                                            const sortedIndex = getSortedFilials(chartData).indexOf(filial);
+                                            const color = generateFilialColor(sortedIndex, getSortedFilials(chartData).length);
+                                            
+                                            return (
+                                                <Bar
+                                                    key={filial}
+                                                    dataKey={filial}
+                                                    name={filial}
+                                                    stackId="a"
+                                                    fill={color}
+                                                    isAnimationActive={false}
+                                                    radius={[4, 4, 4, 4]}
+                                                >
+                                                    {index === array.length - 1 && (
+                                                        <LabelList
+                                                            dataKey={(entry: ChartDataEntry) => {
+                                                                return selectedFilials.reduce((sum, fil) => 
+                                                                    sum + (Number(entry[fil]) || 0), 0
+                                                                );
+                                                            }}
+                                                            position="top"
+                                                            offset={20}
+                                                            fill="hsl(var(--foreground))"
+                                                            fontSize={12}
+                                                            formatter={(value: number) => formatCurrency(value)}
+                                                            angle={-90}
+                                                            dx={5}
+                                                        />
+                                                    )}
+                                                </Bar>
+                                            );
+                                        })}
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
                     </CardContent>
                 </Card>
             </div>
