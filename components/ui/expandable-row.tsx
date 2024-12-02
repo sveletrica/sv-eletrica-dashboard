@@ -5,6 +5,7 @@ import { DailySale } from '@/types/sales'
 import { Table, TableBody, TableCell, TableRow } from './table'
 import Link from 'next/link'
 import { SortingState } from '@tanstack/react-table'
+import { useRouter } from 'next/navigation'
 
 interface ExpandableRowProps {
   row: DailySale
@@ -19,6 +20,7 @@ interface ExpandableRowProps {
 
 export function ExpandableRow({ row, columns, sorting, onSort }: ExpandableRowProps) {
   const [isExpanded, setIsExpanded] = useState(false)
+  const router = useRouter()
 
   const getSortDirection = (field: string) => {
     if (!sorting?.length) return undefined
@@ -110,9 +112,12 @@ export function ExpandableRow({ row, columns, sorting, onSort }: ExpandableRowPr
                 >
                   {row.cdpedido}
                 </Link>
-                <span className="text-xs md:text-sm text-muted-foreground">
+                <Link
+                  href={`/cliente/${encodeURIComponent(row.nmpessoa)}?returnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`}
+                  className="text-blue-500 hover:text-blue-700 underline text-xs md:text-sm"
+                >
                   {truncateText(row.nmpessoa, 30)}
-                </span>
+                </Link>
               </div>
             </TableCell>
             <TableCell className="text-right p-0">

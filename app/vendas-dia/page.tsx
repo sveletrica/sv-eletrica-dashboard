@@ -217,6 +217,14 @@ export default function DailySales() {
         {
             accessorKey: 'nmpessoa',
             header: "Cliente",
+            cell: ({ row }) => (
+                <Link
+                    href={`/cliente/${encodeURIComponent(row.original.nmpessoa)}?returnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`}
+                    className="text-blue-500 hover:text-blue-700 underline"
+                >
+                    {row.original.nmpessoa}
+                </Link>
+            ),
         },
         {
             accessorKey: 'nmrepresentantevenda',

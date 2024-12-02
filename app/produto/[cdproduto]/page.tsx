@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { Roboto } from 'next/font/google'
 import Link from 'next/link'
+import { SortableColumnProps, SortDirection } from "@/components/ui/table"
 
 interface ProductSale {
     cdpedido: string
@@ -256,6 +257,31 @@ const SearchContent = ({
     )
 }
 
+type SortableColumn = 'dtemissao' | 'cdpedido' | 'nrdocumento' | 'nmpessoa' | 'tppessoa' | 'nmempresacurtovenda' | 'qtbrutaproduto' | 'vlfaturamento' | 'vltotalcustoproduto' | 'margem'
+
+// Add these constants at the top of the file, after the imports
+const SORT_STORAGE_KEY = 'product_table_sort'
+
+// Add these helper functions
+const getStoredSortConfig = (): SortableColumnProps | null => {
+    if (typeof window === 'undefined') return null
+    
+    const stored = localStorage.getItem(SORT_STORAGE_KEY)
+    if (!stored) return null
+
+    try {
+        return JSON.parse(stored)
+    } catch (error) {
+        console.error('Error parsing stored sort config:', error)
+        return null
+    }
+}
+
+const storeSortConfig = (config: SortableColumnProps) => {
+    if (typeof window === 'undefined') return
+    localStorage.setItem(SORT_STORAGE_KEY, JSON.stringify(config))
+}
+
 export default function ProductSalesDetails() {
     const router = useRouter()
     const params = useParams()
@@ -275,6 +301,13 @@ export default function ProductSalesDetails() {
     const [searchQuery, setSearchQuery] = useState('')
     const [debouncedSearchQuery] = useDebounce(searchQuery, 300)
     const isMobile = useMediaQuery("(max-width: 1024px)")
+    const [sortConfig, setSortConfig] = useState<SortableColumnProps>(() => {
+        const stored = getStoredSortConfig()
+        return stored || {
+            column: 'dtemissao',
+            direction: 'desc'
+        }
+    })
 
     useEffect(() => {
         const fetchData = async () => {
@@ -304,36 +337,42 @@ export default function ProductSalesDetails() {
     }, [params])
 
     useEffect(() => {
-        if (selectedFilial) {
-            setFilteredData(data
-                .filter(item => item.nmempresacurtovenda === selectedFilial)
-                .sort((a, b) => {
-                    // Split the date string into day, month, year
-                    const [dayA, monthA, yearA] = a.dtemissao.split('/').map(Number);
-                    const [dayB, monthB, yearB] = b.dtemissao.split('/').map(Number);
-                    
-                    // Create date objects (month - 1 because JavaScript months are 0-based)
-                    const dateA = new Date(yearA, monthA - 1, dayA);
-                    const dateB = new Date(yearB, monthB - 1, dayB);
-                    
-                    return dateB.getTime() - dateA.getTime();
-                })
-            )
-        } else {
-            setFilteredData(data
-                .sort((a, b) => {
-                    const [dayA, monthA, yearA] = a.dtemissao.split('/').map(Number);
-                    const [dayB, monthB, yearB] = b.dtemissao.split('/').map(Number);
-                    
-                    const dateA = new Date(yearA, monthA - 1, dayA);
-                    const dateB = new Date(yearB, monthB - 1, dayB);
-                    
-                    return dateB.getTime() - dateA.getTime();
-                })
-            )
+        let sorted = [...data] as SortableProductSale[]
+        
+        if (sortConfig.direction) {
+            sorted.sort((a, b) => {
+                if (sortConfig.column === 'dtemissao') {
+                    const [dayA, monthA, yearA] = a.dtemissao.split('/').map(Number)
+                    const [dayB, monthB, yearB] = b.dtemissao.split('/').map(Number)
+                    const dateA = new Date(yearA, monthA - 1, dayA)
+                    const dateB = new Date(yearB, monthB - 1, dayB)
+                    return sortConfig.direction === 'asc'
+                        ? dateA.getTime() - dateB.getTime()
+                        : dateB.getTime() - dateA.getTime()
+                }
+
+                if (sortConfig.column === 'qtbrutaproduto' || sortConfig.column === 'vlfaturamento' || sortConfig.column === 'vltotalcustoproduto') {
+                    return sortConfig.direction === 'asc'
+                        ? Number(a[sortConfig.column]) - Number(b[sortConfig.column])
+                        : Number(b[sortConfig.column]) - Number(a[sortConfig.column])
+                }
+
+                const compareA = String(a[sortConfig.column]).toLowerCase()
+                const compareB = String(b[sortConfig.column]).toLowerCase()
+
+                return sortConfig.direction === 'asc'
+                    ? compareA.localeCompare(compareB)
+                    : compareB.localeCompare(compareA)
+            })
         }
-        setCurrentPage(1) // Reset para primeira página ao filtrar
-    }, [selectedFilial, data])
+
+        if (selectedFilial) {
+            sorted = sorted.filter(item => item.nmempresacurtovenda === selectedFilial)
+        }
+
+        setFilteredData(sorted)
+        setCurrentPage(1)
+    }, [selectedFilial, data, sortConfig])
 
     useEffect(() => {
         // Set initial product code when data is loaded
@@ -403,6 +442,23 @@ export default function ProductSalesDetails() {
         } else {
             router.back()
         }
+    }
+
+    const handleSort = (column: SortableColumn) => {
+        setSortConfig(prev => {
+            const newConfig = {
+                column,
+                direction: prev.column === column
+                    ? prev.direction === 'asc'
+                        ? 'desc'
+                        : prev.direction === 'desc'
+                            ? null
+                            : 'asc'
+                    : 'asc'
+            }
+            storeSortConfig(newConfig)
+            return newConfig
+        })
     }
 
     if (isLoading) return <Loading />
@@ -792,16 +848,80 @@ export default function ProductSalesDetails() {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Data</TableHead>
-                                <TableHead>Pedido</TableHead>
-                                <TableHead>Documento</TableHead>
-                                <TableHead>Cliente</TableHead>
-                                <TableHead>Tipo</TableHead>
-                                <TableHead>Filial</TableHead>
-                                <TableHead className="text-right">Qtd</TableHead>
-                                <TableHead className="text-right">Faturamento</TableHead>
-                                <TableHead className="text-right">Custo</TableHead>
-                                <TableHead className="text-right">Margem</TableHead>
+                                <TableHead 
+                                    sortable 
+                                    sortDirection={sortConfig.column === 'dtemissao' ? sortConfig.direction : null}
+                                    onSort={() => handleSort('dtemissao')}
+                                >
+                                    Data
+                                </TableHead>
+                                <TableHead 
+                                    sortable 
+                                    sortDirection={sortConfig.column === 'cdpedido' ? sortConfig.direction : null}
+                                    onSort={() => handleSort('cdpedido')}
+                                >
+                                    Pedido
+                                </TableHead>
+                                <TableHead 
+                                    sortable 
+                                    sortDirection={sortConfig.column === 'nrdocumento' ? sortConfig.direction : null}
+                                    onSort={() => handleSort('nrdocumento')}
+                                >
+                                    Documento
+                                </TableHead>
+                                <TableHead 
+                                    sortable 
+                                    sortDirection={sortConfig.column === 'nmpessoa' ? sortConfig.direction : null}
+                                    onSort={() => handleSort('nmpessoa')}
+                                >
+                                    Cliente
+                                </TableHead>
+                                <TableHead 
+                                    sortable 
+                                    sortDirection={sortConfig.column === 'tppessoa' ? sortConfig.direction : null}
+                                    onSort={() => handleSort('tppessoa')}
+                                >
+                                    Tipo
+                                </TableHead>
+                                <TableHead 
+                                    sortable 
+                                    sortDirection={sortConfig.column === 'nmempresacurtovenda' ? sortConfig.direction : null}
+                                    onSort={() => handleSort('nmempresacurtovenda')}
+                                >
+                                    Filial
+                                </TableHead>
+                                <TableHead 
+                                    sortable 
+                                    sortDirection={sortConfig.column === 'qtbrutaproduto' ? sortConfig.direction : null}
+                                    onSort={() => handleSort('qtbrutaproduto')}
+                                    className="text-right"
+                                >
+                                    Qtd
+                                </TableHead>
+                                <TableHead 
+                                    sortable 
+                                    sortDirection={sortConfig.column === 'vlfaturamento' ? sortConfig.direction : null}
+                                    onSort={() => handleSort('vlfaturamento')}
+                                    className="text-right"
+                                >
+                                    Faturamento
+                                </TableHead>
+                                <TableHead 
+                                    sortable 
+                                    sortDirection={sortConfig.column === 'vltotalcustoproduto' ? sortConfig.direction : null}
+                                    onSort={() => handleSort('vltotalcustoproduto')}
+                                    className="text-right"
+                                >
+                                    Custo
+                                </TableHead>
+                                <TableHead 
+                                    sortable 
+                                    sortDirection={sortConfig.column === 'margem' ? sortConfig.direction : null}
+                                    onSort={() => handleSort('margem')}
+                                    className="text-right"
+                                >
+                                    Margem
+                                </TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody className={cn(roboto.className, "text-xs sm:text-sm")}>
