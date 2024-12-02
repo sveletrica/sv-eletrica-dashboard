@@ -1,0 +1,21 @@
+@media print {
+    /* Ensure table headers repeat on every page */
+    thead {
+        display: table-header-group;
+    }
+
+    /* Avoid breaking inside rows */
+    tr {
+        page-break-inside: avoid;
+    }
+
+    /* Force page breaks before certain elements if needed */
+    .page-break-before {
+        page-break-before: always;
+    }
+
+    /* Prevent orphaned headers or footers */
+    .print-together {
+        page-break-inside: avoid;
+    }
+} 

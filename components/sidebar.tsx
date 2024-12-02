@@ -7,6 +7,7 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import { Button } from "@/components/ui/button"
 import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
+import { usePathname } from 'next/navigation'
 
 const sidebarLinks = [
     {
@@ -54,6 +55,11 @@ const sidebarLinks = [
 export function Sidebar() {
     const [isOpen, setIsOpen] = useState(false)
     const [isMobile, setIsMobile] = useState(false)
+    const pathname = usePathname()
+
+    if (pathname === '/quotation/print') {
+        return null
+    }
 
     useEffect(() => {
         const checkIsMobile = () => {

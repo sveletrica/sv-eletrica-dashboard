@@ -5,12 +5,13 @@ import { Sidebar } from "@/components/sidebar"
 import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from '@/components/providers/auth-provider'
 import { cn } from '@/lib/utils'
+import { Toaster } from 'sonner'
+import { headers } from 'next/headers'
 
 const sora = Sora({
   subsets: ['latin'],
-  // Define all the weights we'll use
   weight: ['300', '400', '500', '600', '700'],
-  variable: '--font-sora', // This allows us to reference it in Tailwind
+  variable: '--font-sora',
 })
 
 const roboto = Roboto({
@@ -27,41 +28,63 @@ export const metadata: Metadata = {
   },
 }
 
-export default function RootLayout({
+export const shouldApplyLayout = (pathname: string) => {
+  return !pathname.startsWith('/quotation/print')
+}
+
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const headersList = await headers()
+  const pathname = headersList.get('x-pathname') || ''
+  const isPrintRoute = pathname.includes('/quotation/print')
+
   return (
-    <html lang="en" suppressHydrationWarning className={cn(
-      "min-h-screen bg-background font-sans antialiased",
-      sora.variable,
-      roboto.variable
-    )}>
-      <head>
-        <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
-      </head>
-      <body className={cn(
-        "min-h-screen bg-background font-sans antialiased",
+    <html 
+      lang="pt-BR" 
+      suppressHydrationWarning
+      className={cn(
         sora.variable,
         roboto.variable
-      )}>
+      )}
+    >
+      <head>
+        <meta name="color-scheme" content="light dark" />
+      </head>
+      <body 
+        suppressHydrationWarning
+        className={cn(
+          "min-h-screen bg-background font-sans antialiased",
+          sora.variable,
+          roboto.variable
+        )}
+      >
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
           enableSystem
+          disableTransitionOnChange
         >
           <AuthProvider>
-            <div className="flex min-h-screen relative">
-              <Sidebar />
-              <div className="flex-1 flex flex-col min-h-screen w-full">
-                <main className="flex-1 p-4 md:p-6 bg-background">
-                  {children}
-                </main>
+            {isPrintRoute ? (
+              <main className="min-h-screen bg-white print:bg-transparent">
+                {children}
+              </main>
+            ) : (
+              <div className="flex min-h-screen relative">
+                <Sidebar />
+                <div className="flex-1 flex flex-col min-h-screen w-full">
+                  <main className="flex-1 p-4 md:p-6 bg-background">
+                    {children}
+                  </main>
+                </div>
               </div>
-            </div>
+            )}
           </AuthProvider>
         </ThemeProvider>
+        <Toaster richColors position="top-right" />
       </body>
     </html>
   )

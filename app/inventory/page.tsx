@@ -39,6 +39,20 @@ import Fuse from 'fuse.js';
 import { Roboto } from 'next/font/google'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
+import {
+    Sheet,
+    SheetContent,
+    SheetHeader,
+    SheetTitle,
+    SheetTrigger,
+    SheetFooter,
+    SheetDescription,
+} from "@/components/ui/sheet"
+import { ShoppingCart } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Label } from "@/components/ui/label"
+import { X } from 'lucide-react'
 
 const roboto = Roboto({
     weight: ['400', '500'],
@@ -48,6 +62,9 @@ const roboto = Roboto({
 
 const CACHE_KEY = 'inventoryData'
 const CACHE_DURATION = 24 * 60 * 60 * 1000 // 24 hours in milliseconds
+const STOCK_FILTERS_KEY = 'inventoryStockFilters'
+const SORTING_STATE_KEY = 'inventorySortingState'
+const PAGE_INDEX_KEY = 'inventoryPageIndex'
 
 interface CachedData {
     items: InventoryItem[]
@@ -57,6 +74,11 @@ interface CachedData {
 interface SearchIndex {
     fuse: Fuse<InventoryItem>;
     lastData: InventoryItem[];
+}
+
+interface OrderItem {
+    product: InventoryItem;
+    quantity: number;
 }
 
 function getDefaultVisibleColumns(): Set<ColumnId> {
@@ -88,6 +110,69 @@ const loadSavedColumnOrder = (): string[] => {
     }
 };
 
+// Update the initial stockFilters state to load from localStorage
+const getInitialStockFilters = () => {
+    if (typeof window === 'undefined') return {
+        Empresa1: false,
+        Empresa4: false,
+        Empresa12: false,
+        Empresa59: false,
+        Empresa13: false,
+        Empresa15: false,
+        Empresa17: false,
+    }
+    
+    try {
+        const saved = localStorage.getItem(STOCK_FILTERS_KEY)
+        return saved ? JSON.parse(saved) : {
+            Empresa1: false,
+            Empresa4: false,
+            Empresa12: false,
+            Empresa59: false,
+            Empresa13: false,
+            Empresa15: false,
+            Empresa17: false,
+        }
+    } catch (e) {
+        console.error('Failed to load stock filters:', e)
+        return {
+            Empresa1: false,
+            Empresa4: false,
+            Empresa12: false,
+            Empresa59: false,
+            Empresa13: false,
+            Empresa15: false,
+            Empresa17: false,
+        }
+    }
+}
+
+// Add this function to load saved sorting state
+const getInitialSortingState = (): SortingState => {
+    if (typeof window === 'undefined') return []
+    
+    try {
+        const saved = localStorage.getItem(SORTING_STATE_KEY)
+        return saved ? JSON.parse(saved) : []
+    } catch (e) {
+        console.error('Failed to load sorting state:', e)
+        return []
+    }
+}
+
+// Add this function near the other initial state loading functions
+const getInitialPageIndex = () => {
+    if (typeof window === 'undefined') return 0
+    
+    try {
+        const saved = localStorage.getItem(PAGE_INDEX_KEY)
+        return saved ? parseInt(saved, 10) : 0
+    } catch (e) {
+        console.error('Failed to load page index:', e)
+        return 0
+    }
+}
+
 export default function Inventory() {
     const router = useRouter()
     const searchParams = useSearchParams()
@@ -100,14 +185,22 @@ export default function Inventory() {
     const [visibleColumns, setVisibleColumns] = useState<Set<ColumnId>>(getDefaultVisibleColumns())
     const [error, setError] = useState<string | null>(null)
     const [pageSize] = useState(40)
-    const [pageIndex, setPageIndex] = useState(0)
+    const [pageIndex, setPageIndex] = useState(getInitialPageIndex())
     const [columnOrder, setColumnOrder] = useState<string[]>(loadSavedColumnOrder())
     const [columnSizing, setColumnSizing] = useState<Record<string, number>>({})
     const [columnResizeMode] = useState<ColumnResizeMode>('onChange')
-    const [sorting, setSorting] = useState<SortingState>([])
+    const [sorting, setSorting] = useState<SortingState>(getInitialSortingState())
     const [searchTerms, setSearchTerms] = useState<string[]>([])
     const [filteredData, setFilteredData] = useState<InventoryItem[]>([])
     const searchIndexRef = useRef<SearchIndex | null>(null);
+    const [orderItems, setOrderItems] = useState<OrderItem[]>([])
+    const [sheetOpen, setSheetOpen] = useState(false)
+    const [stockFilters, setStockFilters] = useState<Record<string, boolean>>(getInitialStockFilters())
+
+    // Add this effect to save stock filters when they change
+    useEffect(() => {
+        localStorage.setItem(STOCK_FILTERS_KEY, JSON.stringify(stockFilters))
+    }, [stockFilters])
 
     // Initialize visible columns and column order from localStorage
     useEffect(() => {
@@ -274,7 +367,7 @@ export default function Inventory() {
         await fetchInventoryData(true)
     }
 
-    // Initialize search index when data changes
+    // Replace the existing useEffect that handles search/filtering with this updated version
     useEffect(() => {
         if (data.length > 0) {
             const options = {
@@ -292,61 +385,108 @@ export default function Inventory() {
                 lastData: data
             };
             
-            // Initialize filtered data
-            if (searchTerm) {
-                // Trigger initial search if there's a search term
-                debouncedSearch(searchTerm);
-            } else {
-                setFilteredData(data);
-            }
-        }
-    }, [data, visibleColumns, searchTerm]); // Add searchTerm as dependency
+            // Apply filters in sequence
+            let filtered = [...data]; // Create a new array to avoid mutating original data
 
-    // Update the debouncedSearch to be memoized with useCallback
+            // 1. Apply stock filters first
+            filtered = filtered.filter(item => {
+                return Object.entries(stockFilters).every(([empresa, isActive]) => {
+                    if (!isActive) return true;
+                    const stockKey = `QtEstoque_${empresa}` as keyof InventoryItem;
+                    return (item[stockKey] as number) > 0;
+                });
+            });
+
+            // 2. Then apply search term filter on the already stock-filtered data
+            if (searchTerm) {
+                const searchTerms = searchTerm.trim().toLowerCase().split(/\s+/);
+                filtered = filtered.filter(item => {
+                    const itemString = Array.from(visibleColumns)
+                        .map(columnId => {
+                            const value = item[columnId];
+                            if (value === null || value === undefined) return '';
+                            
+                            if (columnId === 'Atualizacao' || columnId === 'DataInicio' || columnId === 'DataFim') {
+                                if (!value) return '';
+                                return new Date(value).toLocaleString('pt-BR', {
+                                    timeZone: 'UTC'
+                                });
+                            }
+                            
+                            if (columnId.startsWith('VlPreco') || columnId === 'PrecoPromo' || columnId === 'PrecoDe') {
+                                return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                            }
+                            
+                            if (columnId.startsWith('QtEstoque') || columnId === 'StkTotal') {
+                                return value.toLocaleString('pt-BR');
+                            }
+                            
+                            return String(value);
+                        })
+                        .join(' ')
+                        .toLowerCase();
+
+                    return searchTerms.every(term => itemString.includes(term));
+                });
+            }
+
+            setFilteredData(filtered);
+        }
+    }, [data, visibleColumns, searchTerm, stockFilters]);
+
+    // Also update the debouncedSearch callback to maintain the stock filters
     const debouncedSearch = useCallback(
         useDebouncedCallback((searchValue: string) => {
             if (!searchIndexRef.current) return;
 
-            if (!searchValue.trim()) {
-                setFilteredData(data);
-                return;
-            }
+            let filtered = [...data];
 
-            const searchTerms = searchValue.trim().toLowerCase().split(/\s+/);
-            
-            const filteredResults = data.filter(item => {
-                const itemString = Array.from(visibleColumns)
-                    .map(columnId => {
-                        const value = item[columnId];
-                        if (value === null || value === undefined) return '';
-                        
-                        if (columnId === 'Atualizacao' || columnId === 'DataInicio' || columnId === 'DataFim') {
-                            if (!value) return '';
-                            return new Date(value).toLocaleString('pt-BR', {
-                                timeZone: 'UTC'
-                            });
-                        }
-                        
-                        if (columnId.startsWith('VlPreco') || columnId === 'PrecoPromo' || columnId === 'PrecoDe') {
-                            return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                        }
-                        
-                        if (columnId.startsWith('QtEstoque') || columnId === 'StkTotal') {
-                            return value.toLocaleString('pt-BR');
-                        }
-                        
-                        return String(value);
-                    })
-                    .join(' ')
-                    .toLowerCase();
-
-                return searchTerms.every(term => itemString.includes(term));
+            // Apply stock filters first
+            filtered = filtered.filter(item => {
+                return Object.entries(stockFilters).every(([empresa, isActive]) => {
+                    if (!isActive) return true;
+                    const stockKey = `QtEstoque_${empresa}` as keyof InventoryItem;
+                    return (item[stockKey] as number) > 0;
+                });
             });
 
-            setFilteredData(filteredResults);
+            // Then apply search if there is a search value
+            if (searchValue.trim()) {
+                const searchTerms = searchValue.trim().toLowerCase().split(/\s+/);
+                filtered = filtered.filter(item => {
+                    const itemString = Array.from(visibleColumns)
+                        .map(columnId => {
+                            const value = item[columnId];
+                            if (value === null || value === undefined) return '';
+                            
+                            if (columnId === 'Atualizacao' || columnId === 'DataInicio' || columnId === 'DataFim') {
+                                if (!value) return '';
+                                return new Date(value).toLocaleString('pt-BR', {
+                                    timeZone: 'UTC'
+                                });
+                            }
+                            
+                            if (columnId.startsWith('VlPreco') || columnId === 'PrecoPromo' || columnId === 'PrecoDe') {
+                                return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                            }
+                            
+                            if (columnId.startsWith('QtEstoque') || columnId === 'StkTotal') {
+                                return value.toLocaleString('pt-BR');
+                            }
+                            
+                            return String(value);
+                        })
+                        .join(' ')
+                        .toLowerCase();
+
+                    return searchTerms.every(term => itemString.includes(term));
+                });
+            }
+
+            setFilteredData(filtered);
         }, 150),
-        [data, visibleColumns]
-    ); // Add dependencies for useCallback
+        [data, visibleColumns, stockFilters] // Add stockFilters as dependency
+    );
 
     // Update search term and trigger search
     const handleSearch = (value: string) => {
@@ -426,17 +566,26 @@ export default function Inventory() {
                 
                 // Add special handling for CdChamada column
                 if (columnId === 'CdChamada') {
-                    // Preserve current search query in the product link
-                    const currentParams = new URLSearchParams(searchParams)
-                    const returnUrl = `/inventory?${currentParams.toString()}`
-                    
                     return (
-                        <Link
-                            href={`/produto/${value.trim()}?returnUrl=${encodeURIComponent(returnUrl)}`}
-                            className="text-blue-500 hover:text-blue-700 underline"
-                        >
-                            {formattedValue}
-                        </Link>
+                        <div className="flex items-center gap-2">
+                            <Link
+                                href={`/produto/${value.trim()}?returnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`}
+                                className="text-blue-500 hover:text-blue-700 underline flex-1"
+                            >
+                                {formattedValue}
+                            </Link>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleAddToOrder(row.original)
+                                }}
+                            >
+                                <ShoppingCart className="h-4 w-4" />
+                            </Button>
+                        </div>
                     )
                 }
                 
@@ -488,7 +637,7 @@ export default function Inventory() {
                 // Then apply our default sizes
                 switch (columnId) {
                     case 'CdChamada':
-                        return 70;
+                        return 110;
                     case 'NmProduto':
                         return window.innerWidth < 640 ? 150 : 400;
                     case 'NmGrupoProduto':
@@ -528,12 +677,16 @@ export default function Inventory() {
             columnSizing,
             sorting,
         },
-        onSortingChange: setSorting,
+        onSortingChange: (updater: any) => {
+            const newSorting = typeof updater === 'function' ? updater(sorting) : updater
+            setSorting(newSorting)
+            localStorage.setItem(SORTING_STATE_KEY, JSON.stringify(newSorting))
+        },
         getSortedRowModel: getSortedRowModel(),
         onColumnOrderChange: (updater: any) => {
             const newOrder = typeof updater === 'function' ? updater(columnOrder) : updater;
             // Preserve exact order, only filter out non-visible columns
-            const validOrder = newOrder.filter(id => visibleColumns.has(id as ColumnId));
+            const validOrder = newOrder.filter((id: string) => visibleColumns.has(id as ColumnId));
             
             // Only add missing visible columns at the end
             const missingColumns = Array.from(visibleColumns).filter(id => !validOrder.includes(id));
@@ -615,6 +768,115 @@ export default function Inventory() {
             return newOrder;
         });
     };
+
+    // Add this effect to load cart items when the component mounts
+    useEffect(() => {
+        // Load saved cart items from localStorage
+        const savedItems = localStorage.getItem('quotationItems')
+        if (savedItems) {
+            try {
+                const items = JSON.parse(savedItems)
+                if (Array.isArray(items) && items.length > 0) {
+                    setOrderItems(items)
+                    setSheetOpen(false) // Don't automatically open sheet when restoring items
+                }
+            } catch (error) {
+                console.error('Error loading saved cart items:', error)
+            }
+        }
+    }, []) // Empty dependency array means this runs once on mount
+
+    // Update handleAddToOrder to also save to localStorage
+    const handleAddToOrder = (product: InventoryItem) => {
+        setOrderItems(current => {
+            const existingItem = current.find(item => item.product.CdChamada === product.CdChamada)
+            
+            const newItems = existingItem
+                ? current.map(item => 
+                    item.product.CdChamada === product.CdChamada
+                        ? { ...item, quantity: item.quantity + 1 }
+                        : item
+                )
+                : [...current, { product, quantity: 1 }]
+            
+            // Save to localStorage
+            localStorage.setItem('quotationItems', JSON.stringify(newItems))
+            
+            return newItems
+        })
+        setSheetOpen(true)
+    }
+
+    // Update handleUpdateQuantity to save changes
+    const handleUpdateQuantity = (productCode: string, quantity: number) => {
+        if (quantity <= 0) {
+            setOrderItems(current => {
+                const newItems = current.filter(item => item.product.CdChamada !== productCode)
+                localStorage.setItem('quotationItems', JSON.stringify(newItems))
+                return newItems
+            })
+            return
+        }
+        
+        setOrderItems(current => {
+            const newItems = current.map(item =>
+                item.product.CdChamada === productCode
+                    ? { ...item, quantity }
+                    : item
+            )
+            localStorage.setItem('quotationItems', JSON.stringify(newItems))
+            return newItems
+        })
+    }
+
+    // Update handleRemoveItem to save changes
+    const handleRemoveItem = (productCode: string) => {
+        setOrderItems(current => {
+            const newItems = current.filter(item => item.product.CdChamada !== productCode)
+            localStorage.setItem('quotationItems', JSON.stringify(newItems))
+            return newItems
+        })
+    }
+
+    const getTotalItems = () => {
+        return orderItems.reduce((sum, item) => sum + item.quantity, 0)
+    }
+
+    const getTotalPrice = () => {
+        return orderItems.reduce((sum, item) => {
+            const price = item.product.VlPreco_Empresa59 || 0
+            return sum + (price * item.quantity)
+        }, 0)
+    }
+
+    // Add this function near your other cart-related functions
+    const handleClearCart = () => {
+        setOrderItems([])
+        localStorage.removeItem('quotationItems')
+    }
+
+    // Update handleStockFilterChange function
+    const handleStockFilterChange = (empresa: string) => {
+        setStockFilters(prev => {
+            const next = {
+                ...prev,
+                [empresa]: !prev[empresa]
+            }
+            localStorage.setItem(STOCK_FILTERS_KEY, JSON.stringify(next))
+            return next
+        })
+    }
+
+    // Add this effect to save the page index when it changes
+    useEffect(() => {
+        localStorage.setItem(PAGE_INDEX_KEY, pageIndex.toString())
+    }, [pageIndex])
+
+    // Update the pagination controls to use a wrapper function that both updates state and saves to localStorage
+    const handlePageChange = (newPage: number) => {
+        setPageIndex(newPage)
+        localStorage.setItem(PAGE_INDEX_KEY, newPage.toString())
+    }
 
     if (isLoading) {
         return <InventoryLoading />
@@ -751,6 +1013,18 @@ export default function Inventory() {
                                                         Remover Ordenação
                                                     </ContextMenuItem>
                                                     <ContextMenuSeparator />
+                                                    {header.column.id.startsWith('QtEstoque_') && (
+                                                        <>
+                                                            <ContextMenuItem
+                                                                onClick={() => handleStockFilterChange(header.column.id.replace('QtEstoque_', ''))}
+                                                            >
+                                                                {stockFilters[header.column.id.replace('QtEstoque_', '')] 
+                                                                    ? "Mostrar Todos" 
+                                                                    : "Mostrar Apenas Em Estoque"}
+                                                            </ContextMenuItem>
+                                                            <ContextMenuSeparator />
+                                                        </>
+                                                    )}
                                                     <ContextMenuItem
                                                         onClick={() => handleHideColumn(header.column.id)}
                                                         disabled={visibleColumns.size <= 1}
@@ -769,6 +1043,10 @@ export default function Inventory() {
                                                     )}
                                                 />
                                             )}
+                                            {header.column.id.startsWith('QtEstoque_') && 
+                                             stockFilters[header.column.id.replace('QtEstoque_', '')] && (
+                                                <div className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full" />
+                                            )}
                                         </TableHead>
                                     ))}
                                 </TableRow>
@@ -784,7 +1062,7 @@ export default function Inventory() {
                                                     roboto.className,
                                                     "text-xs sm:text-sm",
                                                     cell.column.id === 'NmGrupoProduto' && "max-w-[100px] sm:max-w-[120px] truncate",
-                                                    cell.column.id === 'NmProduto' && "max-w-[300px] sm:max-w-[600px]" // Responsive max-width
+                                                    cell.column.id === 'NmProduto' && "max-w-[300px] sm:max-w-[600px]"
                                                 )}
                                                 style={{
                                                     width: cell.column.getSize(),
@@ -793,10 +1071,28 @@ export default function Inventory() {
                                                     wordBreak: cell.column.id === 'NmGrupoProduto' ? 'normal' : 'break-word'
                                                 }}
                                             >
-                                                {flexRender(
-                                                    cell.column.columnDef.cell,
-                                                    cell.getContext()
-                                                )}
+                                                <ContextMenu>
+                                                    <ContextMenuTrigger className="flex w-full">
+                                                        {flexRender(
+                                                            cell.column.columnDef.cell,
+                                                            cell.getContext()
+                                                        )}
+                                                    </ContextMenuTrigger>
+                                                    <ContextMenuContent>
+                                                        <ContextMenuItem onClick={() => handleAddToOrder(row.original)}>
+                                                            <ShoppingCart className="mr-2 h-4 w-4" />
+                                                            Adicionar ao Pedido
+                                                        </ContextMenuItem>
+                                                        {cell.column.id !== 'CdChamada' && (
+                                                            <ContextMenuItem
+                                                                onClick={() => handleHideColumn(cell.column.id)}
+                                                                disabled={visibleColumns.size <= 1}
+                                                            >
+                                                                Ocultar coluna
+                                                            </ContextMenuItem>
+                                                        )}
+                                                    </ContextMenuContent>
+                                                </ContextMenu>
                                             </TableCell>
                                         ))}
                                     </TableRow>
@@ -811,7 +1107,7 @@ export default function Inventory() {
                             <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => setPageIndex(0)}
+                                onClick={() => handlePageChange(0)}
                                 disabled={!table.getCanPreviousPage()}
                             >
                                 {'<<'}
@@ -819,7 +1115,7 @@ export default function Inventory() {
                             <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => setPageIndex(prev => prev - 1)}
+                                onClick={() => handlePageChange(pageIndex - 1)}
                                 disabled={!table.getCanPreviousPage()}
                             >
                                 {'<'}
@@ -827,7 +1123,7 @@ export default function Inventory() {
                             <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => setPageIndex(prev => prev + 1)}
+                                onClick={() => handlePageChange(pageIndex + 1)}
                                 disabled={!table.getCanNextPage()}
                             >
                                 {'>'}
@@ -835,7 +1131,7 @@ export default function Inventory() {
                             <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => setPageIndex(table.getPageCount() - 1)}
+                                onClick={() => handlePageChange(table.getPageCount() - 1)}
                                 disabled={!table.getCanNextPage()}
                             >
                                 {'>>'}
@@ -854,6 +1150,156 @@ export default function Inventory() {
                     </div>
                 </CardContent>
             </Card>
+            <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+                <SheetTrigger asChild>
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        className="fixed bottom-4 right-4 h-16 w-16 rounded-full shadow-lg"
+                    >
+                        <ShoppingCart className="h-6 w-6" />
+                        {orderItems.length > 0 && (
+                            <Badge 
+                                variant="destructive" 
+                                className="absolute -top-2 -right-2"
+                            >
+                                {getTotalItems()}
+                            </Badge>
+                        )}
+                    </Button>
+                </SheetTrigger>
+                <SheetContent>
+                    <SheetHeader>
+                        <SheetTitle>Pedido Rápido</SheetTitle>
+                        <SheetDescription>
+                            Gerencie os itens do seu pedido aqui
+                        </SheetDescription>
+                    </SheetHeader>
+                    <div className="flex flex-col h-[calc(100vh-8rem)]">
+                        <ScrollArea className="flex-1">
+                            {orderItems.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center h-[400px] text-muted-foreground">
+                                    <ShoppingCart className="h-12 w-12 mb-4" />
+                                    <p>Seu pedido está vazio</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-4 mt-4">
+                                    {orderItems.map((item) => (
+                                        <div
+                                            key={item.product.CdChamada}
+                                            className="flex flex-col gap-2 border-b pb-4"
+                                        >
+                                            <div className="flex justify-between items-start gap-2">
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-medium truncate">{item.product.NmProduto}</p>
+                                                    <p className="text-sm text-muted-foreground">{item.product.CdChamada}</p>
+                                                    <p className="text-sm font-medium">
+                                                        {item.product.VlPreco_Empresa59?.toLocaleString('pt-BR', {
+                                                            style: 'currency',
+                                                            currency: 'BRL'
+                                                        })}
+                                                    </p>
+                                                </div>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => handleRemoveItem(item.product.CdChamada)}
+                                                    className="h-8 w-8 p-0"
+                                                >
+                                                    <X className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Label htmlFor={`quantity-${item.product.CdChamada}`} className="text-sm">
+                                                    Quantidade:
+                                                </Label>
+                                                <div className="flex items-center gap-1">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
+                                                        className="h-8 w-8"
+                                                        onClick={() => handleUpdateQuantity(
+                                                            item.product.CdChamada,
+                                                            Math.max(0, item.quantity - 1)
+                                                        )}
+                                                    >
+                                                        -
+                                                    </Button>
+                                                    <Input
+                                                        id={`quantity-${item.product.CdChamada}`}
+                                                        type="number"
+                                                        value={item.quantity}
+                                                        onChange={(e) => handleUpdateQuantity(
+                                                            item.product.CdChamada,
+                                                            parseInt(e.target.value) || 0
+                                                        )}
+                                                        className="w-16 h-8 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                        min="0"
+                                                    />
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
+                                                        className="h-8 w-8"
+                                                        onClick={() => handleUpdateQuantity(
+                                                            item.product.CdChamada,
+                                                            item.quantity + 1
+                                                        )}
+                                                    >
+                                                        +
+                                                    </Button>
+                                                </div>
+                                                <p className="ml-auto text-sm font-medium">
+                                                    {((item.product.VlPreco_Empresa59 || 0) * item.quantity).toLocaleString('pt-BR', {
+                                                        style: 'currency',
+                                                        currency: 'BRL'
+                                                    })}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </ScrollArea>
+                        
+                        <SheetFooter className="flex flex-col gap-4 border-t pt-4 !flex-col sm:!flex-col">
+                            <div className="flex justify-between items-center w-full">
+                                <span className="text-muted-foreground">Total de itens:</span>
+                                <span className="font-medium">{getTotalItems()}</span>
+                            </div>
+                            <div className="flex justify-between items-center w-full">
+                                <span className="text-muted-foreground">Valor total:</span>
+                                <span className="font-medium">
+                                    {getTotalPrice().toLocaleString('pt-BR', {
+                                        style: 'currency',
+                                        currency: 'BRL'
+                                    })}
+                                </span>
+                            </div>
+                            <div className="flex gap-2 w-full">
+                                {orderItems.length > 0 && (
+                                    <Button
+                                        variant="outline"
+                                        onClick={handleClearCart}
+                                        className="flex-1"
+                                    >
+                                        Limpar Carrinho
+                                    </Button>
+                                )}
+                                <Button
+                                    disabled={orderItems.length === 0}
+                                    onClick={() => {
+                                        localStorage.setItem('quotationItems', JSON.stringify(orderItems))
+                                        router.push('/quotation/new')
+                                    }}
+                                    className="flex-1"
+                                >
+                                    Cotação
+                                </Button>
+                            </div>
+                        </SheetFooter>
+                    </div>
+                </SheetContent>
+            </Sheet>
         </div>
     )
 }
