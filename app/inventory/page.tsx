@@ -960,6 +960,8 @@ export default function Inventory() {
                                                 width: header.getSize(),
                                                 position: 'relative'
                                             }}
+                                            isFiltered={header.column.id.startsWith('QtEstoque_') && 
+                                                stockFilters[header.column.id.replace('QtEstoque_', '')]}
                                         >
                                             <ContextMenu>
                                                 <ContextMenuTrigger>

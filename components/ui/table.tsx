@@ -65,12 +65,15 @@ TableRow.displayName = "TableRow"
 
 const TableHead = React.forwardRef<
   HTMLTableCellElement,
-  React.ThHTMLAttributes<HTMLTableCellElement>
->(({ className, ...props }, ref) => (
+  React.ThHTMLAttributes<HTMLTableCellElement> & {
+    isFiltered?: boolean;
+  }
+>(({ className, isFiltered, ...props }, ref) => (
   <th
     ref={ref}
     className={cn(
       "h-10 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0",
+      isFiltered && "border-b-4 border-red-500 backdrop-blur-sm",
       className
     )}
     {...props}
