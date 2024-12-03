@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, ArrowUpDown } from 'lucide-react'
 import Loading from '../../vendas-dia/loading'
 import Link from 'next/link'
 import { Roboto } from 'next/font/google'
@@ -49,6 +49,9 @@ interface GroupedOrder {
     items: ClientSale[]
 }
 
+type SortField = 'qtdsku' | 'vlfaturamento' | 'vltotalcustoproduto' | 'margem'
+type SortOrder = 'asc' | 'desc'
+
 export default function ClientDetails() {
     const router = useRouter()
     const params = useParams()
@@ -56,6 +59,8 @@ export default function ClientDetails() {
     const [data, setData] = useState<GroupedOrder[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const [sortField, setSortField] = useState<SortField>('vlfaturamento')
+    const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
 
     // Helper function to group orders
     const groupOrders = (sales: ClientSale[]) => {
@@ -204,6 +209,11 @@ export default function ClientDetails() {
         pedidos: acc.pedidos + 1
     }), { faturamento: 0, quantidade: 0, pedidos: 0 })
 
+    const sortedData = [...data].sort((a, b) => {
+        const multiplier = sortOrder === 'asc' ? 1 : -1
+        return (a[sortField] - b[sortField]) * multiplier
+    })
+
     return (
         <div className="space-y-4">
             <Button
@@ -277,14 +287,74 @@ export default function ClientDetails() {
                                 <TableHead>Vendedor</TableHead>
                                 <TableHead>Empresa</TableHead>
                                 <TableHead>Tipo</TableHead>
-                                <TableHead className="text-right">Qtd Items</TableHead>
-                                <TableHead className="text-right">Faturamento</TableHead>
-                                <TableHead className="text-right">Custo</TableHead>
-                                <TableHead className="text-right">Margem</TableHead>
+                                <TableHead className="text-right">
+                                    <Button
+                                        variant="ghost"
+                                        onClick={() => {
+                                            if (sortField === 'qtdsku') {
+                                                setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+                                            } else {
+                                                setSortField('qtdsku')
+                                                setSortOrder('desc')
+                                            }
+                                        }}
+                                    >
+                                        Qtd Items
+                                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                                    </Button>
+                                </TableHead>
+                                <TableHead className="text-right">
+                                    <Button
+                                        variant="ghost"
+                                        onClick={() => {
+                                            if (sortField === 'vlfaturamento') {
+                                                setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+                                            } else {
+                                                setSortField('vlfaturamento')
+                                                setSortOrder('desc')
+                                            }
+                                        }}
+                                    >
+                                        Faturamento
+                                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                                    </Button>
+                                </TableHead>
+                                <TableHead className="text-right">
+                                    <Button
+                                        variant="ghost"
+                                        onClick={() => {
+                                            if (sortField === 'vltotalcustoproduto') {
+                                                setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+                                            } else {
+                                                setSortField('vltotalcustoproduto')
+                                                setSortOrder('desc')
+                                            }
+                                        }}
+                                    >
+                                        Custo
+                                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                                    </Button>
+                                </TableHead>
+                                <TableHead className="text-right">
+                                    <Button
+                                        variant="ghost"
+                                        onClick={() => {
+                                            if (sortField === 'margem') {
+                                                setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+                                            } else {
+                                                setSortField('margem')
+                                                setSortOrder('desc')
+                                            }
+                                        }}
+                                    >
+                                        Margem
+                                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                                    </Button>
+                                </TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody className={roboto.className}>
-                            {data.map((order, index) => (
+                            {sortedData.map((order, index) => (
                                 <TableRow key={index}>
                                     <TableCell>{order.dtemissao}</TableCell>
                                     <TableCell>
@@ -312,7 +382,15 @@ export default function ClientDetails() {
                                             currency: 'BRL'
                                         })}
                                     </TableCell>
-                                    <TableCell className="text-right">{order.margem.toFixed(2)}%</TableCell>
+                                    <TableCell 
+                                        className={`text-right ${
+                                            order.margem >= 0 
+                                                ? 'text-green-600 dark:text-green-400' 
+                                                : 'text-red-600 dark:text-red-400'
+                                        }`}
+                                    >
+                                        {order.margem.toFixed(2)}%
+                                    </TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
