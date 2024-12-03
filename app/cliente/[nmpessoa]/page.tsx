@@ -5,10 +5,11 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, ArrowUpDown } from 'lucide-react'
+import { ArrowLeft, ArrowUpDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import Loading from '../../vendas-dia/loading'
 import Link from 'next/link'
 import { Roboto } from 'next/font/google'
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 
 const roboto = Roboto({
     weight: ['400', '500', '700'],
@@ -49,8 +50,15 @@ interface GroupedOrder {
     items: ClientSale[]
 }
 
-type SortField = 'qtdsku' | 'vlfaturamento' | 'vltotalcustoproduto' | 'margem'
+interface MonthlyData {
+    month: string
+    value: number
+}
+
+type SortField = 'qtdsku' | 'vlfaturamento' | 'vltotalcustoproduto' | 'margem' | 'dtemissao'
 type SortOrder = 'asc' | 'desc'
+
+const ITEMS_PER_PAGE = 20
 
 export default function ClientDetails() {
     const router = useRouter()
@@ -59,8 +67,9 @@ export default function ClientDetails() {
     const [data, setData] = useState<GroupedOrder[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
-    const [sortField, setSortField] = useState<SortField>('vlfaturamento')
+    const [sortField, setSortField] = useState<SortField>('dtemissao')
     const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
+    const [currentPage, setCurrentPage] = useState(1)
 
     // Helper function to group orders
     const groupOrders = (sales: ClientSale[]) => {
@@ -110,6 +119,56 @@ export default function ClientDetails() {
 
         return Array.from(orderMap.values());
     };
+
+    const getMonthlyData = (orders: GroupedOrder[]): MonthlyData[] => {
+        const monthlyMap = new Map<string, number>()
+        
+        orders.forEach(order => {
+            const [day, month, year] = order.dtemissao.split('/')
+            const monthKey = `${year}-${month}`
+            monthlyMap.set(monthKey, (monthlyMap.get(monthKey) || 0) + order.vlfaturamento)
+        })
+
+        // Convert to array and sort by date
+        return Array.from(monthlyMap.entries())
+            .map(([month, value]) => ({
+                month: month.split('-').reverse().join('/'), // Convert YYYY-MM to MM/YYYY
+                value
+            }))
+            .sort((a, b) => {
+                const [monthA, yearA] = a.month.split('/')
+                const [monthB, yearB] = b.month.split('/')
+                return (yearA + monthA).localeCompare(yearB + monthB)
+            })
+    }
+
+    const getYearlyComparison = (orders: GroupedOrder[]) => {
+        const currentYear = new Date().getFullYear()
+        const lastYear = currentYear - 1
+
+        const yearlyTotals = orders.reduce((acc, order) => {
+            const [, , year] = order.dtemissao.split('/')
+            const orderYear = parseInt(year)
+            
+            if (orderYear === currentYear) {
+                acc.currentYear += order.vlfaturamento
+            } else if (orderYear === lastYear) {
+                acc.lastYear += order.vlfaturamento
+            }
+            
+            return acc
+        }, { currentYear: 0, lastYear: 0 })
+
+        const percentageChange = yearlyTotals.lastYear > 0
+            ? ((yearlyTotals.currentYear - yearlyTotals.lastYear) / yearlyTotals.lastYear) * 100
+            : 0
+
+        return {
+            currentYear: yearlyTotals.currentYear,
+            lastYear: yearlyTotals.lastYear,
+            percentageChange
+        }
+    }
 
     useEffect(() => {
         const fetchData = async () => {
@@ -169,6 +228,10 @@ export default function ClientDetails() {
         fetchData()
     }, [params])
 
+    useEffect(() => {
+        setCurrentPage(1)
+    }, [sortField, sortOrder])
+
     const handleBack = () => {
         const returnUrl = searchParams.get('returnUrl')
         if (returnUrl) {
@@ -211,8 +274,54 @@ export default function ClientDetails() {
 
     const sortedData = [...data].sort((a, b) => {
         const multiplier = sortOrder === 'asc' ? 1 : -1
+        
+        if (sortField === 'dtemissao') {
+            // Convert DD/MM/YYYY to YYYY-MM-DD for proper date comparison
+            const dateA = a.dtemissao.split('/').reverse().join('-')
+            const dateB = b.dtemissao.split('/').reverse().join('-')
+            return multiplier * (new Date(dateA).getTime() - new Date(dateB).getTime())
+        }
+        
         return (a[sortField] - b[sortField]) * multiplier
     })
+
+    const paginatedData = sortedData.slice(
+        (currentPage - 1) * ITEMS_PER_PAGE,
+        currentPage * ITEMS_PER_PAGE
+    )
+
+    const totalPages = Math.ceil(sortedData.length / ITEMS_PER_PAGE)
+
+    const PaginationControls = () => (
+        <div className="flex items-center justify-between px-2 py-4">
+            <p className="text-sm text-muted-foreground">
+                Mostrando {((currentPage - 1) * ITEMS_PER_PAGE) + 1} até {Math.min(currentPage * ITEMS_PER_PAGE, sortedData.length)} de {sortedData.length} resultados
+            </p>
+            <div className="flex items-center space-x-2">
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(page => Math.max(1, page - 1))}
+                    disabled={currentPage === 1}
+                >
+                    <ChevronLeft className="h-4 w-4" />
+                    Anterior
+                </Button>
+                <div className="text-sm font-medium">
+                    Página {currentPage} de {totalPages}
+                </div>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(page => Math.min(totalPages, page + 1))}
+                    disabled={currentPage === totalPages}
+                >
+                    Próxima
+                    <ChevronRight className="h-4 w-4" />
+                </Button>
+            </div>
+        </div>
+    )
 
     return (
         <div className="space-y-4">
@@ -229,7 +338,7 @@ export default function ClientDetails() {
                 {decodeURIComponent(params?.nmpessoa as string)}
             </h1>
 
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 grid-cols-3 md:grid-cols-2 lg:grid-cols-3">
                 <Card>
                     <CardHeader>
                         <CardTitle className="text-sm font-medium">
@@ -263,11 +372,128 @@ export default function ClientDetails() {
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">
-                            {totals.faturamento.toLocaleString('pt-BR', {
-                                style: 'currency',
-                                currency: 'BRL'
-                            })}
+                        <div className="text-md md:text-sm lg:text-2xl font-bold">
+                            {window.innerWidth < 600 
+                                ? new Intl.NumberFormat('pt-BR', {
+                                    notation: 'compact',
+                                    compactDisplay: 'short',
+                                    style: 'currency',
+                                    currency: 'BRL'
+                                }).format(totals.faturamento)
+                                : totals.faturamento.toLocaleString('pt-BR', {
+                                    style: 'currency',
+                                    currency: 'BRL'
+                                })
+                            }
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card className="col-span-3 md:col-span-1 lg:col-span-1">
+                    <CardHeader>
+                        <CardTitle className="text-sm font-medium">
+                            Comparativo Anual
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-2">
+                            <div className="text-md md:text-sm lg:text-lg">
+                                {new Date().getFullYear()}:{' '}
+                                {window.innerWidth < 600 
+                                    ? new Intl.NumberFormat('pt-BR', {
+                                        notation: 'compact',
+                                        compactDisplay: 'short',
+                                        style: 'currency',
+                                        currency: 'BRL'
+                                    }).format(getYearlyComparison(data).currentYear)
+                                    : getYearlyComparison(data).currentYear.toLocaleString('pt-BR', {
+                                        style: 'currency',
+                                        currency: 'BRL'
+                                    })
+                                }
+                            </div>
+                            <div className="text-md md:text-sm lg:text-lg text-muted-foreground">
+                                {new Date().getFullYear() - 1}:{' '}
+                                {window.innerWidth < 600 
+                                    ? new Intl.NumberFormat('pt-BR', {
+                                        notation: 'compact',
+                                        compactDisplay: 'short',
+                                        style: 'currency',
+                                        currency: 'BRL'
+                                    }).format(getYearlyComparison(data).lastYear)
+                                    : getYearlyComparison(data).lastYear.toLocaleString('pt-BR', {
+                                        style: 'currency',
+                                        currency: 'BRL'
+                                    })
+                                }
+                            </div>
+                            <div className={`text-md md:text-sm lg:text-lg font-bold ${
+                                getYearlyComparison(data).percentageChange >= 0 
+                                    ? 'text-green-600 dark:text-green-400' 
+                                    : 'text-red-600 dark:text-red-400'
+                            }`}>
+                                {getYearlyComparison(data).percentageChange >= 0 ? '↑' : '↓'}{' '}
+                                {Math.abs(getYearlyComparison(data).percentageChange).toFixed(1)}%
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card className="col-span-3 md:col-span-3 lg:col-span-4">
+                    <CardHeader>
+                        <CardTitle className="text-sm font-medium">
+                            Evolução do Faturamento
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="h-[200px] w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart
+                                    data={getMonthlyData(data)}
+                                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                                >
+                                    <defs>
+                                        <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#2563eb" stopOpacity={0.3}/>
+                                            <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
+                                        </linearGradient>
+                                    </defs>
+                                    <XAxis 
+                                        dataKey="month" 
+                                        fontSize={12}
+                                        tickMargin={5}
+                                    />
+                                    <YAxis 
+                                        fontSize={12}
+                                        tickFormatter={(value) => 
+                                            new Intl.NumberFormat('pt-BR', {
+                                                notation: 'compact',
+                                                compactDisplay: 'short',
+                                                style: 'currency',
+                                                currency: 'BRL'
+                                            }).format(value)
+                                        }
+                                    />
+                                    <Tooltip 
+                                        formatter={(value: number) => 
+                                            new Intl.NumberFormat('pt-BR', {
+                                                style: 'currency',
+                                                currency: 'BRL'
+                                            }).format(value)
+                                        }
+                                        labelFormatter={(label) => `Mês: ${label}`}
+                                    />
+                                    <Area
+                                        type="monotone"
+                                        dataKey="value"
+                                        stroke="#2563eb"
+                                        strokeWidth={2}
+                                        fill="url(#colorValue)"
+                                        dot={{ r: 4, fill: "#2563eb" }}
+                                        activeDot={{ r: 6 }}
+                                    />
+                                </AreaChart>
+                            </ResponsiveContainer>
                         </div>
                     </CardContent>
                 </Card>
@@ -281,7 +507,22 @@ export default function ClientDetails() {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Data</TableHead>
+                                <TableHead>
+                                    <Button
+                                        variant="ghost"
+                                        onClick={() => {
+                                            if (sortField === 'dtemissao') {
+                                                setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+                                            } else {
+                                                setSortField('dtemissao')
+                                                setSortOrder('desc')
+                                            }
+                                        }}
+                                    >
+                                        Data
+                                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                                    </Button>
+                                </TableHead>
                                 <TableHead>Pedido</TableHead>
                                 <TableHead>Documento</TableHead>
                                 <TableHead>Vendedor</TableHead>
@@ -354,7 +595,7 @@ export default function ClientDetails() {
                             </TableRow>
                         </TableHeader>
                         <TableBody className={roboto.className}>
-                            {sortedData.map((order, index) => (
+                            {paginatedData.map((order, index) => (
                                 <TableRow key={index}>
                                     <TableCell>{order.dtemissao}</TableCell>
                                     <TableCell>
@@ -395,6 +636,7 @@ export default function ClientDetails() {
                             ))}
                         </TableBody>
                     </Table>
+                    <PaginationControls />
                 </CardContent>
             </Card>
         </div>

@@ -407,9 +407,13 @@ export default function Inventory() {
             id: columnId,
             accessorKey: columnId,
             header: ({ column }: { column: any }) => {
+                // Add defensive check for columnDefinitions
+                const columnDef = columnDefinitions[columnId];
+                const label = columnDef?.label || columnId; // Fallback to columnId if label not found
+                
                 return (
                     <div className="flex items-center gap-2">
-                        <span>{columnDefinitions[columnId].label}</span>
+                        <span>{label}</span>
                         <button
                             onClick={() => column.toggleSorting()}
                             className="ml-auto"
