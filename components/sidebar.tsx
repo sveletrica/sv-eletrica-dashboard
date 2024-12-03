@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { Home, BarChart2, Package, Menu, X, ShoppingCart, BarChart3, CalendarDays, TrendingUp } from 'lucide-react'
+import { Home, BarChart2, Package, Menu, X, ShoppingCart, BarChart3, CalendarDays, TrendingUp, ChevronLeft } from 'lucide-react'
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Button } from "@/components/ui/button"
 import { useState, useEffect } from 'react'
@@ -54,6 +54,7 @@ const sidebarLinks = [
 export function Sidebar() {
     const [isOpen, setIsOpen] = useState(false)
     const [isMobile, setIsMobile] = useState(false)
+    const [isCollapsed, setIsCollapsed] = useState(false)
 
     useEffect(() => {
         const checkIsMobile = () => {
@@ -101,23 +102,60 @@ export function Sidebar() {
             <div className={cn(
                 "min-h-screen h-full bg-card border-r",
                 "fixed lg:sticky top-0 left-0 z-40",
-                "transition-transform duration-300 ease-in-out",
-                "w-48 shrink-0",
+                "transition-all duration-300 ease-in-out",
+                isCollapsed ? "w-16" : "w-48",
+                "shrink-0",
                 "absolute lg:relative",
                 isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
             )}>
                 <div className="sticky top-0 bg-card z-20 border-b">
-                    <div className="p-6 flex justify-between items-center">
-                        <div className="relative w-36 h-8">
-                            <Image
-                                src="/logo-sv.png"
-                                alt="SV Elétrica Logo"
-                                fill
-                                className="object-contain dark:brightness-0 dark:invert"
-                                priority
-                            />
+                    <div className={cn(
+                        "flex flex-col gap-4",
+                        isCollapsed ? "p-3" : "p-4"
+                    )}>
+                        {/* Logo Container */}
+                        <div className={cn(
+                            "flex justify-center",
+                            isCollapsed ? "px-1" : "px-2"
+                        )}>
+                            <div className={cn(
+                                "relative",
+                                isCollapsed ? "w-10 h-10" : "w-40 h-10"
+                            )}>
+                                <Image
+                                    src={isCollapsed ? "/logo lottie.svg" : "/logo-sv.png"}
+                                    alt="SV Elétrica Logo"
+                                    fill
+                                    className={cn(
+                                        "object-contain",
+                                        !isCollapsed && "dark:brightness-0 dark:invert"
+                                    )}
+                                    priority
+                                />
+                            </div>
                         </div>
-                        <ThemeToggle />
+
+                        {/* Buttons Container */}
+                        <div className={cn(
+                            "flex items-center justify-center",
+                            isCollapsed ? "flex-col gap-1" : "gap-2"
+                        )}>
+                            <ThemeToggle />
+                            {!isMobile && (
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => setIsCollapsed(!isCollapsed)}
+                                    className="hidden lg:flex"
+                                    aria-label={isCollapsed ? "Expandir" : "Recolher"}
+                                >
+                                    <ChevronLeft className={cn(
+                                        "h-4 w-4 transition-transform",
+                                        isCollapsed && "rotate-180"
+                                    )} />
+                                </Button>
+                            )}
+                        </div>
                     </div>
                 </div>
                 <nav className="p-2">
@@ -125,11 +163,15 @@ export function Sidebar() {
                         <Link 
                             key={link.href}
                             href={link.href} 
-                            className="flex items-center gap-2 px-4 py-3 text-foreground rounded-md hover:bg-accent hover:text-accent-foreground"
+                            className={cn(
+                                "flex items-center gap-2 px-4 py-3 text-foreground rounded-md hover:bg-accent hover:text-accent-foreground",
+                                isCollapsed && "px-2 justify-center"
+                            )}
                             onClick={() => isMobile && setIsOpen(false)}
+                            title={isCollapsed ? link.label : undefined}
                         >
                             <link.icon size={20} />
-                            <span>{link.label}</span>
+                            {!isCollapsed && <span>{link.label}</span>}
                         </Link>
                     ))}
                 </nav>

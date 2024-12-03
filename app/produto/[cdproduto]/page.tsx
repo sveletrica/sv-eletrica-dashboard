@@ -937,7 +937,14 @@ export default function ProductSalesDetails() {
                                         </Link>
                                     </TableCell>
                                     <TableCell>{item.nrdocumento}</TableCell>
-                                    <TableCell>{item.nmpessoa}</TableCell>
+                                    <TableCell>
+                                        <Link
+                                            href={`/cliente/${encodeURIComponent(item.nmpessoa)}?returnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`}
+                                            className="text-blue-500 hover:text-blue-700 underline"
+                                        >
+                                            {item.nmpessoa}
+                                        </Link>
+                                    </TableCell>
                                     <TableCell>{item.tppessoa}</TableCell>
                                     <TableCell>{item.nmempresacurtovenda}</TableCell>
                                     <TableCell className="text-right">{item.qtbrutaproduto}</TableCell>

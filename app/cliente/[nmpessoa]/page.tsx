@@ -246,14 +246,15 @@ export default function ClientDetails() {
     if (!data.length) {
         return (
             <div className="space-y-6">
-                <Button
-                    variant="ghost"
-                    onClick={handleBack}
-                    className="mb-4"
-                >
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Voltar
-                </Button>
+                <div className="flex justify-end mb-4">
+                    <Button
+                        variant="ghost"
+                        onClick={handleBack}
+                    >
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Voltar
+                    </Button>
+                </div>
                 <Card>
                     <CardContent className="p-6">
                         <p className="text-center text-muted-foreground">
@@ -325,14 +326,15 @@ export default function ClientDetails() {
 
     return (
         <div className="space-y-4">
-            <Button
-                variant="ghost"
-                onClick={handleBack}
-                className="mb-4"
-            >
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Voltar
-            </Button>
+            <div className="flex justify-end mb-4">
+                <Button
+                    variant="ghost"
+                    onClick={handleBack}
+                >
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Voltar
+                </Button>
+            </div>
 
             <h1 className="text-3xl font-bold tracking-tight">
                 {decodeURIComponent(params?.nmpessoa as string)}
