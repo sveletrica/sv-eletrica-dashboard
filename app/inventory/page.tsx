@@ -392,6 +392,11 @@ export default function Inventory() {
             return value.toLocaleString('pt-BR');
         }
         
+        // Handle NmFornecedorPrincipal specifically if needed
+        if (columnId === 'NmFornecedorPrincipal') {
+            return String(value || '-');
+        }
+        
         return String(value);
     }, []);
 
@@ -480,12 +485,10 @@ export default function Inventory() {
                 return (a as string).localeCompare(b as string, 'pt-BR')
             },
             size: (() => {
-                // First check if there's a custom size in columnSizing
                 if (columnSizing[columnId]) {
                     return columnSizing[columnId];
                 }
                 
-                // Then apply our default sizes
                 switch (columnId) {
                     case 'CdChamada':
                         return 70;
@@ -495,6 +498,8 @@ export default function Inventory() {
                         return window.innerWidth < 640 ? 100 : 120;
                     case 'NmFamiliaProduto':
                         return window.innerWidth < 640 ? 150 : 180;
+                    case 'NmFornecedorPrincipal':
+                        return window.innerWidth < 640 ? 120 : 150; // Add size for supplier column
                     case 'Atualizacao':
                     case 'DataInicio':
                     case 'DataFim':
@@ -784,7 +789,8 @@ export default function Inventory() {
                                                     roboto.className,
                                                     "text-xs sm:text-sm",
                                                     cell.column.id === 'NmGrupoProduto' && "max-w-[100px] sm:max-w-[120px] truncate",
-                                                    cell.column.id === 'NmProduto' && "max-w-[300px] sm:max-w-[600px]" // Responsive max-width
+                                                    cell.column.id === 'NmProduto' && "max-w-[300px] sm:max-w-[600px]",
+                                                    cell.column.id === 'NmFornecedorPrincipal' && "max-w-[120px] sm:max-w-[150px] truncate" // Add truncate for supplier
                                                 )}
                                                 style={{
                                                     width: cell.column.getSize(),

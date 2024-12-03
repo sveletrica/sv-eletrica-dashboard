@@ -3,6 +3,7 @@ export interface InventoryItem {
   NmProduto: string;
   NmGrupoProduto: string;
   NmFamiliaProduto: string;
+  NmFornecedorPrincipal: string;
   QtEstoque_Empresa1: number;
   QtEstoque_Empresa4: number;
   QtEstoque_Empresa12: number;
@@ -26,6 +27,7 @@ export const columnDefinitions = {
   NmProduto: { label: 'Produto', show: true },
   NmGrupoProduto: { label: 'Grupo', show: true },
   NmFamiliaProduto: { label: 'Família', show: false },
+  NmFornecedorPrincipal: { label: 'Fornecedor', show: true },
   QtEstoque_Empresa1: { label: 'Stk Matriz', show: true },
   QtEstoque_Empresa4: { label: 'Stk CD', show: true },
   QtEstoque_Empresa12: { label: 'Stk BM', show: false },
