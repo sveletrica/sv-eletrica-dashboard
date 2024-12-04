@@ -61,4 +61,21 @@ input:focus {
     line-height: 1;
     padding-left: 2px;
 }
+
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line {
+    stroke: var(--border);
+}
+
+.recharts-cartesian-axis-line {
+    stroke: var(--border);
+}
+
+.recharts-cartesian-axis-tick-line {
+    stroke: var(--border);
+}
+
+.recharts-text {
+    fill: var(--foreground);
+}
  

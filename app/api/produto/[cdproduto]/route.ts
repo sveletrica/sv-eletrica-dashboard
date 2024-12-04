@@ -14,7 +14,7 @@ export async function GET(
         const cdproduto = await Promise.resolve(context.params.cdproduto)
 
         const { data, error } = await supabase
-            .from('iosvendames')
+            .from('vw_mssql_bivendas_aux_geral')
             .select('*')
             .eq('cdproduto', cdproduto)
 

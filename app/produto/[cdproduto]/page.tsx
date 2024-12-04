@@ -18,6 +18,7 @@ import { useMediaQuery } from "@/hooks/use-media-query"
 import { Roboto } from 'next/font/google'
 import Link from 'next/link'
 import { SortableColumnProps, SortDirection } from "@/components/ui/table"
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
 interface ProductSale {
     cdpedido: string
@@ -33,11 +34,17 @@ interface ProductSale {
     qtbrutaproduto: number
     dtemissao: string
     nmempresacurtovenda: string
+    nmfornecedorprincipal: string
 }
 
 interface Product {
     cdproduto: string
     nmproduto: string
+}
+
+interface MonthlyData {
+    month: string
+    quantity: number
 }
 
 // Add this font configuration after the imports
@@ -282,6 +289,30 @@ const storeSortConfig = (config: SortableColumnProps) => {
     localStorage.setItem(SORT_STORAGE_KEY, JSON.stringify(config))
 }
 
+const prepareMonthlyData = (data: ProductSale[]): MonthlyData[] => {
+    const monthlyTotals = data.reduce((acc, sale) => {
+        const [day, month, year] = sale.dtemissao.split('/');
+        const monthKey = `${year}-${month.padStart(2, '0')}`;
+        
+        if (!acc[monthKey]) {
+            acc[monthKey] = {
+                quantity: 0,
+                monthStr: `${month}/${year}`
+            };
+        }
+        
+        acc[monthKey].quantity += sale.qtbrutaproduto;
+        return acc;
+    }, {} as Record<string, { quantity: number, monthStr: string }>);
+
+    return Object.entries(monthlyTotals)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([_, data]) => ({
+            month: data.monthStr,
+            quantity: data.quantity
+        }));
+};
+
 export default function ProductSalesDetails() {
     const router = useRouter()
     const params = useParams()
@@ -308,6 +339,7 @@ export default function ProductSalesDetails() {
             direction: 'desc'
         }
     })
+    const monthlyData = useMemo(() => prepareMonthlyData(data), [data])
 
     useEffect(() => {
         const fetchData = async () => {
@@ -582,7 +614,7 @@ export default function ProductSalesDetails() {
                                 {data[0].nmproduto}
                             </div>
                             <div className="text-xs text-muted-foreground mt-2">
-                                Grupo: {data[0].nmgrupoproduto}
+                                Grupo: {data[0].nmgrupoproduto} Fornecedor: {data[0].nmfornecedorprincipal}
                             </div>
                         </CardContent>
                         <Dialog open={isSearchOpen} onOpenChange={setIsSearchOpen}>
@@ -617,6 +649,8 @@ export default function ProductSalesDetails() {
                                     </div>
                                     <div className="text-xs text-muted-foreground mt-2">
                                         Grupo: {data[0].nmgrupoproduto}
+                                        <br />
+                                        {data[0].nmfornecedorprincipal}
                                     </div>
                                 </CardContent>
                             </Card>
@@ -654,86 +688,165 @@ export default function ProductSalesDetails() {
                 </Card>
             </div>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-sm font-medium flex justify-between items-center">
-                        <span>Vendas por Filial</span>
-                        {selectedFilial && (
-                            <Button 
-                                variant="ghost" 
-                                size="sm"
-                                onClick={() => setSelectedFilial(null)}
-                            >
-                                Limpar Filtro
-                            </Button>
-                        )}
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Filial</TableHead>
-                                <TableHead className="text-right">Quantidade</TableHead>
-                                <TableHead className="text-right">Faturamento</TableHead>
-                                <TableHead className="text-right">Margem</TableHead>
-                                <TableHead className="text-right">% do Total</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {sortedFilials.map(([filial, values]) => {
-                                const percentage = (values.quantidade / totals.quantidade) * 100
-                                const margin = calculateMargin(values.faturamento, values.custo)
-                                return (
-                                    <TableRow 
-                                        key={filial}
-                                        className={cn(
-                                            "relative cursor-pointer hover:bg-accent/50",
-                                            selectedFilial === filial && "bg-accent",
-                                            roboto.className,
-                                            "text-xs sm:text-sm"
-                                        )}
-                                        onClick={() => setSelectedFilial(filial === selectedFilial ? null : filial)}
-                                    >
-                                        <TableCell className="font-medium py-2">{filial}</TableCell>
-                                        <TableCell className="text-right py-2">
-                                            <AnimatedValue value={values.quantidade} suffix=" un" />
+            <div className={cn(
+                "grid gap-2",
+                isMobile ? "grid-cols-1" : "grid-cols-2"
+            )}>
+                <Card className={cn(
+                    isMobile && "col-span-1"
+                )}>
+                    <CardHeader>
+                        <CardTitle className="text-sm font-medium flex justify-between items-center">
+                            <span>Vendas por Filial</span>
+                            {selectedFilial && (
+                                <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => setSelectedFilial(null)}
+                                >
+                                    Limpar Filtro
+                                </Button>
+                            )}
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className={cn(
+                            "overflow-x-auto",
+                            isMobile && "max-h-[300px]"
+                        )}>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Filial</TableHead>
+                                        <TableHead className="text-right">Quantidade</TableHead>
+                                        <TableHead className="text-right">Faturamento</TableHead>
+                                        <TableHead className="text-right">Margem</TableHead>
+                                        <TableHead className="text-right">% do Total</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {sortedFilials.map(([filial, values]) => {
+                                        const percentage = (values.quantidade / totals.quantidade) * 100
+                                        const margin = calculateMargin(values.faturamento, values.custo)
+                                        return (
+                                            <TableRow 
+                                                key={filial}
+                                                className={cn(
+                                                    "relative cursor-pointer hover:bg-accent/50",
+                                                    selectedFilial === filial && "bg-accent",
+                                                    roboto.className,
+                                                    "text-xs sm:text-sm"
+                                                )}
+                                                onClick={() => setSelectedFilial(filial === selectedFilial ? null : filial)}
+                                            >
+                                                <TableCell className="font-medium py-2">{filial}</TableCell>
+                                                <TableCell className="text-right py-2">
+                                                    <AnimatedValue value={values.quantidade} suffix=" un" />
+                                                </TableCell>
+                                                <TableCell className="text-right py-2">
+                                                    <AnimatedValue 
+                                                        value={values.faturamento}
+                                                        formatter={(value) => value.toLocaleString('pt-BR', {
+                                                            style: 'currency',
+                                                            currency: 'BRL'
+                                                        })}
+                                                    />
+                                                </TableCell>
+                                                <TableCell className="text-right py-2">
+                                                    {margin >= 0 ? (
+                                                        <div className="flex justify-end">
+                                                            <div className={cn(
+                                                                "inline-flex items-center gap-1 rounded-full px-2 py-1",
+                                                                getMarginStyle(margin).background,
+                                                                getMarginStyle(margin).text
+                                                            )}>
+                                                                <AnimatedValue 
+                                                                    value={margin}
+                                                                    formatter={(value) => value.toFixed(2)}
+                                                                    suffix="%"
+                                                                />
+                                                                {getMarginStyle(margin).icon}
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex justify-end">
+                                                            <div className={cn(
+                                                                "inline-flex items-center gap-1 rounded-full px-2 py-1",
+                                                                getMarginStyle(margin).background,
+                                                                getMarginStyle(margin).text
+                                                            )}>
+                                                                {getMarginStyle(margin).icon}
+                                                                <AnimatedValue 
+                                                                    value={margin}
+                                                                    formatter={(value) => value.toFixed(2)}
+                                                                    suffix="%"
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell className="text-right py-2">
+                                                    <div className="relative">
+                                                        <div 
+                                                            className="absolute inset-0 bg-blue-200 rounded-full animate-expand"
+                                                            style={{
+                                                                width: `${(values.quantidade / maxQuantity) * 100}%`,
+                                                                opacity: 0.5,
+                                                                transformOrigin: 'left',
+                                                            }}
+                                                        />
+                                                        <span className="relative z-10">
+                                                            <AnimatedValue 
+                                                                value={(values.quantidade / totals.quantidade) * 100}
+                                                                formatter={(value) => value.toFixed(1)}
+                                                                suffix="%"
+                                                            />
+                                                        </span>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        )
+                                    })}
+                                    <TableRow className={cn("font-bold", roboto.className, "text-xs sm:text-sm")}>
+                                        <TableCell>Total</TableCell>
+                                        <TableCell className="text-right">
+                                            <AnimatedValue value={totals.quantidade} suffix=" un" />
                                         </TableCell>
-                                        <TableCell className="text-right py-2">
+                                        <TableCell className="text-right">
                                             <AnimatedValue 
-                                                value={values.faturamento}
+                                                value={totals.faturamento}
                                                 formatter={(value) => value.toLocaleString('pt-BR', {
                                                     style: 'currency',
                                                     currency: 'BRL'
                                                 })}
                                             />
                                         </TableCell>
-                                        <TableCell className="text-right py-2">
-                                            {margin >= 0 ? (
+                                        <TableCell className="text-right">
+                                            {calculateMargin(totals.faturamento, data.reduce((acc, item) => acc + item.vltotalcustoproduto, 0)) >= 0 ? (
                                                 <div className="flex justify-end">
                                                     <div className={cn(
                                                         "inline-flex items-center gap-1 rounded-full px-2 py-1",
-                                                        getMarginStyle(margin).background,
-                                                        getMarginStyle(margin).text
+                                                        getMarginStyle(calculateMargin(totals.faturamento, data.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).background,
+                                                        getMarginStyle(calculateMargin(totals.faturamento, data.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).text
                                                     )}>
                                                         <AnimatedValue 
-                                                            value={margin}
+                                                            value={calculateMargin(totals.faturamento, data.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))}
                                                             formatter={(value) => value.toFixed(2)}
                                                             suffix="%"
                                                         />
-                                                        {getMarginStyle(margin).icon}
+                                                        {getMarginStyle(calculateMargin(totals.faturamento, data.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).icon}
                                                     </div>
                                                 </div>
                                             ) : (
                                                 <div className="flex justify-end">
                                                     <div className={cn(
                                                         "inline-flex items-center gap-1 rounded-full px-2 py-1",
-                                                        getMarginStyle(margin).background,
-                                                        getMarginStyle(margin).text
+                                                        getMarginStyle(calculateMargin(totals.faturamento, data.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).background,
+                                                        getMarginStyle(calculateMargin(totals.faturamento, data.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).text
                                                     )}>
-                                                        {getMarginStyle(margin).icon}
+                                                        {getMarginStyle(calculateMargin(totals.faturamento, data.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).icon}
                                                         <AnimatedValue 
-                                                            value={margin}
+                                                            value={calculateMargin(totals.faturamento, data.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))}
                                                             formatter={(value) => value.toFixed(2)}
                                                             suffix="%"
                                                         />
@@ -741,81 +854,81 @@ export default function ProductSalesDetails() {
                                                 </div>
                                             )}
                                         </TableCell>
-                                        <TableCell className="text-right py-2">
-                                            <div className="relative">
-                                                <div 
-                                                    className="absolute inset-0 bg-blue-200 rounded-full animate-expand"
-                                                    style={{
-                                                        width: `${(values.quantidade / maxQuantity) * 100}%`,
-                                                        opacity: 0.5,
-                                                        transformOrigin: 'left',
-                                                    }}
-                                                />
-                                                <span className="relative z-10">
-                                                    <AnimatedValue 
-                                                        value={(values.quantidade / totals.quantidade) * 100}
-                                                        formatter={(value) => value.toFixed(1)}
-                                                        suffix="%"
-                                                    />
-                                                </span>
-                                            </div>
-                                        </TableCell>
+                                        <TableCell className="text-right">100%</TableCell>
                                     </TableRow>
-                                )
-                            })}
-                            <TableRow className={cn("font-bold", roboto.className, "text-xs sm:text-sm")}>
-                                <TableCell>Total</TableCell>
-                                <TableCell className="text-right">
-                                    <AnimatedValue value={totals.quantidade} suffix=" un" />
-                                </TableCell>
-                                <TableCell className="text-right">
-                                    <AnimatedValue 
-                                        value={totals.faturamento}
-                                        formatter={(value) => value.toLocaleString('pt-BR', {
-                                            style: 'currency',
-                                            currency: 'BRL'
-                                        })}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card className={cn(
+                    isMobile && "col-span-1"
+                )}>
+                    <CardHeader>
+                        <CardTitle className="text-sm font-medium">
+                            Tendência de Vendas
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className={cn(
+                            "w-full",
+                            isMobile ? "h-[150px]" : "h-[200px]"
+                        )}>
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart
+                                    data={monthlyData}
+                                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                                >
+                                    <defs>
+                                        <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#2563eb" stopOpacity={0.3}/>
+                                            <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
+                                        </linearGradient>
+                                    </defs>
+                                    <XAxis 
+                                        dataKey="month" 
+                                        fontSize={12}
+                                        tickMargin={5}
                                     />
-                                </TableCell>
-                                <TableCell className="text-right">
-                                    {calculateMargin(totals.faturamento, data.reduce((acc, item) => acc + item.vltotalcustoproduto, 0)) >= 0 ? (
-                                        <div className="flex justify-end">
-                                            <div className={cn(
-                                                "inline-flex items-center gap-1 rounded-full px-2 py-1",
-                                                getMarginStyle(calculateMargin(totals.faturamento, data.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).background,
-                                                getMarginStyle(calculateMargin(totals.faturamento, data.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).text
-                                            )}>
-                                                <AnimatedValue 
-                                                    value={calculateMargin(totals.faturamento, data.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))}
-                                                    formatter={(value) => value.toFixed(2)}
-                                                    suffix="%"
-                                                />
-                                                {getMarginStyle(calculateMargin(totals.faturamento, data.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).icon}
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="flex justify-end">
-                                            <div className={cn(
-                                                "inline-flex items-center gap-1 rounded-full px-2 py-1",
-                                                getMarginStyle(calculateMargin(totals.faturamento, data.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).background,
-                                                getMarginStyle(calculateMargin(totals.faturamento, data.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).text
-                                            )}>
-                                                {getMarginStyle(calculateMargin(totals.faturamento, data.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).icon}
-                                                <AnimatedValue 
-                                                    value={calculateMargin(totals.faturamento, data.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))}
-                                                    formatter={(value) => value.toFixed(2)}
-                                                    suffix="%"
-                                                />
-                                            </div>
-                                        </div>
-                                    )}
-                                </TableCell>
-                                <TableCell className="text-right">100%</TableCell>
-                            </TableRow>
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
+                                    <YAxis 
+                                        fontSize={12}
+                                        tickFormatter={(value) => 
+                                            new Intl.NumberFormat('pt-BR', {
+                                                notation: 'compact',
+                                                compactDisplay: 'short',
+                                            }).format(value)
+                                        }
+                                    />
+                                    <Tooltip 
+                                        formatter={(value: number) => 
+                                            new Intl.NumberFormat('pt-BR').format(value)
+                                        }
+                                        labelFormatter={(label) => `Mês: ${label}`}
+                                        contentStyle={{
+                                            backgroundColor: 'var(--background)',
+                                            border: '1px solid var(--border)',
+                                            borderRadius: '6px',
+                                        }}
+                                        labelStyle={{
+                                            color: 'var(--foreground)',
+                                        }}
+                                    />
+                                    <Area
+                                        type="monotone"
+                                        dataKey="quantity"
+                                        stroke="#2563eb"
+                                        strokeWidth={2}
+                                        fill="url(#colorValue)"
+                                        dot={{ r: 4, fill: "#2563eb" }}
+                                        activeDot={{ r: 6 }}
+                                    />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
 
             <Card>
                 <CardHeader>
