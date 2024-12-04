@@ -17,6 +17,7 @@ const roboto = Roboto({
     display: 'swap',
 })
 
+// Reuse the same interfaces from the client page
 interface ClientSale {
     cdpedido: string
     nrdocumento: string
@@ -36,10 +37,12 @@ interface ClientSale {
     dsunidadedenegocio: string
 }
 
+// Use the same interfaces and constants as in the client page
 interface GroupedOrder {
     cdpedido: string
     nrdocumento: string
     dtemissao: string
+    nmpessoa: string
     nmrepresentantevenda: string
     nmempresacurtovenda: string
     tpmovimentooperacao: string
@@ -60,7 +63,60 @@ type SortOrder = 'asc' | 'desc'
 
 const ITEMS_PER_PAGE = 20
 
-export default function ClientDetails() {
+// Add these helper functions before the SalesmanDetails component
+
+const getMonthlyData = (orders: GroupedOrder[]): MonthlyData[] => {
+    const monthlyMap = new Map<string, number>()
+    
+    orders.forEach(order => {
+        const [day, month, year] = order.dtemissao.split('/')
+        const monthKey = `${year}-${month}`
+        monthlyMap.set(monthKey, (monthlyMap.get(monthKey) || 0) + order.vlfaturamento)
+    })
+
+    // Convert to array and sort by date
+    return Array.from(monthlyMap.entries())
+        .map(([month, value]) => ({
+            month: month.split('-').reverse().join('/'), // Convert YYYY-MM to MM/YYYY
+            value
+        }))
+        .sort((a, b) => {
+            const [monthA, yearA] = a.month.split('/')
+            const [monthB, yearB] = b.month.split('/')
+            return (yearA + monthA).localeCompare(yearB + monthB)
+        })
+}
+
+const getYearlyComparison = (orders: GroupedOrder[]) => {
+    const currentYear = new Date().getFullYear()
+    const lastYear = currentYear - 1
+
+    const yearlyTotals = orders.reduce((acc, order) => {
+        const [, , year] = order.dtemissao.split('/')
+        const orderYear = parseInt(year)
+        
+        if (orderYear === currentYear) {
+            acc.currentYear += order.vlfaturamento
+        } else if (orderYear === lastYear) {
+            acc.lastYear += order.vlfaturamento
+        }
+        
+        return acc
+    }, { currentYear: 0, lastYear: 0 })
+
+    const percentageChange = yearlyTotals.lastYear > 0
+        ? ((yearlyTotals.currentYear - yearlyTotals.lastYear) / yearlyTotals.lastYear) * 100
+        : 0
+
+    return {
+        currentYear: yearlyTotals.currentYear,
+        lastYear: yearlyTotals.lastYear,
+        percentageChange
+    }
+}
+
+export default function SalesmanDetails() {
+    // Use the same state and logic as in the client page
     const router = useRouter()
     const params = useParams()
     const searchParams = useSearchParams()
@@ -71,13 +127,13 @@ export default function ClientDetails() {
     const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
     const [currentPage, setCurrentPage] = useState(1)
 
-    // Helper function to group orders
+    // Reuse the same helper functions from the client page
     const groupOrders = (sales: ClientSale[]) => {
         const orderMap = new Map<string, {
             cdpedido: string
             nrdocumento: string
             dtemissao: string
-            nmrepresentantevenda: string
+            nmpessoa: string
             nmempresacurtovenda: string
             tpmovimentooperacao: string
             qtdsku: number
@@ -94,7 +150,7 @@ export default function ClientDetails() {
                     cdpedido: sale.cdpedido,
                     nrdocumento: sale.nrdocumento,
                     dtemissao: sale.dtemissao,
-                    nmrepresentantevenda: sale.nmrepresentantevenda,
+                    nmpessoa: sale.nmpessoa,
                     nmempresacurtovenda: sale.nmempresacurtovenda,
                     tpmovimentooperacao: sale.tpmovimentooperacao,
                     qtdsku: 0,
@@ -112,7 +168,6 @@ export default function ClientDetails() {
             order.vltotalcustoproduto += sale.vltotalcustoproduto;
         });
 
-        // Calculate margin for each order
         orderMap.forEach(order => {
             order.margem = ((order.vlfaturamento - (order.vlfaturamento * 0.268 + order.vltotalcustoproduto)) / order.vlfaturamento) * 100;
         });
@@ -120,106 +175,36 @@ export default function ClientDetails() {
         return Array.from(orderMap.values());
     };
 
-    const getMonthlyData = (orders: GroupedOrder[]): MonthlyData[] => {
-        const monthlyMap = new Map<string, number>()
-        
-        orders.forEach(order => {
-            const [day, month, year] = order.dtemissao.split('/')
-            const monthKey = `${year}-${month}`
-            monthlyMap.set(monthKey, (monthlyMap.get(monthKey) || 0) + order.vlfaturamento)
-        })
-
-        // Convert to array and sort by date
-        return Array.from(monthlyMap.entries())
-            .map(([month, value]) => ({
-                month: month.split('-').reverse().join('/'), // Convert YYYY-MM to MM/YYYY
-                value
-            }))
-            .sort((a, b) => {
-                const [monthA, yearA] = a.month.split('/')
-                const [monthB, yearB] = b.month.split('/')
-                return (yearA + monthA).localeCompare(yearB + monthB)
-            })
-    }
-
-    const getYearlyComparison = (orders: GroupedOrder[]) => {
-        const currentYear = new Date().getFullYear()
-        const lastYear = currentYear - 1
-
-        const yearlyTotals = orders.reduce((acc, order) => {
-            const [, , year] = order.dtemissao.split('/')
-            const orderYear = parseInt(year)
-            
-            if (orderYear === currentYear) {
-                acc.currentYear += order.vlfaturamento
-            } else if (orderYear === lastYear) {
-                acc.lastYear += order.vlfaturamento
-            }
-            
-            return acc
-        }, { currentYear: 0, lastYear: 0 })
-
-        const percentageChange = yearlyTotals.lastYear > 0
-            ? ((yearlyTotals.currentYear - yearlyTotals.lastYear) / yearlyTotals.lastYear) * 100
-            : 0
-
-        return {
-            currentYear: yearlyTotals.currentYear,
-            lastYear: yearlyTotals.lastYear,
-            percentageChange
-        }
-    }
-
+    // Reuse the same data fetching logic but with the new endpoint
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const nmpessoa = params?.nmpessoa as string
-                if (!nmpessoa) {
-                    throw new Error('Nome do cliente não encontrado')
+                const nmrepresentantevenda = params?.nmrepresentantevenda as string
+                if (!nmrepresentantevenda) {
+                    throw new Error('Nome do vendedor não encontrado')
                 }
 
-                const url = `/api/cliente/${encodeURIComponent(nmpessoa)}`
-                console.log('Fetching data from:', url)
-                console.log('Client name:', {
-                    original: nmpessoa,
-                    encoded: encodeURIComponent(nmpessoa),
-                    decoded: decodeURIComponent(encodeURIComponent(nmpessoa))
-                })
-
+                const url = `/api/vendedor/${encodeURIComponent(nmrepresentantevenda)}`
                 const response = await fetch(url)
-                console.log('Response status:', response.status)
-                
-                const contentType = response.headers.get('content-type')
-                console.log('Response content type:', contentType)
-
                 const responseData = await response.json()
-                console.log('Response data:', responseData)
 
                 if (!response.ok) {
                     throw new Error(
                         responseData.details || 
                         responseData.error || 
-                        'Failed to fetch client sales'
+                        'Failed to fetch salesman sales'
                     )
                 }
 
                 if (!Array.isArray(responseData)) {
-                    console.error('Unexpected response format:', responseData)
                     throw new Error('Invalid response format from server')
                 }
 
                 const groupedOrders = groupOrders(responseData)
-                console.log('Grouped orders:', groupedOrders)
-
                 setData(groupedOrders)
             } catch (err) {
                 const error = err as Error
-                console.error('Error details:', {
-                    message: error.message,
-                    stack: error.stack,
-                    cause: error.cause
-                })
-                setError(error.message || 'Failed to fetch client sales')
+                setError(error.message || 'Failed to fetch salesman sales')
             } finally {
                 setIsLoading(false)
             }
@@ -275,14 +260,14 @@ export default function ClientDetails() {
 
     const sortedData = [...data].sort((a, b) => {
         const multiplier = sortOrder === 'asc' ? 1 : -1
-        
+
         if (sortField === 'dtemissao') {
             // Convert DD/MM/YYYY to YYYY-MM-DD for proper date comparison
             const dateA = a.dtemissao.split('/').reverse().join('-')
             const dateB = b.dtemissao.split('/').reverse().join('-')
             return multiplier * (new Date(dateA).getTime() - new Date(dateB).getTime())
         }
-        
+
         return (a[sortField] - b[sortField]) * multiplier
     })
 
@@ -337,7 +322,7 @@ export default function ClientDetails() {
             </div>
 
             <h1 className="text-3xl font-bold tracking-tight">
-                {decodeURIComponent(params?.nmpessoa as string)}
+                {decodeURIComponent(params?.nmrepresentantevenda as string)}
             </h1>
 
             <div className="grid gap-4 grid-cols-3 md:grid-cols-2 lg:grid-cols-3">
@@ -375,7 +360,7 @@ export default function ClientDetails() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-md md:text-sm lg:text-2xl font-bold">
-                            {window.innerWidth < 600 
+                            {window.innerWidth < 600
                                 ? new Intl.NumberFormat('pt-BR', {
                                     notation: 'compact',
                                     compactDisplay: 'short',
@@ -401,7 +386,7 @@ export default function ClientDetails() {
                         <div className="space-y-2">
                             <div className="text-md md:text-sm lg:text-lg">
                                 {new Date().getFullYear()}:{' '}
-                                {window.innerWidth < 600 
+                                {window.innerWidth < 600
                                     ? new Intl.NumberFormat('pt-BR', {
                                         notation: 'compact',
                                         compactDisplay: 'short',
@@ -416,7 +401,7 @@ export default function ClientDetails() {
                             </div>
                             <div className="text-md md:text-sm lg:text-lg text-muted-foreground">
                                 {new Date().getFullYear() - 1}:{' '}
-                                {window.innerWidth < 600 
+                                {window.innerWidth < 600
                                     ? new Intl.NumberFormat('pt-BR', {
                                         notation: 'compact',
                                         compactDisplay: 'short',
@@ -429,11 +414,10 @@ export default function ClientDetails() {
                                     })
                                 }
                             </div>
-                            <div className={`text-md md:text-sm lg:text-lg font-bold ${
-                                getYearlyComparison(data).percentageChange >= 0 
-                                    ? 'text-green-600 dark:text-green-400' 
+                            <div className={`text-md md:text-sm lg:text-lg font-bold ${getYearlyComparison(data).percentageChange >= 0
+                                    ? 'text-green-600 dark:text-green-400'
                                     : 'text-red-600 dark:text-red-400'
-                            }`}>
+                                }`}>
                                 {getYearlyComparison(data).percentageChange >= 0 ? '↑' : '↓'}{' '}
                                 {Math.abs(getYearlyComparison(data).percentageChange).toFixed(1)}%
                             </div>
@@ -456,18 +440,18 @@ export default function ClientDetails() {
                                 >
                                     <defs>
                                         <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#2563eb" stopOpacity={0.3}/>
-                                            <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
+                                            <stop offset="5%" stopColor="#2563eb" stopOpacity={0.3} />
+                                            <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
                                         </linearGradient>
                                     </defs>
-                                    <XAxis 
-                                        dataKey="month" 
+                                    <XAxis
+                                        dataKey="month"
                                         fontSize={12}
                                         tickMargin={5}
                                     />
-                                    <YAxis 
+                                    <YAxis
                                         fontSize={12}
-                                        tickFormatter={(value) => 
+                                        tickFormatter={(value) =>
                                             new Intl.NumberFormat('pt-BR', {
                                                 notation: 'compact',
                                                 compactDisplay: 'short',
@@ -476,8 +460,8 @@ export default function ClientDetails() {
                                             }).format(value)
                                         }
                                     />
-                                    <Tooltip 
-                                        formatter={(value: number) => 
+                                    <Tooltip
+                                        formatter={(value: number) =>
                                             new Intl.NumberFormat('pt-BR', {
                                                 style: 'currency',
                                                 currency: 'BRL'
@@ -527,9 +511,7 @@ export default function ClientDetails() {
                                 </TableHead>
                                 <TableHead>Pedido</TableHead>
                                 <TableHead>Documento</TableHead>
-                                <TableHead>
-                                    <span className="text-blue-500">Vendedor ↗</span>
-                                </TableHead>
+                                <TableHead>Cliente</TableHead>
                                 <TableHead>Empresa</TableHead>
                                 <TableHead>Tipo</TableHead>
                                 <TableHead className="text-right">
@@ -611,14 +593,7 @@ export default function ClientDetails() {
                                         </Link>
                                     </TableCell>
                                     <TableCell>{order.nrdocumento}</TableCell>
-                                    <TableCell>
-                                        <Link
-                                            href={`/vendedor/${encodeURIComponent(order.nmrepresentantevenda)}?returnUrl=${encodeURIComponent(window.location.pathname)}`}
-                                            className="text-blue-500 hover:text-blue-700 underline"
-                                        >
-                                            {order.nmrepresentantevenda}
-                                        </Link>
-                                    </TableCell>
+                                    <TableCell>{order.nmpessoa}</TableCell>
                                     <TableCell>{order.nmempresacurtovenda}</TableCell>
                                     <TableCell>{order.tpmovimentooperacao}</TableCell>
                                     <TableCell className="text-right">{order.qtdsku}</TableCell>
@@ -634,12 +609,11 @@ export default function ClientDetails() {
                                             currency: 'BRL'
                                         })}
                                     </TableCell>
-                                    <TableCell 
-                                        className={`text-right ${
-                                            order.margem >= 0 
-                                                ? 'text-green-600 dark:text-green-400' 
+                                    <TableCell
+                                        className={`text-right ${order.margem >= 0
+                                                ? 'text-green-600 dark:text-green-400'
                                                 : 'text-red-600 dark:text-red-400'
-                                        }`}
+                                            }`}
                                     >
                                         {order.margem.toFixed(2)}%
                                     </TableCell>
