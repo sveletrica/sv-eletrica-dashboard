@@ -348,7 +348,7 @@ export default function ClientDetails() {
                 {decodeURIComponent(params?.nmpessoa as string)}
             </h1>
 
-            <div className="grid gap-4 grid-cols-3 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-3">
                 <Card>
                     <CardHeader>
                         <CardTitle className="text-sm font-medium">
@@ -417,7 +417,7 @@ export default function ClientDetails() {
                     </CardContent>
                 </Card>
 
-                <Card className="col-span-3 md:col-span-1 lg:col-span-1">
+                <Card className="col-span-1 md:col-span-1 lg:col-span-1">
                     <CardHeader>
                         <CardTitle className="text-sm font-medium">
                             Comparativo Anual
@@ -467,7 +467,7 @@ export default function ClientDetails() {
                     </CardContent>
                 </Card>
 
-                <Card className="col-span-3 md:col-span-3 lg:col-span-4">
+                <Card className="col-span-2 md:col-span-2 lg:col-span-4">
                     <CardHeader>
                         <CardTitle className="text-sm font-medium">
                             Evolução do Faturamento

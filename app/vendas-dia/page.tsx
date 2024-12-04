@@ -955,7 +955,7 @@ export default function DailySales() {
                     )}
                     
                     <div 
-                        className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide xl:justify-center"
+                        className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide xl:justify-center py-0.5"
                         onScroll={handleCardsScroll}
                     >
                         <div className="flex gap-4 px-6">
@@ -1025,8 +1025,8 @@ export default function DailySales() {
                                             "relative overflow-hidden cursor-pointer transition-all duration-200 snap-start shrink-0",
                                             "w-[calc(40vw-1.5rem)] md:w-[200px]",
                                             isSelected
-                                                ? "ring-2 ring-primary hover:ring-primary/70"
-                                                : "hover:ring-2 hover:ring-primary/50 opacity-70 hover:opacity-100",
+                                                ? "ring-1 ring-primary hover:ring-primary/70"
+                                                : "hover:ring-1 hover:ring-primary/50 opacity-70 hover:opacity-100",
                                             empresaFilter !== 'all' && !isSelected && "opacity-50"
                                         )}
                                         onClick={() => handleEmpresaFilter(isSelected ? 'all' : summary.empresa)}
