@@ -115,6 +115,14 @@ const getYearlyComparison = (orders: GroupedOrder[]) => {
     }
 }
 
+const getYearlyTotals = (orders: GroupedOrder[]) => {
+    return orders.reduce((acc, order) => {
+        const year = order.dtemissao.split('/')[2]
+        acc[year] = (acc[year] || 0) + order.vlfaturamento
+        return acc
+    }, {} as Record<string, number>)
+}
+
 export default function SalesmanDetails() {
     // Use the same state and logic as in the client page
     const router = useRouter()
@@ -359,19 +367,37 @@ export default function SalesmanDetails() {
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-md md:text-sm lg:text-2xl font-bold">
-                            {window.innerWidth < 600
-                                ? new Intl.NumberFormat('pt-BR', {
-                                    notation: 'compact',
-                                    compactDisplay: 'short',
-                                    style: 'currency',
-                                    currency: 'BRL'
-                                }).format(totals.faturamento)
-                                : totals.faturamento.toLocaleString('pt-BR', {
-                                    style: 'currency',
-                                    currency: 'BRL'
-                                })
-                            }
+                        <div className="space-y-2">
+                            <div className="text-md md:text-sm lg:text-2xl font-bold">
+                                {window.innerWidth < 600
+                                    ? new Intl.NumberFormat('pt-BR', {
+                                        notation: 'compact',
+                                        compactDisplay: 'short',
+                                        style: 'currency',
+                                        currency: 'BRL'
+                                    }).format(totals.faturamento)
+                                    : totals.faturamento.toLocaleString('pt-BR', {
+                                        style: 'currency',
+                                        currency: 'BRL'
+                                    })
+                                }
+                            </div>
+                            <div className="space-y-1">
+                                {Object.entries(getYearlyTotals(data))
+                                    .sort((a, b) => b[0].localeCompare(a[0])) // Sort years in descending order
+                                    .map(([year, value]) => (
+                                        <div key={year} className="text-xs text-muted-foreground">
+                                            {year}: {new Intl.NumberFormat('pt-BR', {
+                                                notation: 'compact',
+                                                compactDisplay: 'short',
+                                                style: 'currency',
+                                                currency: 'BRL',
+                                                maximumFractionDigits: 2
+                                            }).format(value).replace('bi', 'B').replace('mil', 'K')}
+                                        </div>
+                                    ))
+                                }
+                            </div>
                         </div>
                     </CardContent>
                 </Card>
