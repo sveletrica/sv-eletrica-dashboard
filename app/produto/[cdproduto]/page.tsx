@@ -614,7 +614,9 @@ export default function ProductSalesDetails() {
                                 {data[0].nmproduto}
                             </div>
                             <div className="text-xs text-muted-foreground mt-2">
-                                Grupo: {data[0].nmgrupoproduto} Fornecedor: {data[0].nmfornecedorprincipal}
+                                Grupo: {data[0].nmgrupoproduto}
+                                <br />
+                                {data[0].nmfornecedorprincipal}
                             </div>
                         </CardContent>
                         <Dialog open={isSearchOpen} onOpenChange={setIsSearchOpen}>
