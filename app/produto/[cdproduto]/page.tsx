@@ -703,7 +703,7 @@ export default function ProductSalesDetails() {
                             {selectedFilial && (
                                 <Button 
                                     variant="ghost" 
-                                    size="sm"
+                                    size="xs"
                                     onClick={() => setSelectedFilial(null)}
                                 >
                                     Limpar Filtro
@@ -734,8 +734,11 @@ export default function ProductSalesDetails() {
                                             <TableRow 
                                                 key={filial}
                                                 className={cn(
-                                                    "relative cursor-pointer hover:bg-accent/50",
-                                                    selectedFilial === filial && "bg-accent",
+                                                    "relative cursor-pointer hover:bg-accent/100 transition-colors duration-200",
+                                                    selectedFilial === filial && [
+                                                        "bg-primary/10 dark:bg-primary/20",
+                                                        "shadow-sm"
+                                                    ],
                                                     roboto.className,
                                                     "text-xs sm:text-sm"
                                                 )}
