@@ -30,7 +30,7 @@ const sidebarLinks = [
         icon: TrendingUp,
     },
     {
-        href: '/produtos',
+        href: '/produto',
         label: 'Produtos',
         icon: BarChart3,
     },

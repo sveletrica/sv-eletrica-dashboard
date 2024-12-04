@@ -319,7 +319,7 @@ export default function ProductSalesDetails() {
     const searchParams = useSearchParams()
     const [data, setData] = useState<ProductSale[]>([])
     const [filteredData, setFilteredData] = useState<ProductSale[]>([])
-    const [isLoading, setIsLoading] = useState(true)
+    const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [selectedFilial, setSelectedFilial] = useState<string | null>(null)
     const [currentPage, setCurrentPage] = useState(1)
@@ -343,12 +343,14 @@ export default function ProductSalesDetails() {
 
     useEffect(() => {
         const fetchData = async () => {
-            try {
-                const cdproduto = params?.cdproduto as string
-                if (!cdproduto) {
-                    throw new Error('Código do produto não encontrado')
-                }
+            const cdproduto = params?.cdproduto as string
+            if (!cdproduto) {
+                // No product selected yet - return early
+                return
+            }
 
+            setIsLoading(true)
+            try {
                 const response = await fetch(`/api/produto/${cdproduto}`)
                 
                 if (!response.ok) {
@@ -491,6 +493,79 @@ export default function ProductSalesDetails() {
             storeSortConfig(newConfig)
             return newConfig
         })
+    }
+
+    if (!data.length && !isLoading) {
+        return (
+            <div className="space-y-6">
+                <Button
+                    variant="ghost"
+                    onClick={handleBack}
+                    className="mb-4"
+                >
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Voltar
+                </Button>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Buscar Produto</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="flex flex-col items-center justify-center p-8 text-center">
+                            <Package className="h-10 w-10 text-muted-foreground mb-4" />
+                            <h3 className="text-lg font-semibold mb-2">
+                                Nenhum produto selecionado
+                            </h3>
+                            <p className="text-sm text-muted-foreground mb-4">
+                                Digite o código ou nome do produto para começar
+                            </p>
+                            
+                            {isMobile ? (
+                                <>
+                                    <Button 
+                                        className="w-full max-w-sm"
+                                        onClick={() => setIsSearchOpen(true)}
+                                    >
+                                        <Search className="h-4 w-4 mr-2" />
+                                        Buscar Produto
+                                    </Button>
+                                    <Dialog open={isSearchOpen} onOpenChange={setIsSearchOpen}>
+                                        <DialogContent className="sm:max-w-[425px] p-0">
+                                            <DialogTitle className="sr-only">
+                                                Buscar Produto
+                                            </DialogTitle>
+                                            <SearchContent
+                                                searchQuery={searchQuery}
+                                                setSearchQuery={setSearchQuery}
+                                                filteredProducts={filteredProducts}
+                                                handleProductSelect={handleProductSelect}
+                                            />
+                                        </DialogContent>
+                                    </Dialog>
+                                </>
+                            ) : (
+                                <Popover open={isSearchOpen} onOpenChange={setIsSearchOpen}>
+                                    <PopoverTrigger asChild>
+                                        <Button className="w-full max-w-sm">
+                                            <Search className="h-4 w-4 mr-2" />
+                                            Buscar Produto
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="p-0 w-[400px]" align="center">
+                                        <SearchContent
+                                            searchQuery={searchQuery}
+                                            setSearchQuery={setSearchQuery}
+                                            filteredProducts={filteredProducts}
+                                            handleProductSelect={handleProductSelect}
+                                        />
+                                    </PopoverContent>
+                                </Popover>
+                            )}
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        )
     }
 
     if (isLoading) return <Loading />
