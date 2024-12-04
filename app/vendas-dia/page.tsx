@@ -350,6 +350,11 @@ export default function DailySales() {
                     </div>
                 );
             },
+            sortingFn: (rowA, rowB) => {
+                const marginA = parseFloat(rowA.original.margem);
+                const marginB = parseFloat(rowB.original.margem);
+                return marginA - marginB;
+            },
         },
     ], [])
 

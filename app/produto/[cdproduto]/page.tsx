@@ -878,7 +878,7 @@ export default function ProductSalesDetails() {
                     <CardContent>
                         <div className={cn(
                             "w-full",
-                            isMobile ? "h-[150px]" : "h-[200px]"
+                            isMobile ? "h-[150px]" : "h-[300px]"
                         )}>
                             <ResponsiveContainer width="100%" height="100%">
                                 <AreaChart
