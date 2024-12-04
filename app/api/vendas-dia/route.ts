@@ -17,7 +17,7 @@ export async function GET(request: Request) {
             )
         }
 
-        const url = `${SUPABASE_URL}/rest/v1/vendamesporpedido`
+        const url = `${SUPABASE_URL}/rest/v1/vw_vendamesporpedido_geral`
         
         const response = await fetch(`${url}?dtemissao=${date}`, {
             method: 'GET',
