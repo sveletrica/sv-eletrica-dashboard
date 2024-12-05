@@ -99,83 +99,86 @@ export function Sidebar() {
             )}
 
             {/* Sidebar */}
-            <div className={cn(
-                "min-h-screen h-full bg-card border-r",
+            <aside className={cn(
+                "h-full bg-card border-r",
                 "fixed lg:sticky top-0 left-0 z-40",
                 "transition-all duration-300 ease-in-out",
                 isCollapsed ? "w-16" : "w-48",
                 "shrink-0",
-                "absolute lg:relative",
                 isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
             )}>
-                <div className="sticky top-0 bg-card z-20 border-b">
-                    <div className={cn(
-                        "flex flex-col gap-4",
-                        isCollapsed ? "p-3" : "p-4"
-                    )}>
-                        {/* Logo Container */}
+                <div className="flex flex-col h-full">
+                    <div className="bg-card border-b">
                         <div className={cn(
-                            "flex justify-center",
-                            isCollapsed ? "px-1" : "px-2"
+                            "flex flex-col gap-4",
+                            isCollapsed ? "p-3" : "p-4"
                         )}>
+                            {/* Logo Container */}
                             <div className={cn(
-                                "relative",
-                                isCollapsed ? "w-10 h-10" : "w-40 h-10"
+                                "flex justify-center",
+                                isCollapsed ? "px-1" : "px-2"
                             )}>
-                                <Image
-                                    src={isCollapsed ? "/logo lottie.svg" : "/logo-sv.png"}
-                                    alt="SV Elétrica Logo"
-                                    fill
-                                    className={cn(
-                                        "object-contain",
-                                        !isCollapsed && "dark:brightness-0 dark:invert"
-                                    )}
-                                    priority
-                                />
+                                <div className={cn(
+                                    "relative",
+                                    isCollapsed ? "w-10 h-10" : "w-40 h-10"
+                                )}>
+                                    <Image
+                                        src={isCollapsed ? "/logo lottie.svg" : "/logo-sv.png"}
+                                        alt="SV Elétrica Logo"
+                                        fill
+                                        className={cn(
+                                            "object-contain",
+                                            !isCollapsed && "dark:brightness-0 dark:invert"
+                                        )}
+                                        priority
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Buttons Container */}
+                            <div className={cn(
+                                "flex items-center justify-center",
+                                isCollapsed ? "flex-col gap-1" : "gap-2"
+                            )}>
+                                <ThemeToggle />
+                                {!isMobile && (
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => setIsCollapsed(!isCollapsed)}
+                                        className="hidden lg:flex"
+                                        aria-label={isCollapsed ? "Expandir" : "Recolher"}
+                                    >
+                                        <ChevronLeft className={cn(
+                                            "h-4 w-4 transition-transform",
+                                            isCollapsed && "rotate-180"
+                                        )} />
+                                    </Button>
+                                )}
                             </div>
                         </div>
-
-                        {/* Buttons Container */}
-                        <div className={cn(
-                            "flex items-center justify-center",
-                            isCollapsed ? "flex-col gap-1" : "gap-2"
-                        )}>
-                            <ThemeToggle />
-                            {!isMobile && (
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => setIsCollapsed(!isCollapsed)}
-                                    className="hidden lg:flex"
-                                    aria-label={isCollapsed ? "Expandir" : "Recolher"}
+                    </div>
+                    <div className="flex-1 overflow-y-auto">
+                        <nav className="p-2">
+                            {sidebarLinks.map((link) => (
+                                <Link 
+                                    key={link.href}
+                                    href={link.href} 
+                                    className={cn(
+                                        "flex items-center gap-2 px-4 py-3 text-foreground rounded-md hover:bg-accent hover:text-accent-foreground",
+                                        isCollapsed && "px-2 justify-center"
+                                    )}
+                                    onClick={() => isMobile && setIsOpen(false)}
+                                    title={isCollapsed ? link.label : undefined}
                                 >
-                                    <ChevronLeft className={cn(
-                                        "h-4 w-4 transition-transform",
-                                        isCollapsed && "rotate-180"
-                                    )} />
-                                </Button>
-                            )}
-                        </div>
+                                    <link.icon size={20} />
+                                    {!isCollapsed && <span>{link.label}</span>}
+                                </Link>
+                            ))}
+                        </nav>
                     </div>
                 </div>
-                <nav className="p-2">
-                    {sidebarLinks.map((link) => (
-                        <Link 
-                            key={link.href}
-                            href={link.href} 
-                            className={cn(
-                                "flex items-center gap-2 px-4 py-3 text-foreground rounded-md hover:bg-accent hover:text-accent-foreground",
-                                isCollapsed && "px-2 justify-center"
-                            )}
-                            onClick={() => isMobile && setIsOpen(false)}
-                            title={isCollapsed ? link.label : undefined}
-                        >
-                            <link.icon size={20} />
-                            {!isCollapsed && <span>{link.label}</span>}
-                        </Link>
-                    ))}
-                </nav>
-            </div>
+            </aside>
         </>
     )
 }

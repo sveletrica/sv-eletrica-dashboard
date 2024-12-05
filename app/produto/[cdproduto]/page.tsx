@@ -19,6 +19,7 @@ import { Roboto } from 'next/font/google'
 import Link from 'next/link'
 import { SortableColumnProps, SortDirection } from "@/components/ui/table"
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { ProductStockCard } from '@/components/product-stock-card'
 
 interface ProductSale {
     cdpedido: string
@@ -45,6 +46,22 @@ interface Product {
 interface MonthlyData {
     month: string
     quantity: number
+}
+
+interface ApiResponse {
+    product: ProductSale[];
+    stock: StockData[];
+}
+
+interface StockData {
+    QtEstoque_Empresa1?: number;
+    QtEstoque_Empresa4?: number;
+    QtEstoque_Empresa12?: number;
+    QtEstoque_Empresa13?: number;
+    QtEstoque_Empresa15?: number;
+    QtEstoque_Empresa17?: number;
+    QtEstoque_Empresa59?: number;
+    StkTotal: number;
 }
 
 // Add this font configuration after the imports
@@ -289,8 +306,8 @@ const storeSortConfig = (config: SortableColumnProps) => {
     localStorage.setItem(SORT_STORAGE_KEY, JSON.stringify(config))
 }
 
-const prepareMonthlyData = (data: ProductSale[]): MonthlyData[] => {
-    const monthlyTotals = data.reduce((acc, sale) => {
+const prepareMonthlyData = (salesData: ProductSale[]): MonthlyData[] => {
+    const monthlyTotals = salesData.reduce((acc, sale) => {
         const [day, month, year] = sale.dtemissao.split('/');
         const monthKey = `${year}-${month.padStart(2, '0')}`;
         
@@ -332,11 +349,16 @@ const CustomTooltip = ({ active, payload, label, selectedMonth }: any) => {
     return null
 }
 
+// Add this helper function at the top level
+const formatStockNumber = (num: number) => {
+    return new Intl.NumberFormat('pt-BR').format(num);
+}
+
 export default function ProductSalesDetails() {
     const router = useRouter()
     const params = useParams()
     const searchParams = useSearchParams()
-    const [data, setData] = useState<ProductSale[]>([])
+    const [data, setData] = useState<ApiResponse>({ product: [], stock: [] });
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [selectedFilial, setSelectedFilial] = useState<string | null>(null)
@@ -357,16 +379,13 @@ export default function ProductSalesDetails() {
             direction: 'desc'
         }
     })
-    const monthlyData = useMemo(() => prepareMonthlyData(data), [data])
+    const monthlyData = useMemo(() => prepareMonthlyData(data.product), [data.product])
     const [selectedMonth, setSelectedMonth] = useState<string | null>(null)
 
     useEffect(() => {
         const fetchData = async () => {
             const cdproduto = params?.cdproduto as string
-            if (!cdproduto) {
-                // No product selected yet - return early
-                return
-            }
+            if (!cdproduto) return;
 
             setIsLoading(true)
             try {
@@ -375,8 +394,8 @@ export default function ProductSalesDetails() {
                 if (!response.ok) {
                     throw new Error('Failed to fetch product sales')
                 }
-                const salesData = await response.json()
-                setData(salesData)
+                const responseData = await response.json()
+                setData(responseData)
             } catch (err) {
                 const error = err as Error
                 console.error('Error fetching product sales:', error)
@@ -391,10 +410,10 @@ export default function ProductSalesDetails() {
 
     useEffect(() => {
         // Set initial product code when data is loaded
-        if (data.length > 0) {
-            setInputProductCode(data[0].cdproduto)
+        if (data.product.length > 0) {
+            setInputProductCode(data.product[0].cdproduto)
         }
-    }, [data])
+    }, [data.product])
 
     useEffect(() => {
         const fetchAndStoreProducts = async () => {
@@ -441,7 +460,7 @@ export default function ProductSalesDetails() {
 
     const handleBlur = () => {
         setIsEditing(false)
-        setInputProductCode(data[0]?.cdproduto || '')
+        setInputProductCode(data.product[0]?.cdproduto || '')
     }
 
     const handleProductSelect = (product: Product) => {
@@ -477,7 +496,7 @@ export default function ProductSalesDetails() {
     }
 
     const filteredData = useMemo(() => {
-        let filtered = [...data]
+        let filtered = [...data.product]
         
         // Apply sorting
         if (sortConfig.direction) {
@@ -523,7 +542,7 @@ export default function ProductSalesDetails() {
         }
 
         return filtered
-    }, [data, selectedMonth, selectedFilial, sortConfig])
+    }, [data.product, selectedMonth, selectedFilial, sortConfig])
 
     const handleMonthClick = (props: any) => {
         if (props && props.activeLabel) {
@@ -531,7 +550,7 @@ export default function ProductSalesDetails() {
         }
     }
 
-    if (!data.length && !isLoading) {
+    if (!data.product.length && !isLoading) {
         return (
             <div className="space-y-6">
                 <Button
@@ -606,7 +625,7 @@ export default function ProductSalesDetails() {
 
     if (isLoading) return <Loading />
 
-    if (!data.length) {
+    if (!data.product.length) {
         return (
             <div className="space-y-6">
                 <Button
@@ -628,12 +647,12 @@ export default function ProductSalesDetails() {
         )
     }
 
-    const totals = data.reduce((acc, item) => ({
+    const totals = data.product.reduce((acc, item) => ({
         faturamento: acc.faturamento + item.vlfaturamento,
         quantidade: acc.quantidade + item.qtbrutaproduto
     }), { faturamento: 0, quantidade: 0 })
 
-    const filialTotals = data.reduce((acc, item) => {
+    const filialTotals = data.product.reduce((acc, item) => {
         const filial = item.nmempresacurtovenda
         if (!acc[filial]) {
             acc[filial] = {
@@ -680,7 +699,7 @@ export default function ProductSalesDetails() {
 
             <h1 className="text-3xl font-bold tracking-tight flex justify-center">Detalhe do Produto</h1>
 
-            <div className="grid gap-2 grid-cols-3">
+            <div className="grid gap-2 grid-cols-2 md:grid-cols-5">
                 <Card 
                     className="h-full cursor-pointer hover:ring-2 hover:ring-primary/50"
                     onClick={() => !isEditing && setIsEditing(true)}
@@ -704,80 +723,47 @@ export default function ProductSalesDetails() {
                             />
                         ) : (
                             <div className="text-2xl font-bold truncate product-code">
-                                {data[0]?.cdproduto}
+                                {data.product[0]?.cdproduto}
                             </div>
                         )}
                     </CardContent>
                 </Card>
-                {isMobile ? (
-                    <Card 
-                        className="h-full cursor-pointer hover:ring-2 hover:ring-primary/50"
-                        onClick={() => setIsSearchOpen(true)}
-                    >
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2">
-                            <CardTitle className="text-xs sm:text-sm font-medium">
-                                Descrição
-                            </CardTitle>
-                            <Search className="h-4 w-4" />
-                        </CardHeader>
-                        <CardContent className="p-2 md:p-4">
-                            <div className="text-sm md:text-xl font-bold break-words">
-                                {data[0].nmproduto}
-                            </div>
-                            <div className="text-xs text-muted-foreground mt-2">
-                                Grupo: {data[0].nmgrupoproduto}
-                                <br />
-                                {data[0].nmfornecedorprincipal}
-                            </div>
-                        </CardContent>
-                        <Dialog open={isSearchOpen} onOpenChange={setIsSearchOpen}>
-                            <DialogContent className="sm:max-w-[425px] p-0">
-                                <DialogTitle className="sr-only">
-                                    Buscar Produto
-                                </DialogTitle>
-                                <SearchContent
-                                    searchQuery={searchQuery}
-                                    setSearchQuery={setSearchQuery}
-                                    filteredProducts={filteredProducts}
-                                    handleProductSelect={handleProductSelect}
-                                />
-                            </DialogContent>
-                        </Dialog>
-                    </Card>
-                ) : (
-                    <Popover open={isSearchOpen} onOpenChange={setIsSearchOpen}>
-                        <PopoverTrigger asChild>
-                            <Card 
-                                className="h-full cursor-pointer hover:ring-2 hover:ring-primary/50"
-                            >
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2">
-                                    <CardTitle className="text-xs sm:text-sm font-medium">
-                                        Descrição
-                                    </CardTitle>
-                                    <Search className="h-4 w-4" />
-                                </CardHeader>
-                                <CardContent className="p-2 md:p-4">
-                                    <div className="text-sm md:text-xl font-bold break-words">
-                                        {data[0].nmproduto}
-                                    </div>
-                                    <div className="text-xs text-muted-foreground mt-2">
-                                        Grupo: {data[0].nmgrupoproduto}
-                                        <br />
-                                        {data[0].nmfornecedorprincipal}
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </PopoverTrigger>
-                        <PopoverContent className="p-0 w-[400px]" align="end">
+
+                <Card 
+                    className="h-full col-span-1 md:col-span-2 cursor-pointer hover:ring-2 hover:ring-primary/50"
+                    onClick={() => setIsSearchOpen(true)}
+                >
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2">
+                        <CardTitle className="text-xs sm:text-sm font-medium">
+                            Descrição
+                        </CardTitle>
+                        <Search className="h-4 w-4" />
+                    </CardHeader>
+                    <CardContent className="p-2 md:p-4">
+                        <div className="text-sm md:text-xl font-bold break-words">
+                            {data.product[0].nmproduto}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-2">
+                            Grupo: {data.product[0].nmgrupoproduto}
+                            <br />
+                            {data.product[0].nmfornecedorprincipal}
+                        </div>
+                    </CardContent>
+                    <Dialog open={isSearchOpen} onOpenChange={setIsSearchOpen}>
+                        <DialogContent className="sm:max-w-[425px] p-0">
+                            <DialogTitle className="sr-only">
+                                Buscar Produto
+                            </DialogTitle>
                             <SearchContent
                                 searchQuery={searchQuery}
                                 setSearchQuery={setSearchQuery}
                                 filteredProducts={filteredProducts}
                                 handleProductSelect={handleProductSelect}
                             />
-                        </PopoverContent>
-                    </Popover>
-                )}
+                        </DialogContent>
+                    </Dialog>
+                </Card>
+
                 <Card className="h-full">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2">
                         <CardTitle className="text-xs sm:text-sm font-medium">
@@ -799,6 +785,72 @@ export default function ProductSalesDetails() {
                         </p>
                     </CardContent>
                 </Card>
+
+                {data.stock && data.stock[0] && (
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Card className="h-full cursor-pointer hover:ring-2 hover:ring-primary/50">
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2">
+                                    <CardTitle className="text-xs sm:text-sm font-medium">
+                                        Estoque Total
+                                    </CardTitle>
+                                    <Package className="h-4 w-4 text-muted-foreground" />
+                                </CardHeader>
+                                <CardContent className="p-2 md:p-4">
+                                    <div className="text-sm md:text-xl font-bold">
+                                        <AnimatedValue value={data.stock[0].StkTotal} suffix=" un" />
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">
+                                        Em {Object.keys(data.stock[0] || {})
+                                            .filter(key => key.startsWith('QtEstoque_') && data.stock[0]?.[key as keyof StockData] > 0)
+                                            .length} filiais
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80" align="end">
+                            <div className="space-y-2 p-6">
+                                <h4 className="font-medium">Estoque por Filial</h4>
+                                <div className="grid gap-2">
+                                    {Object.entries(data.stock[0] || {})
+                                        .filter(([key]) => key.startsWith('QtEstoque_'))
+                                        .sort(([, a], [, b]) => (Number(b) || 0) - (Number(a) || 0))
+                                        .map(([key, value]) => {
+                                            if (!value || value === 0) return null;
+                                            const filialNumber = key.replace('QtEstoque_Empresa', '');
+                                            const percentage = ((value as number) / data.stock[0].StkTotal) * 100;
+                                            
+                                            return (
+                                                <div key={key} className="relative">
+                                                    <div className="flex justify-between items-center text-sm">
+                                                        <span className="font-medium">
+                                                            {filialNumber === '1' ? 'Matriz' : `Filial ${filialNumber}`}
+                                                        </span>
+                                                        <span>{formatStockNumber(value as number)} un</span>
+                                                    </div>
+                                                    <div className="mt-1 h-2 w-full bg-muted rounded-full overflow-hidden">
+                                                        <div 
+                                                            className="h-full bg-primary transition-all duration-500 ease-in-out"
+                                                            style={{ width: `${percentage}%` }}
+                                                        />
+                                                    </div>
+                                                    <span className="text-xs text-muted-foreground">
+                                                        {percentage.toFixed(1)}%
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                </div>
+                                <div className="pt-2 border-t mt-2">
+                                    <div className="flex justify-between items-center font-medium">
+                                        <span>Total</span>
+                                        <span>{formatStockNumber(data.stock[0].StkTotal)} un</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </PopoverContent>
+                    </Popover>
+                )}
             </div>
 
             <div className={cn(
@@ -950,31 +1002,31 @@ export default function ProductSalesDetails() {
                                             />
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            {calculateMargin(totals.faturamento, data.reduce((acc, item) => acc + item.vltotalcustoproduto, 0)) >= 0 ? (
+                                            {calculateMargin(totals.faturamento, data.product.reduce((acc, item) => acc + item.vltotalcustoproduto, 0)) >= 0 ? (
                                                 <div className="flex justify-end">
                                                     <div className={cn(
                                                         "inline-flex items-center gap-1 rounded-full px-2 py-1",
-                                                        getMarginStyle(calculateMargin(totals.faturamento, data.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).background,
-                                                        getMarginStyle(calculateMargin(totals.faturamento, data.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).text
+                                                        getMarginStyle(calculateMargin(totals.faturamento, data.product.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).background,
+                                                        getMarginStyle(calculateMargin(totals.faturamento, data.product.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).text
                                                     )}>
                                                         <AnimatedValue 
-                                                            value={calculateMargin(totals.faturamento, data.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))}
+                                                            value={calculateMargin(totals.faturamento, data.product.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))}
                                                             formatter={(value) => value.toFixed(2)}
                                                             suffix="%"
                                                         />
-                                                        {getMarginStyle(calculateMargin(totals.faturamento, data.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).icon}
+                                                        {getMarginStyle(calculateMargin(totals.faturamento, data.product.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).icon}
                                                     </div>
                                                 </div>
                                             ) : (
                                                 <div className="flex justify-end">
                                                     <div className={cn(
                                                         "inline-flex items-center gap-1 rounded-full px-2 py-1",
-                                                        getMarginStyle(calculateMargin(totals.faturamento, data.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).background,
-                                                        getMarginStyle(calculateMargin(totals.faturamento, data.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).text
+                                                        getMarginStyle(calculateMargin(totals.faturamento, data.product.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).background,
+                                                        getMarginStyle(calculateMargin(totals.faturamento, data.product.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).text
                                                     )}>
-                                                        {getMarginStyle(calculateMargin(totals.faturamento, data.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).icon}
+                                                        {getMarginStyle(calculateMargin(totals.faturamento, data.product.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).icon}
                                                         <AnimatedValue 
-                                                            value={calculateMargin(totals.faturamento, data.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))}
+                                                            value={calculateMargin(totals.faturamento, data.product.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))}
                                                             formatter={(value) => value.toFixed(2)}
                                                             suffix="%"
                                                         />
@@ -1254,6 +1306,10 @@ export default function ProductSalesDetails() {
                     </Table>
                 </CardContent>
             </Card>
+
+            {data.stock && data.stock[0] && (
+                <ProductStockCard stockData={data.stock[0]} />
+            )}
         </div>
     )
 } 

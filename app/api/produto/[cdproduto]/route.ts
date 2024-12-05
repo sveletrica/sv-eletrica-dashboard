@@ -13,14 +13,26 @@ export async function GET(
     try {
         const cdproduto = await Promise.resolve(context.params.cdproduto)
 
-        const { data, error } = await supabase
+        // Fetch product details
+        const { data: productData, error: productError } = await supabase
             .from('vw_mssql_bivendas_aux_geral')
             .select('*')
             .eq('cdproduto', cdproduto)
 
-        if (error) throw error
+        if (productError) throw productError
 
-        return NextResponse.json(data)
+        // Fetch stock information
+        const { data: stockData, error: stockError } = await supabase
+            .from('DBestoque')
+            .select('*')
+            .eq('CdChamada', cdproduto)
+
+        if (stockError) throw stockError
+
+        return NextResponse.json({
+            product: productData,
+            stock: stockData
+        })
     } catch (error) {
         console.error('Error:', error)
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
