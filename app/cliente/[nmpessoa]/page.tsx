@@ -631,10 +631,8 @@ export default function ClientDetails() {
                                     </Button>
                                 </TableHead>
                                 <TableHead>Pedido</TableHead>
-                                <TableHead>Documento</TableHead>
-                                <TableHead>
-                                    <span className="text-blue-500">Vendedor ↗</span>
-                                </TableHead>
+                                <TableHead>Doc.</TableHead>
+                                <TableHead>Vendedor</TableHead>
                                 <TableHead>Empresa</TableHead>
                                 <TableHead>Tipo</TableHead>
                                 <TableHead className="text-right">
@@ -649,7 +647,7 @@ export default function ClientDetails() {
                                             }
                                         }}
                                     >
-                                        Qtd Items
+                                        Qtd
                                         <ArrowUpDown className="ml-2 h-4 w-4" />
                                     </Button>
                                 </TableHead>
@@ -665,7 +663,7 @@ export default function ClientDetails() {
                                             }
                                         }}
                                     >
-                                        Faturamento
+                                        Fat.
                                         <ArrowUpDown className="ml-2 h-4 w-4" />
                                     </Button>
                                 </TableHead>
