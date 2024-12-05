@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { Home, BarChart2, Package, Menu, X, ShoppingCart, BarChart3, CalendarDays, TrendingUp, ChevronLeft } from 'lucide-react'
+import { Home, BarChart2, Package, Menu, X, ShoppingCart, BarChart3, CalendarDays, TrendingUp, ChevronLeft, Calculator } from 'lucide-react'
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Button } from "@/components/ui/button"
 import { useState, useEffect } from 'react'
@@ -30,10 +30,18 @@ const sidebarLinks = [
         icon: TrendingUp,
     },
     {
+        href: '/orcamento',
+        label: 'Orçamento',
+        icon: Calculator,
+    },
+    {
         href: '/produto',
         label: 'Produtos',
         icon: BarChart3,
     },
+] as const
+
+const storeLinks = [
     {
         href: '/sobral',
         label: 'Sobral',
@@ -161,6 +169,27 @@ export function Sidebar() {
                     <div className="flex-1 overflow-y-auto">
                         <nav className="p-2">
                             {sidebarLinks.map((link) => (
+                                <Link 
+                                    key={link.href}
+                                    href={link.href} 
+                                    className={cn(
+                                        "flex items-center gap-2 px-4 py-3 text-foreground rounded-md hover:bg-accent hover:text-accent-foreground",
+                                        isCollapsed && "px-2 justify-center"
+                                    )}
+                                    onClick={() => isMobile && setIsOpen(false)}
+                                    title={isCollapsed ? link.label : undefined}
+                                >
+                                    <link.icon size={20} />
+                                    {!isCollapsed && <span>{link.label}</span>}
+                                </Link>
+                            ))}
+                            
+                            <div className={cn(
+                                "mx-2 my-4 h-[1px] bg-border",
+                                isCollapsed && "mx-1"
+                            )} />
+
+                            {storeLinks.map((link) => (
                                 <Link 
                                     key={link.href}
                                     href={link.href} 
