@@ -11,6 +11,7 @@ import Link from 'next/link'
 import { Roboto } from 'next/font/google'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { startOfMonth, endOfMonth, parseISO } from 'date-fns'
+import { cn } from '@/lib/utils'
 
 const roboto = Roboto({
     weight: ['400', '500', '700'],
@@ -490,11 +491,11 @@ export default function ClientDetails() {
 
                 <Card className="col-span-2 md:col-span-2 lg:col-span-4">
                     <CardHeader>
-                        <div className="flex justify-between items-center">
+                        <div className="h-8 flex justify-between items-center">
                             <CardTitle className="text-sm font-medium">
                                 Evolução do Faturamento
                             </CardTitle>
-                            {selectedMonth && (
+                            {selectedMonth ? (
                                 <Button 
                                     variant="ghost" 
                                     size="sm"
@@ -504,6 +505,17 @@ export default function ClientDetails() {
                                     <X className="h-4 w-4 mr-2" />
                                     Limpar filtro: {selectedMonth}
                                 </Button>
+                            ) : (
+                                <div className="invisible">
+                                    <Button 
+                                        variant="ghost" 
+                                        size="sm"
+                                        className="opacity-0"
+                                    >
+                                        <X className="h-4 w-4 mr-2" />
+                                        Placeholder
+                                    </Button>
+                                </div>
                             )}
                         </div>
                     </CardHeader>
@@ -547,20 +559,38 @@ export default function ClientDetails() {
                                         labelFormatter={(label) => `Mês: ${label}`}
                                     />
                                     <Area
+                                        key="value-area"
                                         type="monotone"
                                         dataKey="value"
                                         stroke="#2563eb"
                                         strokeWidth={2}
                                         fill="url(#colorValue)"
-                                        dot={{ 
-                                            r: 4, 
-                                            fill: "#2563eb",
-                                            // Highlight selected month
-                                            stroke: (props: any) => 
-                                                props.payload.month === selectedMonth ? "#fff" : "transparent",
-                                            strokeWidth: 2
+                                        dot={(props: any) => {
+                                            const isSelected = selectedMonth && props.payload.month === selectedMonth
+                                            return (
+                                                <circle
+                                                    key={`dot-${props.payload.month}`}
+                                                    r={isSelected ? 6 : 4}
+                                                    fill={isSelected ? "#2563eb" : "#fff"}
+                                                    stroke="#2563eb"
+                                                    strokeWidth={isSelected ? 3 : 2}
+                                                    cx={props.cx}
+                                                    cy={props.cy}
+                                                    className={cn(
+                                                        "transition-all duration-200",
+                                                        isSelected && "drop-shadow-md"
+                                                    )}
+                                                />
+                                            )
                                         }}
-                                        activeDot={{ r: 6 }}
+                                        activeDot={{
+                                            key: "active-dot",
+                                            r: 6,
+                                            stroke: "#2563eb",
+                                            strokeWidth: 2,
+                                            fill: "#fff",
+                                            className: "drop-shadow-md"
+                                        }}
                                     />
                                 </AreaChart>
                             </ResponsiveContainer>
