@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Package, ChevronLeft, ChevronRight, Check, AlertTriangle, XCircle, Search } from 'lucide-react'
+import { ArrowLeft, Package, ChevronLeft, ChevronRight, Check, AlertTriangle, XCircle, Search, X } from 'lucide-react'
 import Loading from '../../vendas-dia/loading'
 import { cn } from "@/lib/utils"
 import { useSpring, animated } from '@react-spring/web'
@@ -313,12 +313,30 @@ const prepareMonthlyData = (data: ProductSale[]): MonthlyData[] => {
         }));
 };
 
+// Add this custom tooltip component
+const CustomTooltip = ({ active, payload, label, selectedMonth }: any) => {
+    if (active && payload && payload.length) {
+        const isSelected = label === selectedMonth
+        return (
+            <div className={cn(
+                "bg-background border rounded-lg shadow-lg p-2",
+                isSelected && "ring-2 ring-primary"
+            )}>
+                <p className="font-medium">{label}</p>
+                <p className="text-sm">
+                    Quantidade: {payload[0].value.toLocaleString('pt-BR')}
+                </p>
+            </div>
+        )
+    }
+    return null
+}
+
 export default function ProductSalesDetails() {
     const router = useRouter()
     const params = useParams()
     const searchParams = useSearchParams()
     const [data, setData] = useState<ProductSale[]>([])
-    const [filteredData, setFilteredData] = useState<ProductSale[]>([])
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [selectedFilial, setSelectedFilial] = useState<string | null>(null)
@@ -340,6 +358,7 @@ export default function ProductSalesDetails() {
         }
     })
     const monthlyData = useMemo(() => prepareMonthlyData(data), [data])
+    const [selectedMonth, setSelectedMonth] = useState<string | null>(null)
 
     useEffect(() => {
         const fetchData = async () => {
@@ -369,44 +388,6 @@ export default function ProductSalesDetails() {
 
         fetchData()
     }, [params])
-
-    useEffect(() => {
-        let sorted = [...data] as SortableProductSale[]
-        
-        if (sortConfig.direction) {
-            sorted.sort((a, b) => {
-                if (sortConfig.column === 'dtemissao') {
-                    const [dayA, monthA, yearA] = a.dtemissao.split('/').map(Number)
-                    const [dayB, monthB, yearB] = b.dtemissao.split('/').map(Number)
-                    const dateA = new Date(yearA, monthA - 1, dayA)
-                    const dateB = new Date(yearB, monthB - 1, dayB)
-                    return sortConfig.direction === 'asc'
-                        ? dateA.getTime() - dateB.getTime()
-                        : dateB.getTime() - dateA.getTime()
-                }
-
-                if (sortConfig.column === 'qtbrutaproduto' || sortConfig.column === 'vlfaturamento' || sortConfig.column === 'vltotalcustoproduto') {
-                    return sortConfig.direction === 'asc'
-                        ? Number(a[sortConfig.column]) - Number(b[sortConfig.column])
-                        : Number(b[sortConfig.column]) - Number(a[sortConfig.column])
-                }
-
-                const compareA = String(a[sortConfig.column]).toLowerCase()
-                const compareB = String(b[sortConfig.column]).toLowerCase()
-
-                return sortConfig.direction === 'asc'
-                    ? compareA.localeCompare(compareB)
-                    : compareB.localeCompare(compareA)
-            })
-        }
-
-        if (selectedFilial) {
-            sorted = sorted.filter(item => item.nmempresacurtovenda === selectedFilial)
-        }
-
-        setFilteredData(sorted)
-        setCurrentPage(1)
-    }, [selectedFilial, data, sortConfig])
 
     useEffect(() => {
         // Set initial product code when data is loaded
@@ -480,7 +461,7 @@ export default function ProductSalesDetails() {
 
     const handleSort = (column: SortableColumn) => {
         setSortConfig(prev => {
-            const newConfig = {
+            const newConfig: SortableColumnProps = {
                 column,
                 direction: prev.column === column
                     ? prev.direction === 'asc'
@@ -493,6 +474,61 @@ export default function ProductSalesDetails() {
             storeSortConfig(newConfig)
             return newConfig
         })
+    }
+
+    const filteredData = useMemo(() => {
+        let filtered = [...data]
+        
+        // Apply sorting
+        if (sortConfig.direction) {
+            filtered.sort((a, b) => {
+                if (sortConfig.column === 'dtemissao') {
+                    const [dayA, monthA, yearA] = a.dtemissao.split('/').map(Number)
+                    const [dayB, monthB, yearB] = b.dtemissao.split('/').map(Number)
+                    const dateA = new Date(yearA, monthA - 1, dayA)
+                    const dateB = new Date(yearB, monthB - 1, dayB)
+                    return sortConfig.direction === 'asc'
+                        ? dateA.getTime() - dateB.getTime()
+                        : dateB.getTime() - dateA.getTime()
+                }
+
+                if (sortConfig.column === 'qtbrutaproduto' || sortConfig.column === 'vlfaturamento' || sortConfig.column === 'vltotalcustoproduto') {
+                    return sortConfig.direction === 'asc'
+                        ? Number(a[sortConfig.column]) - Number(b[sortConfig.column])
+                        : Number(b[sortConfig.column]) - Number(a[sortConfig.column])
+                }
+
+                // Type assertion to handle string indexing
+                const compareA = String((a as any)[sortConfig.column]).toLowerCase()
+                const compareB = String((b as any)[sortConfig.column]).toLowerCase()
+
+                return sortConfig.direction === 'asc'
+                    ? compareA.localeCompare(compareB)
+                    : compareB.localeCompare(compareA)
+            })
+        }
+
+        // Apply filial filter
+        if (selectedFilial) {
+            filtered = filtered.filter(item => item.nmempresacurtovenda === selectedFilial)
+        }
+
+        // Apply month filter
+        if (selectedMonth) {
+            const [month, year] = selectedMonth.split('/')
+            filtered = filtered.filter(sale => {
+                const [, saleMonth, saleYear] = sale.dtemissao.split('/')
+                return saleMonth === month && saleYear === year
+            })
+        }
+
+        return filtered
+    }, [data, selectedMonth, selectedFilial, sortConfig])
+
+    const handleMonthClick = (props: any) => {
+        if (props && props.activeLabel) {
+            setSelectedMonth(selectedMonth === props.activeLabel ? null : props.activeLabel)
+        }
     }
 
     if (!data.length && !isLoading) {
@@ -773,18 +809,30 @@ export default function ProductSalesDetails() {
                     isMobile && "col-span-1"
                 )}>
                     <CardHeader>
-                        <CardTitle className="text-sm font-medium flex justify-between items-center">
-                            <span>Vendas por Filial</span>
-                            {selectedFilial && (
+                        <div className="h-8 flex justify-between items-center">
+                            <CardTitle className="text-sm font-medium">
+                                Vendas por Filial
+                            </CardTitle>
+                            {selectedFilial ? (
                                 <Button 
                                     variant="ghost" 
-                                    size="xs"
+                                    size="sm"
                                     onClick={() => setSelectedFilial(null)}
                                 >
                                     Limpar Filtro
                                 </Button>
+                            ) : (
+                                <div className="invisible">
+                                    <Button 
+                                        variant="ghost" 
+                                        size="sm"
+                                        className="opacity-0"
+                                    >
+                                        Placeholder
+                                    </Button>
+                                </div>
                             )}
-                        </CardTitle>
+                        </div>
                     </CardHeader>
                     <CardContent>
                         <div className={cn(
@@ -946,9 +994,33 @@ export default function ProductSalesDetails() {
                     isMobile && "col-span-1"
                 )}>
                     <CardHeader>
-                        <CardTitle className="text-sm font-medium">
-                            Tendência de Vendas
-                        </CardTitle>
+                        <div className="h-8 flex justify-between items-center">
+                            <CardTitle className="text-sm font-medium">
+                                Tendência de Vendas
+                            </CardTitle>
+                            {selectedMonth ? (
+                                <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => setSelectedMonth(null)}
+                                    className="text-muted-foreground"
+                                >
+                                    <X className="h-4 w-4 mr-2" />
+                                    Limpar filtro: {selectedMonth}
+                                </Button>
+                            ) : (
+                                <div className="invisible">
+                                    <Button 
+                                        variant="ghost" 
+                                        size="sm"
+                                        className="opacity-0"
+                                    >
+                                        <X className="h-4 w-4 mr-2" />
+                                        Placeholder
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
                     </CardHeader>
                     <CardContent>
                         <div className={cn(
@@ -959,6 +1031,7 @@ export default function ProductSalesDetails() {
                                 <AreaChart
                                     data={monthlyData}
                                     margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                                    onClick={handleMonthClick}
                                 >
                                     <defs>
                                         <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
@@ -980,28 +1053,40 @@ export default function ProductSalesDetails() {
                                             }).format(value)
                                         }
                                     />
-                                    <Tooltip 
-                                        formatter={(value: number) => 
-                                            new Intl.NumberFormat('pt-BR').format(value)
-                                        }
-                                        labelFormatter={(label) => `Mês: ${label}`}
-                                        contentStyle={{
-                                            backgroundColor: 'var(--background)',
-                                            border: '1px solid var(--border)',
-                                            borderRadius: '6px',
-                                        }}
-                                        labelStyle={{
-                                            color: 'var(--foreground)',
-                                        }}
-                                    />
+                                    <Tooltip content={<CustomTooltip selectedMonth={selectedMonth} />} />
                                     <Area
+                                        key="quantity-area"
                                         type="monotone"
                                         dataKey="quantity"
                                         stroke="#2563eb"
                                         strokeWidth={2}
                                         fill="url(#colorValue)"
-                                        dot={{ r: 4, fill: "#2563eb" }}
-                                        activeDot={{ r: 6 }}
+                                        dot={(props: any) => {
+                                            const isSelected = selectedMonth && props.payload.month === selectedMonth
+                                            return (
+                                                <circle
+                                                    key={`dot-${props.payload.month}`}
+                                                    cx={props.cx}
+                                                    cy={props.cy}
+                                                    r={isSelected ? 6 : 4}
+                                                    fill={isSelected ? "#2563eb" : "#fff"}
+                                                    stroke="#2563eb"
+                                                    strokeWidth={isSelected ? 3 : 2}
+                                                    className={cn(
+                                                        "transition-all duration-200",
+                                                        isSelected && "drop-shadow-md"
+                                                    )}
+                                                />
+                                            )
+                                        }}
+                                        activeDot={{
+                                            key: "active-dot",
+                                            r: 6,
+                                            stroke: "#2563eb",
+                                            strokeWidth: 2,
+                                            fill: "#fff",
+                                            className: "drop-shadow-md"
+                                        }}
                                     />
                                 </AreaChart>
                             </ResponsiveContainer>
@@ -1013,7 +1098,14 @@ export default function ProductSalesDetails() {
             <Card>
                 <CardHeader>
                     <CardTitle className="flex justify-between items-center">
-                        <span>Histórico de Vendas</span>
+                        <div>
+                            Histórico de Vendas
+                            {selectedMonth && (
+                                <span className="ml-2 text-sm font-normal text-muted-foreground">
+                                    Filtrado por: {selectedMonth}
+                                </span>
+                            )}
+                        </div>
                         <div className="flex items-center gap-2">
                             <Button
                                 variant="outline"
@@ -1118,44 +1210,46 @@ export default function ProductSalesDetails() {
                             </TableRow>
                         </TableHeader>
                         <TableBody className={cn(roboto.className, "text-xs sm:text-sm")}>
-                            {currentItems.map((item, index) => (
-                                <TableRow key={index}>
-                                    <TableCell>{item.dtemissao}</TableCell>
-                                    <TableCell>
-                                        <Link
-                                            href={`/vendas-dia/${item.cdpedido}?nrdocumento=${item.nrdocumento}&dtemissao=${item.dtemissao}&fromProduct=${item.cdproduto}`}
-                                            className="text-blue-500 hover:text-blue-700 underline"
-                                        >
-                                            {item.cdpedido}
-                                        </Link>
-                                    </TableCell>
-                                    <TableCell>{item.nrdocumento}</TableCell>
-                                    <TableCell>
-                                        <Link
-                                            href={`/cliente/${encodeURIComponent(item.nmpessoa)}?returnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`}
-                                            className="text-blue-500 hover:text-blue-700 underline"
-                                        >
-                                            {item.nmpessoa}
-                                        </Link>
-                                    </TableCell>
-                                    <TableCell>{item.tppessoa}</TableCell>
-                                    <TableCell>{item.nmempresacurtovenda}</TableCell>
-                                    <TableCell className="text-right">{item.qtbrutaproduto}</TableCell>
-                                    <TableCell className="text-right">
-                                        {item.vlfaturamento.toLocaleString('pt-BR', {
-                                            style: 'currency',
-                                            currency: 'BRL'
-                                        })}
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        {item.vltotalcustoproduto.toLocaleString('pt-BR', {
-                                            style: 'currency',
-                                            currency: 'BRL'
-                                        })}
-                                    </TableCell>
-                                    <TableCell className="text-right">{item.margem}</TableCell>
-                                </TableRow>
-                            ))}
+                            {filteredData
+                                .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                                .map((item, index) => (
+                                    <TableRow key={index}>
+                                        <TableCell>{item.dtemissao}</TableCell>
+                                        <TableCell>
+                                            <Link
+                                                href={`/vendas-dia/${item.cdpedido}?nrdocumento=${item.nrdocumento}&dtemissao=${item.dtemissao}&fromProduct=${item.cdproduto}`}
+                                                className="text-blue-500 hover:text-blue-700 underline"
+                                            >
+                                                {item.cdpedido}
+                                            </Link>
+                                        </TableCell>
+                                        <TableCell>{item.nrdocumento}</TableCell>
+                                        <TableCell>
+                                            <Link
+                                                href={`/cliente/${encodeURIComponent(item.nmpessoa)}?returnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`}
+                                                className="text-blue-500 hover:text-blue-700 underline"
+                                            >
+                                                {item.nmpessoa}
+                                            </Link>
+                                        </TableCell>
+                                        <TableCell>{item.tppessoa}</TableCell>
+                                        <TableCell>{item.nmempresacurtovenda}</TableCell>
+                                        <TableCell className="text-right">{item.qtbrutaproduto}</TableCell>
+                                        <TableCell className="text-right">
+                                            {item.vlfaturamento.toLocaleString('pt-BR', {
+                                                style: 'currency',
+                                                currency: 'BRL'
+                                            })}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            {item.vltotalcustoproduto.toLocaleString('pt-BR', {
+                                                style: 'currency',
+                                                currency: 'BRL'
+                                            })}
+                                        </TableCell>
+                                        <TableCell className="text-right">{item.margem}</TableCell>
+                                    </TableRow>
+                                ))}
                         </TableBody>
                     </Table>
                 </CardContent>
