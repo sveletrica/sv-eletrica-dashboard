@@ -81,21 +81,21 @@ const TableHead = React.forwardRef<HTMLTableCellElement, TableHeadProps>(
     <th
       ref={ref}
       className={cn(
-        "h-10 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0",
+        "h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0",
         sortable && "cursor-pointer select-none",
         className
       )}
       onClick={sortable ? onSort : undefined}
       {...props}
     >
-      <div className="flex items-center gap-1">
-        {children}
+      <div className="flex items-center space-x-1">
+        <span className="flex-1">{children}</span>
         {sortable && (
-          <div className="w-4 h-4 flex items-center justify-center">
+          <span className="w-4 flex items-center justify-center">
             {sortDirection === "asc" && <ChevronUp className="h-4 w-4" />}
             {sortDirection === "desc" && <ChevronDown className="h-4 w-4" />}
             {sortDirection === null && <ChevronsUpDown className="h-4 w-4 opacity-50" />}
-          </div>
+          </span>
         )}
       </div>
     </th>

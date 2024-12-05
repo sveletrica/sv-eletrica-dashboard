@@ -63,6 +63,104 @@ type SortOrder = 'asc' | 'desc'
 
 const ITEMS_PER_PAGE = 20
 
+// Add these utility functions before the ClientDetails component
+const groupOrders = (sales: ClientSale[]) => {
+    const orderMap = new Map<string, GroupedOrder>();
+
+    sales.forEach(sale => {
+        const key = `${sale.cdpedido}-${sale.nrdocumento}`;
+        const [day, month, year] = sale.dtemissao.split('/')
+        const monthKey = `${month}/${year}`
+
+        if (!orderMap.has(key)) {
+            orderMap.set(key, {
+                cdpedido: sale.cdpedido,
+                nrdocumento: sale.nrdocumento,
+                dtemissao: sale.dtemissao,
+                monthKey,
+                nmrepresentantevenda: sale.nmrepresentantevenda,
+                nmempresacurtovenda: sale.nmempresacurtovenda,
+                tpmovimentooperacao: sale.tpmovimentooperacao,
+                qtdsku: 0,
+                vlfaturamento: 0,
+                vltotalcustoproduto: 0,
+                margem: 0,
+                items: []
+            });
+        }
+        
+        const order = orderMap.get(key)!;
+        order.items.push(sale);
+        order.qtdsku += sale.qtbrutaproduto;
+        order.vlfaturamento += sale.vlfaturamento;
+        order.vltotalcustoproduto += sale.vltotalcustoproduto;
+    });
+
+    // Calculate margin for each order
+    orderMap.forEach(order => {
+        order.margem = ((order.vlfaturamento - (order.vlfaturamento * 0.268 + order.vltotalcustoproduto)) / order.vlfaturamento) * 100;
+    });
+
+    return Array.from(orderMap.values());
+};
+
+const getMonthlyData = (orders: GroupedOrder[]): MonthlyData[] => {
+    const monthlyMap = new Map<string, number>();
+    
+    orders.forEach(order => {
+        const [day, month, year] = order.dtemissao.split('/');
+        const monthKey = `${year}-${month}`;
+        monthlyMap.set(monthKey, (monthlyMap.get(monthKey) || 0) + order.vlfaturamento);
+    });
+
+    return Array.from(monthlyMap.entries())
+        .map(([month, value]) => ({
+            month: month.split('-').reverse().join('/'),
+            value
+        }))
+        .sort((a, b) => {
+            const [monthA, yearA] = a.month.split('/');
+            const [monthB, yearB] = b.month.split('/');
+            return (yearA + monthA).localeCompare(yearB + monthB);
+        });
+};
+
+const getYearlyComparison = (orders: GroupedOrder[]) => {
+    const currentYear = new Date().getFullYear();
+    const lastYear = currentYear - 1;
+
+    const yearlyTotals = orders.reduce((acc, order) => {
+        const [, , year] = order.dtemissao.split('/');
+        const orderYear = parseInt(year);
+        
+        if (orderYear === currentYear) {
+            acc.currentYear += order.vlfaturamento;
+        } else if (orderYear === lastYear) {
+            acc.lastYear += order.vlfaturamento;
+        }
+        
+        return acc;
+    }, { currentYear: 0, lastYear: 0 });
+
+    const percentageChange = yearlyTotals.lastYear > 0
+        ? ((yearlyTotals.currentYear - yearlyTotals.lastYear) / yearlyTotals.lastYear) * 100
+        : 0;
+
+    return {
+        currentYear: yearlyTotals.currentYear,
+        lastYear: yearlyTotals.lastYear,
+        percentageChange
+    };
+};
+
+const getYearlyTotals = (orders: GroupedOrder[]) => {
+    return orders.reduce((acc, order) => {
+        const year = order.dtemissao.split('/')[2];
+        acc[year] = (acc[year] || 0) + order.vlfaturamento;
+        return acc;
+    }, {} as Record<string, number>);
+};
+
 export default function ClientDetails() {
     const router = useRouter()
     const params = useParams()
@@ -75,117 +173,57 @@ export default function ClientDetails() {
     const [currentPage, setCurrentPage] = useState(1)
     const [selectedMonth, setSelectedMonth] = useState<string | null>(null)
 
-    // Helper function to group orders
-    const groupOrders = (sales: ClientSale[]) => {
-        const orderMap = new Map<string, {
-            cdpedido: string
-            nrdocumento: string
-            dtemissao: string
-            monthKey: string
-            nmrepresentantevenda: string
-            nmempresacurtovenda: string
-            tpmovimentooperacao: string
-            qtdsku: number
-            vlfaturamento: number
-            vltotalcustoproduto: number
-            margem: number
-            items: ClientSale[]
-        }>();
+    const filteredData = useMemo(() => {
+        if (!selectedMonth) return data;
+        return data.filter(order => {
+            const [, month, year] = order.dtemissao.split('/')
+            const orderMonth = `${month}/${year}`
+            return orderMonth === selectedMonth
+        });
+    }, [data, selectedMonth]);
 
-        sales.forEach(sale => {
-            const key = `${sale.cdpedido}-${sale.nrdocumento}`;
-            const [day, month, year] = sale.dtemissao.split('/')
-            const monthKey = `${month}/${year}`
+    const sortedData = useMemo(() => {
+        return [...filteredData].sort((a, b) => {
+            const multiplier = sortOrder === 'asc' ? 1 : -1;
+            
+            if (sortField === 'dtemissao') {
+                const [dayA, monthA, yearA] = a.dtemissao.split('/');
+                const [dayB, monthB, yearB] = b.dtemissao.split('/');
+                const dateA = new Date(+yearA, +monthA - 1, +dayA);
+                const dateB = new Date(+yearB, +monthB - 1, +dayB);
+                return multiplier * (dateA.getTime() - dateB.getTime());
+            }
 
-            if (!orderMap.has(key)) {
-                orderMap.set(key, {
-                    cdpedido: sale.cdpedido,
-                    nrdocumento: sale.nrdocumento,
-                    dtemissao: sale.dtemissao,
-                    monthKey,
-                    nmrepresentantevenda: sale.nmrepresentantevenda,
-                    nmempresacurtovenda: sale.nmempresacurtovenda,
-                    tpmovimentooperacao: sale.tpmovimentooperacao,
-                    qtdsku: 0,
-                    vlfaturamento: 0,
-                    vltotalcustoproduto: 0,
-                    margem: 0,
-                    items: []
-                });
+            if (sortField === 'qtdsku') {
+                return multiplier * (a.qtdsku - b.qtdsku);
+            }
+
+            if (sortField === 'vlfaturamento') {
+                return multiplier * (a.vlfaturamento - b.vlfaturamento);
+            }
+
+            if (sortField === 'vltotalcustoproduto') {
+                return multiplier * (a.vltotalcustoproduto - b.vltotalcustoproduto);
+            }
+
+            if (sortField === 'margem') {
+                return multiplier * (a.margem - b.margem);
             }
             
-            const order = orderMap.get(key)!;
-            order.items.push(sale);
-            order.qtdsku += sale.qtbrutaproduto;
-            order.vlfaturamento += sale.vlfaturamento;
-            order.vltotalcustoproduto += sale.vltotalcustoproduto;
+            return 0;
         });
+    }, [filteredData, sortField, sortOrder]);
 
-        // Calculate margin for each order
-        orderMap.forEach(order => {
-            order.margem = ((order.vlfaturamento - (order.vlfaturamento * 0.268 + order.vltotalcustoproduto)) / order.vlfaturamento) * 100;
-        });
+    const paginatedData = useMemo(() => {
+        return sortedData.slice(
+            (currentPage - 1) * ITEMS_PER_PAGE,
+            currentPage * ITEMS_PER_PAGE
+        );
+    }, [sortedData, currentPage]);
 
-        return Array.from(orderMap.values());
-    };
-
-    const getMonthlyData = (orders: GroupedOrder[]): MonthlyData[] => {
-        const monthlyMap = new Map<string, number>()
-        
-        orders.forEach(order => {
-            const [day, month, year] = order.dtemissao.split('/')
-            const monthKey = `${year}-${month}`
-            monthlyMap.set(monthKey, (monthlyMap.get(monthKey) || 0) + order.vlfaturamento)
-        })
-
-        // Convert to array and sort by date
-        return Array.from(monthlyMap.entries())
-            .map(([month, value]) => ({
-                month: month.split('-').reverse().join('/'), // Convert YYYY-MM to MM/YYYY
-                value
-            }))
-            .sort((a, b) => {
-                const [monthA, yearA] = a.month.split('/')
-                const [monthB, yearB] = b.month.split('/')
-                return (yearA + monthA).localeCompare(yearB + monthB)
-            })
-    }
-
-    const getYearlyComparison = (orders: GroupedOrder[]) => {
-        const currentYear = new Date().getFullYear()
-        const lastYear = currentYear - 1
-
-        const yearlyTotals = orders.reduce((acc, order) => {
-            const [, , year] = order.dtemissao.split('/')
-            const orderYear = parseInt(year)
-            
-            if (orderYear === currentYear) {
-                acc.currentYear += order.vlfaturamento
-            } else if (orderYear === lastYear) {
-                acc.lastYear += order.vlfaturamento
-            }
-            
-            return acc
-        }, { currentYear: 0, lastYear: 0 })
-
-        const percentageChange = yearlyTotals.lastYear > 0
-            ? ((yearlyTotals.currentYear - yearlyTotals.lastYear) / yearlyTotals.lastYear) * 100
-            : 0
-
-        return {
-            currentYear: yearlyTotals.currentYear,
-            lastYear: yearlyTotals.lastYear,
-            percentageChange
-        }
-    }
-
-    const getYearlyTotals = (orders: GroupedOrder[]) => {
-        return orders.reduce((acc, order) => {
-            const year = order.dtemissao.split('/')[2]
-            acc[year] = (acc[year] || 0) + order.vlfaturamento
-            return acc
-        }, {} as Record<string, number>)
-    }
+    const totalPages = useMemo(() => 
+        Math.ceil(sortedData.length / ITEMS_PER_PAGE)
+    , [sortedData]);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -258,16 +296,11 @@ export default function ClientDetails() {
         }
     }
 
-    // Filter data based on selected month
-    const filteredData = useMemo(() => {
-        if (!selectedMonth) return data;
-        return data.filter(order => order.monthKey === selectedMonth);
-    }, [data, selectedMonth]);
-
-    // Modify the area chart to include click handling
     const handleMonthClick = (props: any) => {
         if (props && props.activeLabel) {
-            setSelectedMonth(selectedMonth === props.activeLabel ? null : props.activeLabel);
+            const clickedMonth = props.activeLabel;
+            setSelectedMonth(prevMonth => prevMonth === clickedMonth ? null : clickedMonth);
+            setCurrentPage(1);
         }
     };
 
@@ -302,26 +335,6 @@ export default function ClientDetails() {
         quantidade: acc.quantidade + order.qtdsku,
         pedidos: acc.pedidos + 1
     }), { faturamento: 0, quantidade: 0, pedidos: 0 })
-
-    const sortedData = [...data].sort((a, b) => {
-        const multiplier = sortOrder === 'asc' ? 1 : -1
-        
-        if (sortField === 'dtemissao') {
-            // Convert DD/MM/YYYY to YYYY-MM-DD for proper date comparison
-            const dateA = a.dtemissao.split('/').reverse().join('-')
-            const dateB = b.dtemissao.split('/').reverse().join('-')
-            return multiplier * (new Date(dateA).getTime() - new Date(dateB).getTime())
-        }
-        
-        return (a[sortField] - b[sortField]) * multiplier
-    })
-
-    const paginatedData = sortedData.slice(
-        (currentPage - 1) * ITEMS_PER_PAGE,
-        currentPage * ITEMS_PER_PAGE
-    )
-
-    const totalPages = Math.ceil(sortedData.length / ITEMS_PER_PAGE)
 
     const PaginationControls = () => (
         <div className="flex items-center justify-between px-2 py-4">
@@ -617,17 +630,14 @@ export default function ClientDetails() {
                                 <TableHead>
                                     <Button
                                         variant="ghost"
+                                        className="w-full flex items-center justify-between"
                                         onClick={() => {
-                                            if (sortField === 'dtemissao') {
-                                                setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
-                                            } else {
-                                                setSortField('dtemissao')
-                                                setSortOrder('desc')
-                                            }
+                                            setSortOrder(sortField === 'dtemissao' && sortOrder === 'asc' ? 'desc' : 'asc');
+                                            setSortField('dtemissao');
                                         }}
                                     >
                                         Data
-                                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                                        <ArrowUpDown className="h-4 w-4" />
                                     </Button>
                                 </TableHead>
                                 <TableHead>Pedido</TableHead>
@@ -635,74 +645,62 @@ export default function ClientDetails() {
                                 <TableHead>Vendedor</TableHead>
                                 <TableHead>Empresa</TableHead>
                                 <TableHead>Tipo</TableHead>
-                                <TableHead className="text-right">
+                                <TableHead>
                                     <Button
                                         variant="ghost"
+                                        className="w-full flex items-center justify-between"
                                         onClick={() => {
-                                            if (sortField === 'qtdsku') {
-                                                setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
-                                            } else {
-                                                setSortField('qtdsku')
-                                                setSortOrder('desc')
-                                            }
+                                            setSortOrder(sortField === 'qtdsku' && sortOrder === 'asc' ? 'desc' : 'asc');
+                                            setSortField('qtdsku');
                                         }}
                                     >
                                         Qtd
-                                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                                        <ArrowUpDown className="h-4 w-4" />
                                     </Button>
                                 </TableHead>
-                                <TableHead className="text-right">
+                                <TableHead>
                                     <Button
                                         variant="ghost"
+                                        className="w-full flex items-center justify-between"
                                         onClick={() => {
-                                            if (sortField === 'vlfaturamento') {
-                                                setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
-                                            } else {
-                                                setSortField('vlfaturamento')
-                                                setSortOrder('desc')
-                                            }
+                                            setSortOrder(sortField === 'vlfaturamento' && sortOrder === 'asc' ? 'desc' : 'asc');
+                                            setSortField('vlfaturamento');
                                         }}
                                     >
                                         Fat.
-                                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                                        <ArrowUpDown className="h-4 w-4" />
                                     </Button>
                                 </TableHead>
-                                <TableHead className="text-right">
+                                <TableHead>
                                     <Button
                                         variant="ghost"
+                                        className="w-full flex items-center justify-between"
                                         onClick={() => {
-                                            if (sortField === 'vltotalcustoproduto') {
-                                                setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
-                                            } else {
-                                                setSortField('vltotalcustoproduto')
-                                                setSortOrder('desc')
-                                            }
+                                            setSortOrder(sortField === 'vltotalcustoproduto' && sortOrder === 'asc' ? 'desc' : 'asc');
+                                            setSortField('vltotalcustoproduto');
                                         }}
                                     >
                                         Custo
-                                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                                        <ArrowUpDown className="h-4 w-4" />
                                     </Button>
                                 </TableHead>
-                                <TableHead className="text-right">
+                                <TableHead>
                                     <Button
                                         variant="ghost"
+                                        className="w-full flex items-center justify-between"
                                         onClick={() => {
-                                            if (sortField === 'margem') {
-                                                setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
-                                            } else {
-                                                setSortField('margem')
-                                                setSortOrder('desc')
-                                            }
+                                            setSortOrder(sortField === 'margem' && sortOrder === 'asc' ? 'desc' : 'asc');
+                                            setSortField('margem');
                                         }}
                                     >
                                         Margem
-                                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                                        <ArrowUpDown className="h-4 w-4" />
                                     </Button>
                                 </TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody className={roboto.className}>
-                            {filteredData.map((order, index) => (
+                            {paginatedData.map((order, index) => (
                                 <TableRow key={index}>
                                     <TableCell>{order.dtemissao}</TableCell>
                                     <TableCell>
