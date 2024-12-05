@@ -167,38 +167,96 @@ const highlightMatches = (text: string, searchTerms: string[]) => {
     return result;
 };
 
-// Add these functions at the top level after the existing helper functions
-const STORAGE_KEY = 'products_cache'
-const CACHE_DURATION = 24 * 60 * 60 * 1000 // 24 hours in milliseconds
+// Add these constants and helper functions at the top level
+const DB_NAME = 'products_db'
+const STORE_NAME = 'products'
+const DB_VERSION = 1
+const CACHE_DURATION = 24 * 60 * 60 * 1000 // 24 hours
 
-const getStoredProducts = () => {
-    if (typeof window === 'undefined') return null;
-    
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (!stored) return null;
+// Helper function to open IndexedDB
+const openDB = (): Promise<IDBDatabase> => {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION)
+
+        request.onerror = () => reject(request.error)
+        request.onsuccess = () => resolve(request.result)
+
+        request.onupgradeneeded = (event) => {
+            const db = (event.target as IDBOpenDBRequest).result
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+                db.createObjectStore(STORE_NAME, { keyPath: 'timestamp' })
+            }
+        }
+    })
+}
+
+// Replace getStoredProducts with this version
+const getStoredProducts = async (): Promise<Product[] | null> => {
+    if (typeof window === 'undefined') return null
 
     try {
-        const { data, timestamp } = JSON.parse(stored)
-        // Check if cache is expired
-        if (Date.now() - timestamp > CACHE_DURATION) {
-            localStorage.removeItem(STORAGE_KEY)
-            return null
-        }
-        return data
+        const db = await openDB()
+        return new Promise((resolve, reject) => {
+            const transaction = db.transaction(STORE_NAME, 'readonly')
+            const store = transaction.objectStore(STORE_NAME)
+            const request = store.getAll()
+
+            request.onerror = () => reject(request.error)
+            request.onsuccess = () => {
+                const records = request.result
+                if (records.length === 0) {
+                    resolve(null)
+                    return
+                }
+
+                const latestRecord = records[records.length - 1]
+                if (Date.now() - latestRecord.timestamp > CACHE_DURATION) {
+                    // Cache expired, clear the store
+                    const clearTransaction = db.transaction(STORE_NAME, 'readwrite')
+                    const clearStore = clearTransaction.objectStore(STORE_NAME)
+                    clearStore.clear()
+                    resolve(null)
+                } else {
+                    resolve(latestRecord.data)
+                }
+            }
+        })
     } catch (error) {
-        console.error('Error parsing stored products:', error)
+        console.error('Error accessing IndexedDB:', error)
         return null
     }
 }
 
-const storeProducts = (products: Product[]) => {
-    if (typeof window === 'undefined') return;
-    
-    const dataToStore = {
-        data: products,
-        timestamp: Date.now()
+// Replace storeProducts with this version
+const storeProducts = async (products: Product[]): Promise<void> => {
+    if (typeof window === 'undefined') return
+
+    try {
+        const db = await openDB()
+        const transaction = db.transaction(STORE_NAME, 'readwrite')
+        const store = transaction.objectStore(STORE_NAME)
+
+        // Clear old data
+        await new Promise<void>((resolve, reject) => {
+            const clearRequest = store.clear()
+            clearRequest.onerror = () => reject(clearRequest.error)
+            clearRequest.onsuccess = () => resolve()
+        })
+
+        // Store new data
+        const record = {
+            timestamp: Date.now(),
+            data: products
+        }
+
+        return new Promise((resolve, reject) => {
+            const request = store.add(record)
+            request.onerror = () => reject(request.error)
+            request.onsuccess = () => resolve()
+        })
+    } catch (error) {
+        console.error('Error storing products in IndexedDB:', error)
     }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToStore))
 }
 
 // Update the search logic
@@ -417,19 +475,20 @@ export default function ProductSalesDetails() {
 
     useEffect(() => {
         const fetchAndStoreProducts = async () => {
-            // Try to get from localStorage first
-            const storedProducts = getStoredProducts()
-            if (storedProducts) {
-                setAllProducts(storedProducts)
-                return
-            }
-
             try {
+                // Try to get from IndexedDB first
+                const storedProducts = await getStoredProducts()
+                if (storedProducts) {
+                    setAllProducts(storedProducts)
+                    return
+                }
+
+                // If no cached data, fetch from API
                 const response = await fetch('/api/produtos')
                 if (!response.ok) throw new Error('Failed to fetch products')
                 const data = await response.json()
                 setAllProducts(data)
-                storeProducts(data)
+                await storeProducts(data)
             } catch (error) {
                 console.error('Error fetching products:', error)
             }
