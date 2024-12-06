@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from '@/components/providers/auth-provider'
 import { cn } from '@/lib/utils'
 import { SpeedInsights } from "@vercel/speed-insights/next"
+import { Analytics } from "@vercel/analytics/react"
 import { Toaster } from "sonner"
 
 const sora = Sora({
@@ -66,6 +67,7 @@ export default function RootLayout({
         </ThemeProvider>
         <SpeedInsights />
         <Toaster />
+        <Analytics />
       </body>
     </html>
   )
