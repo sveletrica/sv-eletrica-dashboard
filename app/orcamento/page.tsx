@@ -16,6 +16,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "sonner"
+import { CountdownTimer } from "@/components/countdown-timer"
 
 const roboto = Roboto({
     weight: ['400', '500', '700'],
@@ -71,6 +72,10 @@ interface SavedSimulation {
   created_by?: string
 }
 
+interface DataExtractionInfo {
+    dataextracao: string;
+}
+
 const getMarginStyle = (margin: number) => {
     if (margin > 5) {
         return "bg-gradient-to-br from-green-50 to-green-200 dark:from-green-900/20 dark:to-green-900/10"
@@ -110,7 +115,7 @@ function SaveSimulationDialog({ open, onOpenChange, onSave }: SaveSimulationDial
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Observações</label>
+            <label className="text-sm font-medium">Observaçes</label>
             <Textarea
               placeholder="Adicione observações sobre esta simulação..."
               value={notes}
@@ -164,6 +169,7 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
     const [targetMargin, setTargetMargin] = useState<string>('')
     const [groupDiscounts, setGroupDiscounts] = useState<Record<string, number>>({})
     const [showGroupDiscounts, setShowGroupDiscounts] = useState(false)
+    const [lastExtraction, setLastExtraction] = useState<string | null>(null)
 
     const calculateMargin = (revenue: number, cost: number) => {
         return ((revenue - (revenue * 0.268 + cost)) / revenue) * 100
@@ -526,6 +532,32 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
         }) as Record<string, number>)
     }
 
+    const fetchLastExtraction = async () => {
+        try {
+            const response = await fetch(
+                'https://kinftxezwizaoyrcbfqc.supabase.co/rest/v1/vw_biorcamento_aux?select=dataextracao&order=dataextracao.desc&limit=1',
+                {
+                    headers: {
+                        'apikey': process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+                    }
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch extraction date');
+            }
+
+            const [data]: DataExtractionInfo[] = await response.json();
+            setLastExtraction(data.dataextracao);
+        } catch (error) {
+            console.error('Error fetching extraction date:', error);
+        }
+    };
+
+    useEffect(() => {
+        fetchLastExtraction();
+    }, []);
+
     if (isLoading) return <Loading />
 
     if (!initialCode && data.length === 0) {
@@ -580,6 +612,17 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                             </div>
                         </div>
                     </CardContent>
+                    {lastExtraction && (
+                        <div className="px-6 py-4 border-t text-center text-sm text-muted-foreground">
+                            Dados atualizados em: {new Date(lastExtraction).toLocaleString('pt-BR', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            })}
+                        </div>
+                    )}
                 </Card>
             </div>
         )
@@ -1113,6 +1156,22 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                             </div>
                         </CardContent>
                     </Card>
+                    {lastExtraction && (
+                        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 bg-black text-white rounded-full shadow-lg text-center text-xs">
+                            <div>
+                                Dados atualizados em: {new Date(lastExtraction).toLocaleString('pt-BR', {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                })}
+                            </div>
+                            <div>
+                                Próxima atualização em: <CountdownTimer />
+                            </div>
+                        </div>
+                    )}
                 </>
             )}
 
