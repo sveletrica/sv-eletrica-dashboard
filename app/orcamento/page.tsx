@@ -5,12 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Search, Calculator, Info } from 'lucide-react'
+import { Search, Calculator, Info, Check, X } from 'lucide-react'
 import Loading from '../vendas-dia/loading'
 import { Roboto } from 'next/font/google'
 import { useRouter } from 'next/navigation'
 import { StockPopover } from "@/components/stock-popover"
 import { cn } from "@/lib/utils"
+import './styles.css'
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 const roboto = Roboto({
     weight: ['400', '500', '700'],
@@ -475,126 +477,139 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                             <CardTitle>Produtos do Orçamento</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Código</TableHead>
-                                        <TableHead>Produto</TableHead>
-                                        <TableHead className="text-right">Estoque</TableHead>
-                                        <TableHead className="text-right">Comprado</TableHead>
-                                        <TableHead className="text-right">Qtd</TableHead>
-                                        <TableHead className="text-right">Preço Lista</TableHead>
-                                        <TableHead className="text-right">Desconto</TableHead>
-                                        <TableHead className="text-right">Preço Final</TableHead>
-                                        <TableHead className="text-right">Custo</TableHead>
-                                        <TableHead className="text-right">Margem</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody className={roboto.className}>
-                                    {data.map((item, index) => {
-                                        const currentDiscount = calculateDiscount(
-                                            item.vlprecovendainformado,
-                                            item.vlfaturamento
-                                        )
-                                        const simulatedDiscount = simulatedDiscounts[item.cdproduto]
-                                        const margin = isSimulating && simulatedDiscount !== undefined
-                                            ? calculateMarginWithDiscount(
-                                                item.vlprecovendainformado,
-                                                item.vltotalcustoproduto,
-                                                simulatedDiscount
-                                            )
-                                            : calculateMargin(item.vlfaturamento, item.vltotalcustoproduto)
-                                        
-                                        const simulatedPrice = isSimulating && simulatedDiscount !== undefined
-                                            ? item.vlprecovendainformado * (1 - simulatedDiscount / 100)
-                                            : item.vlfaturamento
-
-                                        return (
-                                            <TableRow 
-                                                key={index}
-                                                className={cn(
-                                                    "transition-colors",
-                                                    margin < 0 && "animate-pulseRow bg-red-500/50"
-                                                )}
-                                            >
-                                                <TableCell>{item.cdproduto}</TableCell>
-                                                <TableCell>{item.nmproduto}</TableCell>
-                                                <TableCell className="text-right">
-                                                    <StockPopover 
-                                                        stockData={stockData[item.cdproduto] || null}
-                                                        open={openPopoverId === item.cdproduto}
-                                                        onOpenChange={(open) => {
-                                                            setOpenPopoverId(open ? item.cdproduto : null)
-                                                            if (open && !stockData[item.cdproduto] && !loadingStock[item.cdproduto]) {
-                                                                fetchStockData(item.cdproduto)
-                                                            }
-                                                        }}
-                                                        loading={loadingStock[item.cdproduto]}
-                                                    >
-                                                        <button 
-                                                            className="cursor-pointer hover:underline"
-                                                            type="button"
-                                                        >
-                                                            {stockData[item.cdproduto]?.StkTotal || item.qtestoqueatualempresa}
-                                                        </button>
-                                                    </StockPopover>
-                                                </TableCell>
-                                                <TableCell className="text-right">{item.qtcomprada}</TableCell>
-                                                <TableCell className="text-right">{item.qtpedida}</TableCell>
-                                                <TableCell className="text-right">
-                                                    {item.vlprecovendainformado.toLocaleString('pt-BR', {
-                                                        style: 'currency',
-                                                        currency: 'BRL'
-                                                    })}
-                                                </TableCell>
-                                                <TableCell className="text-right">
-                                                    {isSimulating ? (
-                                                        <Input
-                                                            type="number"
-                                                            value={simulatedDiscounts[item.cdproduto] ?? currentDiscount.toFixed(2)}
-                                                            onChange={(e) => handleSimulatedDiscountChange(item.cdproduto, e.target.value)}
-                                                            className="w-20 text-right"
-                                                            min="0"
-                                                            max="100"
-                                                            step="0.1"
-                                                            onKeyDown={(e) => {
-                                                                if (e.key === 'Enter') {
-                                                                    e.preventDefault()
-                                                                    const discount = parseFloat(e.currentTarget.value)
-                                                                    if (!isNaN(discount)) {
-                                                                        handleSimulatedDiscountChange(item.cdproduto, e.currentTarget.value)
-                                                                    }
-                                                                }
-                                                            }}
-                                                        />
-                                                    ) : (
-                                                        `${currentDiscount.toFixed(2)}%`
-                                                    )}
-                                                </TableCell>
-                                                <TableCell className="text-right">
-                                                    {simulatedPrice.toLocaleString('pt-BR', {
-                                                        style: 'currency',
-                                                        currency: 'BRL'
-                                                    })}
-                                                </TableCell>
-                                                <TableCell className="text-right">
-                                                    {item.vltotalcustoproduto.toLocaleString('pt-BR', {
-                                                        style: 'currency',
-                                                        currency: 'BRL'
-                                                    })}
-                                                </TableCell>
-                                                <TableCell className={`text-right ${
-                                                    margin >= 0 
-                                                        ? 'text-green-600 dark:text-green-400' 
-                                                        : 'text-red-600 dark:text-red-400'
-                                                }`}>
-                                                    {margin.toFixed(2)}%
-                                                </TableCell>
+                            <div className="relative rounded-md border">
+                                <div className="max-h-[600px] overflow-auto">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Código</TableHead>
+                                                <TableHead>Produto</TableHead>
+                                                <TableHead className="text-right">Estoque</TableHead>
+                                                <TableHead className="text-right">Comprado</TableHead>
+                                                <TableHead className="text-right">Qtd</TableHead>
+                                                <TableHead className="text-right">Preço Lista</TableHead>
+                                                <TableHead className="text-right">Desconto</TableHead>
+                                                <TableHead className="text-right">Preço Final</TableHead>
+                                                <TableHead className="text-right">Custo</TableHead>
+                                                <TableHead className="text-right">Margem</TableHead>
                                             </TableRow>
-                                        )
-                                    })}
-                                </TableBody>
-                            </Table>
+                                        </TableHeader>
+                                        <TableBody className={roboto.className}>
+                                            {data.map((item, index) => {
+                                                const currentDiscount = calculateDiscount(
+                                                    item.vlprecovendainformado,
+                                                    item.vlfaturamento
+                                                )
+                                                const simulatedDiscount = simulatedDiscounts[item.cdproduto]
+                                                const margin = isSimulating && simulatedDiscount !== undefined
+                                                    ? calculateMarginWithDiscount(
+                                                        item.vlprecovendainformado,
+                                                        item.vltotalcustoproduto,
+                                                        simulatedDiscount
+                                                    )
+                                                    : calculateMargin(item.vlfaturamento, item.vltotalcustoproduto)
+                                                
+                                                const simulatedPrice = isSimulating && simulatedDiscount !== undefined
+                                                    ? item.vlprecovendainformado * (1 - simulatedDiscount / 100)
+                                                    : item.vlfaturamento
+
+                                                return (
+                                                    <TableRow 
+                                                        key={index}
+                                                        className={cn(
+                                                            "transition-colors",
+                                                            margin < 0 && "animate-pulseRow bg-red-500/50"
+                                                        )}
+                                                    >
+                                                        <TableCell>{item.cdproduto}</TableCell>
+                                                        <TableCell>{item.nmproduto}</TableCell>
+                                                        <TableCell className="text-right">
+                                                            <StockPopover 
+                                                                stockData={stockData[item.cdproduto] || null}
+                                                                open={openPopoverId === item.cdproduto}
+                                                                onOpenChange={(open) => {
+                                                                    setOpenPopoverId(open ? item.cdproduto : null)
+                                                                    if (open && !stockData[item.cdproduto] && !loadingStock[item.cdproduto]) {
+                                                                        fetchStockData(item.cdproduto)
+                                                                    }
+                                                                }}
+                                                                loading={loadingStock[item.cdproduto]}
+                                                            >
+                                                                <button 
+                                                                    className="cursor-pointer hover:underline"
+                                                                    type="button"
+                                                                >
+                                                                    {stockData[item.cdproduto]?.StkTotal || item.qtestoqueatualempresa}
+                                                                </button>
+                                                            </StockPopover>
+                                                        </TableCell>
+                                                        <TableCell className="text-right">{item.qtcomprada}</TableCell>
+                                                        <TableCell className="text-right">
+                                                            <div className="flex items-center justify-end gap-1">
+                                                                {item.qtpedida}
+                                                                {(stockData[item.cdproduto]?.StkTotal || item.qtestoqueatualempresa) >= item.qtpedida ? (
+                                                                    <Check className="h-4 w-4 text-green-500" />
+                                                                ) : (
+                                                                    <X className="h-4 w-4 text-red-500" />
+                                                                )}
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell className="text-right">
+                                                            {item.vlprecovendainformado.toLocaleString('pt-BR', {
+                                                                style: 'currency',
+                                                                currency: 'BRL'
+                                                            })}
+                                                        </TableCell>
+                                                        <TableCell className="text-right">
+                                                            {isSimulating ? (
+                                                                <Input
+                                                                    type="number"
+                                                                    value={simulatedDiscounts[item.cdproduto] ?? currentDiscount.toFixed(2)}
+                                                                    onChange={(e) => handleSimulatedDiscountChange(item.cdproduto, e.target.value)}
+                                                                    className="w-20 text-right"
+                                                                    min="0"
+                                                                    max="100"
+                                                                    step="0.1"
+                                                                    onKeyDown={(e) => {
+                                                                        if (e.key === 'Enter') {
+                                                                            e.preventDefault()
+                                                                            const discount = parseFloat(e.currentTarget.value)
+                                                                            if (!isNaN(discount)) {
+                                                                                handleSimulatedDiscountChange(item.cdproduto, e.currentTarget.value)
+                                                                            }
+                                                                        }
+                                                                    }}
+                                                                />
+                                                            ) : (
+                                                                `${currentDiscount.toFixed(2)}%`
+                                                            )}
+                                                        </TableCell>
+                                                        <TableCell className="text-right">
+                                                            {simulatedPrice.toLocaleString('pt-BR', {
+                                                                style: 'currency',
+                                                                currency: 'BRL'
+                                                            })}
+                                                        </TableCell>
+                                                        <TableCell className="text-right">
+                                                            {item.vltotalcustoproduto.toLocaleString('pt-BR', {
+                                                                style: 'currency',
+                                                                currency: 'BRL'
+                                                            })}
+                                                        </TableCell>
+                                                        <TableCell className={`text-right ${
+                                                            margin >= 0 
+                                                                ? 'text-green-600 dark:text-green-400' 
+                                                                : 'text-red-600 dark:text-red-400'
+                                                        }`}>
+                                                            {margin.toFixed(2)}%
+                                                        </TableCell>
+                                                    </TableRow>
+                                                )
+                                            })}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            </div>
                         </CardContent>
                     </Card>
                 </>
