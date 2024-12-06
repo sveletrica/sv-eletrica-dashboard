@@ -234,6 +234,30 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
         }
     }
 
+    // Add this function after other calculation functions
+    const calculateDiscountForZeroMargin = (listPrice: number, cost: number) => {
+        // We need to solve: (price * (1 - x) - (price * (1 - x) * 0.268 + cost)) / (price * (1 - x)) = 0
+        // Where x is the discount percentage we want to find
+        // Simplified: price * (1 - x) * (1 - 0.268) = cost
+        // Therefore: x = 1 - (cost / (price * (1 - 0.268)))
+        const taxRate = 0.268
+        const discountDecimal = 1 - (cost / (listPrice * (1 - taxRate)))
+        return Math.max(Math.min(discountDecimal * 100, 100), 0) // Ensure discount is between 0 and 100
+    }
+
+    // Add this function to handle setting zero margin discounts
+    const applyZeroMarginDiscounts = () => {
+        const newDiscounts: Record<string, number> = {}
+        data.forEach(item => {
+            const zeroMarginDiscount = calculateDiscountForZeroMargin(
+                item.vlprecovendainformado,
+                item.vltotalcustoproduto
+            )
+            newDiscounts[item.cdproduto] = parseFloat(zeroMarginDiscount.toFixed(2))
+        })
+        setSimulatedDiscounts(newDiscounts)
+    }
+
     if (isLoading) return <Loading />
 
     if (!initialCode && data.length === 0) {
@@ -356,15 +380,23 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                     </Button>
                                 </div>
                             </div>
-                            <Button 
-                                variant="outline" 
-                                onClick={() => {
-                                    setSimulatedDiscounts({})
-                                    setGlobalDiscount('')
-                                }}
-                            >
-                                Limpar Simulação
-                            </Button>
+                            <div className="flex gap-2">
+                                <Button 
+                                    variant="outline" 
+                                    onClick={() => {
+                                        setSimulatedDiscounts({})
+                                        setGlobalDiscount('')
+                                    }}
+                                >
+                                    Limpar Simulação
+                                </Button>
+                                <Button
+                                    variant="secondary"
+                                    onClick={applyZeroMarginDiscounts}
+                                >
+                                    Margem Zero
+                                </Button>
+                            </div>
                         </div>
                     </CardContent>
                 </Card>
@@ -518,7 +550,7 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                                         key={index}
                                                         className={cn(
                                                             "transition-colors",
-                                                            margin < 0 && "animate-pulseRow bg-red-500/50"
+                                                            margin < -0.01 && "animate-pulseRow bg-red-500/50"
                                                         )}
                                                     >
                                                         <TableCell>{item.cdproduto}</TableCell>
