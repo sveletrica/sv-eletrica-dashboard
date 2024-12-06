@@ -152,6 +152,7 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
     const [saveDialogOpen, setSaveDialogOpen] = useState(false)
     const [savedSimulations, setSavedSimulations] = useState<SavedSimulation[]>([])
     const [loadingSimulations, setLoadingSimulations] = useState(false)
+    const [targetMargin, setTargetMargin] = useState<string>('')
 
     const calculateMargin = (revenue: number, cost: number) => {
         return ((revenue - (revenue * 0.268 + cost)) / revenue) * 100
@@ -332,6 +333,34 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
         setSimulatedDiscounts(newDiscounts)
     }
 
+    const calculateDiscountForTargetMargin = (listPrice: number, cost: number, targetMarginPercent: number) => {
+        // We need to solve: (price * (1 - x) - (price * (1 - x) * 0.268 + cost)) / (price * (1 - x)) = targetMargin/100
+        // Where x is the discount percentage we want to find
+        // Simplified: price * (1 - x) * (1 - 0.268) - cost = price * (1 - x) * (targetMargin/100)
+        // Therefore: price * (1 - x) * (1 - 0.268 - targetMargin/100) = cost
+        // x = 1 - (cost / (price * (1 - 0.268 - targetMargin/100)))
+        const taxRate = 0.268
+        const discountDecimal = 1 - (cost / (listPrice * (1 - taxRate - targetMarginPercent/100)))
+        return Math.max(Math.min(discountDecimal * 100, 100), 0) // Ensure discount is between 0 and 100
+    }
+
+    // Add this function to handle applying target margin discounts
+    const applyTargetMarginDiscounts = () => {
+        const marginValue = parseFloat(targetMargin)
+        if (isNaN(marginValue)) return
+
+        const newDiscounts: Record<string, number> = {}
+        data.forEach(item => {
+            const targetMarginDiscount = calculateDiscountForTargetMargin(
+                item.vlprecovendainformado,
+                item.vltotalcustoproduto,
+                marginValue
+            )
+            newDiscounts[item.cdproduto] = parseFloat(targetMarginDiscount.toFixed(2))
+        })
+        setSimulatedDiscounts(newDiscounts)
+    }
+
     const saveSimulation = async (notes: string) => {
         try {
             const response = await fetch('/api/simulations', {
@@ -503,106 +532,143 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
             {isSimulating && data.length > 0 && (
                 <Card>
                     <CardContent className="pt-6">
-                        <div className="flex items-end gap-4">
-                            <div className="flex-1 max-w-xs">
-                                <label className="text-sm font-medium mb-2 block">
-                                    Aplicar desconto em todos os itens
-                                </label>
-                                <div className="flex gap-2">
-                                    <Input
-                                        type="number"
-                                        value={globalDiscount}
-                                        onChange={(e) => setGlobalDiscount(e.target.value)}
-                                        placeholder="Digite o desconto %"
-                                        min="0"
-                                        max="100"
-                                        step="0.1"
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter') {
-                                                e.preventDefault()
-                                                applyGlobalDiscount()
-                                            }
-                                        }}
-                                    />
+                        <div className="flex flex-col gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                {/* Global Discount Section */}
+                                <div>
+                                    <label className="text-sm font-medium mb-2 block">
+                                        Aplicar desconto em todos os itens
+                                    </label>
+                                    <div className="flex gap-2">
+                                        <Input
+                                            type="number"
+                                            value={globalDiscount}
+                                            onChange={(e) => setGlobalDiscount(e.target.value)}
+                                            placeholder="Digite o desconto %"
+                                            min="0"
+                                            max="100"
+                                            step="0.1"
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    e.preventDefault()
+                                                    applyGlobalDiscount()
+                                                }
+                                            }}
+                                        />
+                                        <Button 
+                                            onClick={applyGlobalDiscount}
+                                            disabled={!globalDiscount}
+                                        >
+                                            Aplicar
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                {/* Target Margin Section */}
+                                <div>
+                                    <label className="text-sm font-medium mb-2 block">
+                                        Definir margem alvo
+                                    </label>
+                                    <div className="flex gap-2">
+                                        <Input
+                                            type="number"
+                                            value={targetMargin}
+                                            onChange={(e) => setTargetMargin(e.target.value)}
+                                            placeholder="Digite a margem %"
+                                            min="-100"
+                                            max="100"
+                                            step="0.1"
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    e.preventDefault()
+                                                    applyTargetMarginDiscounts()
+                                                }
+                                            }}
+                                        />
+                                        <Button 
+                                            onClick={applyTargetMarginDiscounts}
+                                            disabled={!targetMargin}
+                                        >
+                                            Aplicar
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                {/* Action Buttons */}
+                                <div className="flex items-end gap-2">
                                     <Button 
-                                        onClick={applyGlobalDiscount}
-                                        disabled={!globalDiscount}
+                                        variant="outline" 
+                                        onClick={() => {
+                                            setSimulatedDiscounts({})
+                                            setGlobalDiscount('')
+                                            setTargetMargin('')
+                                        }}
                                     >
-                                        Aplicar
+                                        Limpar Simulação
+                                    </Button>
+                                    <Button
+                                        variant="secondary"
+                                        onClick={applyZeroMarginDiscounts}
+                                    >
+                                        Margem Zero
+                                    </Button>
+                                    <Button
+                                        variant="secondary"
+                                        onClick={() => setSaveDialogOpen(true)}
+                                        disabled={Object.keys(simulatedDiscounts).length === 0}
+                                    >
+                                        Salvar Simulação
                                     </Button>
                                 </div>
                             </div>
-                            <div className="flex gap-2">
-                                <Button 
-                                    variant="outline" 
-                                    onClick={() => {
-                                        setSimulatedDiscounts({})
-                                        setGlobalDiscount('')
-                                    }}
-                                >
-                                    Limpar Simulação
-                                </Button>
-                                <Button
-                                    variant="secondary"
-                                    onClick={applyZeroMarginDiscounts}
-                                >
-                                    Margem Zero
-                                </Button>
-                            </div>
-                            <Button
-                                variant="secondary"
-                                onClick={() => setSaveDialogOpen(true)}
-                                disabled={Object.keys(simulatedDiscounts).length === 0}
-                            >
-                                Salvar Simulação
-                            </Button>
-                        </div>
 
-                        {savedSimulations.length > 0 && (
-                            <div className="mt-4">
-                                <h3 className="text-sm font-medium mb-2">Simulações Salvas:</h3>
-                                <ScrollArea className="h-[100px]">
-                                    <div className="space-y-2">
-                                        {savedSimulations.map((sim) => (
-                                            <div
-                                                key={sim.id}
-                                                className="flex items-center justify-between p-2 rounded border"
-                                            >
-                                                <div className="flex-1">
-                                                    <p className="text-sm font-medium">
-                                                        {new Date(sim.created_at).toLocaleString()}
-                                                    </p>
-                                                    {sim.notes && (
-                                                        <p className="text-sm text-muted-foreground">{sim.notes}</p>
-                                                    )}
+                            {/* Saved Simulations Section */}
+                            {savedSimulations.length > 0 && (
+                                <div className="mt-4">
+                                    <h3 className="text-sm font-medium mb-2">Simulações Salvas:</h3>
+                                    <ScrollArea className="h-[100px]">
+                                        <div className="space-y-2">
+                                            {savedSimulations.map((sim) => (
+                                                <div
+                                                    key={sim.id}
+                                                    className="flex items-center justify-between p-2 rounded border"
+                                                >
+                                                    <div className="flex-1">
+                                                        <p className="text-sm font-medium">
+                                                            {new Date(sim.created_at).toLocaleString()}
+                                                        </p>
+                                                        {sim.notes && (
+                                                            <p className="text-sm text-muted-foreground">{sim.notes}</p>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => setSimulatedDiscounts(sim.discounts)}
+                                                        >
+                                                            Aplicar
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                                                            onClick={() => {
+                                                                if (window.confirm('Tem certeza que deseja excluir esta simulação?')) {
+                                                                    deleteSimulation(sim.id)
+                                                                }
+                                                            }}
+                                                        >
+                                                            <X className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
                                                 </div>
-                                                <div className="flex gap-2">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => setSimulatedDiscounts(sim.discounts)}
-                                                    >
-                                                        Aplicar
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                                                        onClick={() => {
-                                                            if (window.confirm('Tem certeza que deseja excluir esta simulação?')) {
-                                                                deleteSimulation(sim.id)
-                                                            }
-                                                        }}
-                                                    >
-                                                        <X className="h-4 w-4" />
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </ScrollArea>
-                            </div>
-                        )}
+                                            ))}
+                                        </div>
+                                    </ScrollArea>
+                                </div>
+                            )}
+                        </div>
                     </CardContent>
                 </Card>
             )}
