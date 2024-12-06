@@ -13,6 +13,9 @@ import { StockPopover } from "@/components/stock-popover"
 import { cn } from "@/lib/utils"
 import './styles.css'
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Textarea } from "@/components/ui/textarea"
+import { toast } from "sonner"
 
 const roboto = Roboto({
     weight: ['400', '500', '700'],
@@ -52,6 +55,21 @@ interface StockData {
     StkTotal: number;
 }
 
+interface SaveSimulationDialogProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onSave: (notes: string) => Promise<void>
+}
+
+interface SavedSimulation {
+  id: string
+  cdpedidodevenda: string
+  discounts: Record<string, number>
+  created_at: string
+  notes?: string
+  created_by?: string
+}
+
 const getMarginStyle = (margin: number) => {
     if (margin > 5) {
         return "bg-gradient-to-br from-green-50 to-green-200 dark:from-green-900/20 dark:to-green-900/10"
@@ -66,6 +84,59 @@ interface QuotationDetailsProps {
     initialCode?: string
 }
 
+function SaveSimulationDialog({ open, onOpenChange, onSave }: SaveSimulationDialogProps) {
+  const [notes, setNotes] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+
+  const handleSave = async () => {
+    setIsSaving(true)
+    try {
+      await onSave(notes)
+      onOpenChange(false)
+      setNotes('')
+    } catch (error) {
+      console.error('Error saving simulation:', error)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Salvar Simulação</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Observações</label>
+            <Textarea
+              placeholder="Adicione observações sobre esta simulação..."
+              value={notes}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNotes(e.target.value)}
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isSaving}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={isSaving}
+          >
+            {isSaving ? "Salvando..." : "Salvar Simulação"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 export default function QuotationDetails({ initialCode }: QuotationDetailsProps = {}) {
     const router = useRouter()
     const [quotationCode, setQuotationCode] = useState(initialCode || '')
@@ -78,6 +149,9 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
     const [stockData, setStockData] = useState<Record<string, StockData>>({})
     const [loadingStock, setLoadingStock] = useState<Record<string, boolean>>({})
     const [openPopoverId, setOpenPopoverId] = useState<string | null>(null)
+    const [saveDialogOpen, setSaveDialogOpen] = useState(false)
+    const [savedSimulations, setSavedSimulations] = useState<SavedSimulation[]>([])
+    const [loadingSimulations, setLoadingSimulations] = useState(false)
 
     const calculateMargin = (revenue: number, cost: number) => {
         return ((revenue - (revenue * 0.268 + cost)) / revenue) * 100
@@ -258,6 +332,84 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
         setSimulatedDiscounts(newDiscounts)
     }
 
+    const saveSimulation = async (notes: string) => {
+        try {
+            const response = await fetch('/api/simulations', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    cdpedidodevenda: quotationCode,
+                    discounts: simulatedDiscounts,
+                    notes,
+                }),
+            })
+
+            const data = await response.json()
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to save simulation')
+            }
+
+            toast.success('Simulação salva com sucesso!')
+            loadSavedSimulations()
+        } catch (error) {
+            console.error('Error saving simulation:', error)
+            toast.error(error instanceof Error ? error.message : 'Erro ao salvar simulação')
+        }
+    }
+
+    const loadSavedSimulations = async () => {
+        if (!quotationCode) return
+
+        setLoadingSimulations(true)
+        try {
+            const response = await fetch(`/api/simulations/${quotationCode}`)
+            const data = await response.json()
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to load simulations')
+            }
+
+            setSavedSimulations(data)
+        } catch (error) {
+            console.error('Error loading simulations:', error)
+            toast.error(error instanceof Error ? error.message : 'Erro ao carregar simulações salvas')
+        } finally {
+            setLoadingSimulations(false)
+        }
+    }
+
+    useEffect(() => {
+        if (initialCode) {
+            loadSavedSimulations()
+        }
+    }, [initialCode])
+
+    const deleteSimulation = async (simulationId: string) => {
+        try {
+            const response = await fetch(
+                `/api/simulations/${quotationCode}?id=${simulationId}`,
+                {
+                    method: 'DELETE',
+                }
+            )
+
+            const data = await response.json()
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to delete simulation')
+            }
+
+            toast.success('Simulação excluída com sucesso!')
+            loadSavedSimulations()
+        } catch (error) {
+            console.error('Error deleting simulation:', error)
+            toast.error(error instanceof Error ? error.message : 'Erro ao excluir simulação')
+        }
+    }
+
     if (isLoading) return <Loading />
 
     if (!initialCode && data.length === 0) {
@@ -397,7 +549,60 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                     Margem Zero
                                 </Button>
                             </div>
+                            <Button
+                                variant="secondary"
+                                onClick={() => setSaveDialogOpen(true)}
+                                disabled={Object.keys(simulatedDiscounts).length === 0}
+                            >
+                                Salvar Simulação
+                            </Button>
                         </div>
+
+                        {savedSimulations.length > 0 && (
+                            <div className="mt-4">
+                                <h3 className="text-sm font-medium mb-2">Simulações Salvas:</h3>
+                                <ScrollArea className="h-[100px]">
+                                    <div className="space-y-2">
+                                        {savedSimulations.map((sim) => (
+                                            <div
+                                                key={sim.id}
+                                                className="flex items-center justify-between p-2 rounded border"
+                                            >
+                                                <div className="flex-1">
+                                                    <p className="text-sm font-medium">
+                                                        {new Date(sim.created_at).toLocaleString()}
+                                                    </p>
+                                                    {sim.notes && (
+                                                        <p className="text-sm text-muted-foreground">{sim.notes}</p>
+                                                    )}
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => setSimulatedDiscounts(sim.discounts)}
+                                                    >
+                                                        Aplicar
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                                                        onClick={() => {
+                                                            if (window.confirm('Tem certeza que deseja excluir esta simulação?')) {
+                                                                deleteSimulation(sim.id)
+                                                            }
+                                                        }}
+                                                    >
+                                                        <X className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </ScrollArea>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             )}
@@ -646,6 +851,12 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                     </Card>
                 </>
             )}
+
+            <SaveSimulationDialog
+                open={saveDialogOpen}
+                onOpenChange={setSaveDialogOpen}
+                onSave={saveSimulation}
+            />
         </div>
     )
 } 
