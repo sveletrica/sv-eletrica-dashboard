@@ -42,6 +42,7 @@ interface QuotationItem {
     nmempresacurtovenda: string
     vltotalcustoproduto: number
     dataextracao: string
+    nmgrupoproduto: string
 }
 
 interface StockData {
@@ -137,6 +138,14 @@ function SaveSimulationDialog({ open, onOpenChange, onSave }: SaveSimulationDial
   )
 }
 
+// Keep the interfaces outside
+interface GroupTotals {
+    precoLista: number
+    precoFinal: number
+    custo: number
+    quantidade: number
+}
+
 export default function QuotationDetails({ initialCode }: QuotationDetailsProps = {}) {
     const router = useRouter()
     const [quotationCode, setQuotationCode] = useState(initialCode || '')
@@ -153,6 +162,8 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
     const [savedSimulations, setSavedSimulations] = useState<SavedSimulation[]>([])
     const [loadingSimulations, setLoadingSimulations] = useState(false)
     const [targetMargin, setTargetMargin] = useState<string>('')
+    const [groupDiscounts, setGroupDiscounts] = useState<Record<string, number>>({})
+    const [showGroupDiscounts, setShowGroupDiscounts] = useState(false)
 
     const calculateMargin = (revenue: number, cost: number) => {
         return ((revenue - (revenue * 0.268 + cost)) / revenue) * 100
@@ -188,7 +199,7 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
 
         try {
             const response = await fetch(
-                `https://kinftxezwizaoyrcbfqc.supabase.co/rest/v1/pub_biorcamento_aux?cdpedidodevenda=eq.${quotationCode}`,
+                `https://kinftxezwizaoyrcbfqc.supabase.co/rest/v1/vw_biorcamento_aux?cdpedidodevenda=eq.${quotationCode}`,
                 {
                     headers: {
                         'apikey': process.env.SUPABASE_SERVICE_ROLE_KEY || '',
@@ -245,6 +256,23 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
         : 0
 
     // Add function to apply global discount
+    const updateDiscountsAndGroupDiscounts = (newDiscounts: Record<string, number>) => {
+        setSimulatedDiscounts(newDiscounts)
+        
+        // Calculate and update group discounts
+        const newGroupDiscounts: Record<string, number> = {}
+        getUniqueProductGroups().forEach(group => {
+            const groupProducts = data.filter(item => item.nmgrupoproduto === group)
+            const groupDiscount = groupProducts.reduce((sum, item) => {
+                return sum + (newDiscounts[item.cdproduto] || 0)
+            }, 0) / groupProducts.length
+            
+            newGroupDiscounts[group] = parseFloat(groupDiscount.toFixed(2))
+        })
+        
+        setGroupDiscounts(newGroupDiscounts)
+    }
+
     const applyGlobalDiscount = () => {
         const discount = parseFloat(globalDiscount)
         if (isNaN(discount)) return
@@ -253,7 +281,7 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
         data.forEach(item => {
             newDiscounts[item.cdproduto] = discount
         })
-        setSimulatedDiscounts(newDiscounts)
+        updateDiscountsAndGroupDiscounts(newDiscounts)
     }
 
     const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -320,7 +348,7 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
         return Math.max(Math.min(discountDecimal * 100, 100), 0) // Ensure discount is between 0 and 100
     }
 
-    // Add this function to handle setting zero margin discounts
+    // Update the applyZeroMarginDiscounts function
     const applyZeroMarginDiscounts = () => {
         const newDiscounts: Record<string, number> = {}
         data.forEach(item => {
@@ -330,7 +358,7 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
             )
             newDiscounts[item.cdproduto] = parseFloat(zeroMarginDiscount.toFixed(2))
         })
-        setSimulatedDiscounts(newDiscounts)
+        updateDiscountsAndGroupDiscounts(newDiscounts)
     }
 
     const calculateDiscountForTargetMargin = (listPrice: number, cost: number, targetMarginPercent: number) => {
@@ -344,7 +372,7 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
         return Math.max(Math.min(discountDecimal * 100, 100), 0) // Ensure discount is between 0 and 100
     }
 
-    // Add this function to handle applying target margin discounts
+    // Update the applyTargetMarginDiscounts function
     const applyTargetMarginDiscounts = () => {
         const marginValue = parseFloat(targetMargin)
         if (isNaN(marginValue)) return
@@ -358,7 +386,7 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
             )
             newDiscounts[item.cdproduto] = parseFloat(targetMarginDiscount.toFixed(2))
         })
-        setSimulatedDiscounts(newDiscounts)
+        updateDiscountsAndGroupDiscounts(newDiscounts)
     }
 
     const saveSimulation = async (notes: string) => {
@@ -439,6 +467,65 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
         }
     }
 
+    const getUniqueProductGroups = () => {
+        const groups = new Set(data.map(item => item.nmgrupoproduto))
+        return Array.from(groups).sort()
+    }
+
+    const applyGroupDiscount = (group: string, discount: number) => {
+        const newDiscounts = { ...simulatedDiscounts }
+        data.forEach(item => {
+            if (item.nmgrupoproduto === group) {
+                newDiscounts[item.cdproduto] = discount
+            }
+        })
+        updateDiscountsAndGroupDiscounts(newDiscounts)
+    }
+
+    // Update the clearSimulation function to ensure group discounts are cleared
+    const clearSimulation = () => {
+        updateDiscountsAndGroupDiscounts({})
+        setGlobalDiscount('')
+        setTargetMargin('')
+    }
+
+    // Move calculateGroupTotals inside the component
+    const calculateGroupTotals = () => {
+        const groupTotals: Record<string, GroupTotals> = {}
+        
+        data.forEach((item: QuotationItem) => {
+            const group = item.nmgrupoproduto
+            const simulatedDiscount = simulatedDiscounts[item.cdproduto]
+            const currentPrice = isSimulating && simulatedDiscount !== undefined
+                ? item.vlprecovendainformado * (1 - simulatedDiscount / 100)
+                : item.vlfaturamento
+
+            if (!groupTotals[group]) {
+                groupTotals[group] = {
+                    precoLista: 0,
+                    precoFinal: 0,
+                    custo: 0,
+                    quantidade: 0
+                }
+            }
+
+            groupTotals[group].precoLista += item.vlprecovendainformado
+            groupTotals[group].precoFinal += currentPrice
+            groupTotals[group].custo += item.vltotalcustoproduto
+            groupTotals[group].quantidade += item.qtpedida
+        })
+
+        return groupTotals
+    }
+
+    // Fix the groupDiscounts state handling
+    const handleGroupDiscountChange = (group: string, value: string) => {
+        setGroupDiscounts(prev => ({
+            ...prev,
+            [group]: value ? Number(value) : undefined
+        }) as Record<string, number>)
+    }
+
     if (isLoading) return <Loading />
 
     if (!initialCode && data.length === 0) {
@@ -478,7 +565,7 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                 <h3 className="font-semibold">O que você encontrará aqui:</h3>
                             </div>
                             <ul className="space-y-2 text-sm text-muted-foreground">
-                                <li>• Detalhes completos do orçamento</li>
+                                <li> Detalhes completos do orçamento</li>
                                 <li>• Informações do cliente e localização</li>
                                 <li>• Lista detalhada de produtos</li>
                                 <li>• Preços, descontos e margens</li>
@@ -594,15 +681,124 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                     </div>
                                 </div>
 
+                                {/* Product Groups Section */}
+                                <div className="col-span-full">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h3 className="text-sm font-medium">Desconto por Grupo de Produtos</h3>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => setShowGroupDiscounts(!showGroupDiscounts)}
+                                        >
+                                            {showGroupDiscounts ? 'Ocultar' : 'Mostrar'}
+                                        </Button>
+                                    </div>
+                                    
+                                    {showGroupDiscounts && (
+                                        <div className="relative rounded-md border">
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>Grupo</TableHead>
+                                                        <TableHead className="text-right">Qtd</TableHead>
+                                                        <TableHead className="text-right">Preço Lista</TableHead>
+                                                        <TableHead className="text-right">Preço Final</TableHead>
+                                                        <TableHead className="text-right">Custo</TableHead>
+                                                        <TableHead className="text-right">Margem</TableHead>
+                                                        <TableHead className="text-right">Desconto %</TableHead>
+                                                        <TableHead></TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {getUniqueProductGroups().map(group => {
+                                                        const totals = calculateGroupTotals()[group]
+                                                        const margin = calculateMargin(totals.precoFinal, totals.custo)
+                                                        const currentDiscount = ((totals.precoLista - totals.precoFinal) / totals.precoLista) * 100
+
+                                                        return (
+                                                            <TableRow key={group}>
+                                                                <TableCell className="font-medium">
+                                                                    {group}
+                                                                </TableCell>
+                                                                <TableCell className="text-right">
+                                                                    {totals.quantidade}
+                                                                </TableCell>
+                                                                <TableCell className="text-right">
+                                                                    {totals.precoLista.toLocaleString('pt-BR', {
+                                                                        style: 'currency',
+                                                                        currency: 'BRL'
+                                                                    })}
+                                                                </TableCell>
+                                                                <TableCell className="text-right">
+                                                                    {totals.precoFinal.toLocaleString('pt-BR', {
+                                                                        style: 'currency',
+                                                                        currency: 'BRL'
+                                                                    })}
+                                                                </TableCell>
+                                                                <TableCell className="text-right">
+                                                                    {totals.custo.toLocaleString('pt-BR', {
+                                                                        style: 'currency',
+                                                                        currency: 'BRL'
+                                                                    })}
+                                                                </TableCell>
+                                                                <TableCell className={`text-right ${
+                                                                    margin >= 0 
+                                                                        ? 'text-green-600 dark:text-green-400' 
+                                                                        : 'text-red-600 dark:text-red-400'
+                                                                }`}>
+                                                                    {margin.toFixed(2)}%
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <div className="flex items-center gap-2 justify-end">
+                                                                        <Input
+                                                                            type="number"
+                                                                            value={groupDiscounts[group] ?? ''}
+                                                                            onChange={(e) => handleGroupDiscountChange(group, e.target.value)}
+                                                                            placeholder="Desconto %"
+                                                                            className="w-24"
+                                                                            min="0"
+                                                                            max="100"
+                                                                            step="0.1"
+                                                                            onKeyDown={(e) => {
+                                                                                if (e.key === 'Enter') {
+                                                                                    e.preventDefault()
+                                                                                    const discount = Number(groupDiscounts[group])
+                                                                                    if (!isNaN(discount)) {
+                                                                                        applyGroupDiscount(group, discount)
+                                                                                    }
+                                                                                }
+                                                                            }}
+                                                                        />
+                                                                    </div>
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <Button
+                                                                        onClick={() => {
+                                                                            const discount = Number(groupDiscounts[group])
+                                                                            if (!isNaN(discount)) {
+                                                                                applyGroupDiscount(group, discount)
+                                                                            }
+                                                                        }}
+                                                                        disabled={groupDiscounts[group] === undefined}
+                                                                        size="sm"
+                                                                    >
+                                                                        Aplicar
+                                                                    </Button>
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        )
+                                                    })}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
+                                    )}
+                                </div>
+
                                 {/* Action Buttons */}
                                 <div className="flex items-end gap-2">
                                     <Button 
                                         variant="outline" 
-                                        onClick={() => {
-                                            setSimulatedDiscounts({})
-                                            setGlobalDiscount('')
-                                            setTargetMargin('')
-                                        }}
+                                        onClick={clearSimulation}
                                     >
                                         Limpar Simulação
                                     </Button>
@@ -645,7 +841,7 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
-                                                            onClick={() => setSimulatedDiscounts(sim.discounts)}
+                                                            onClick={() => updateDiscountsAndGroupDiscounts(sim.discounts)}
                                                         >
                                                             Aplicar
                                                         </Button>
@@ -795,6 +991,7 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                                 <TableHead className="text-right">Preço Final</TableHead>
                                                 <TableHead className="text-right">Custo</TableHead>
                                                 <TableHead className="text-right">Margem</TableHead>
+                                                <TableHead>Grupo</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody className={roboto.className}>
@@ -906,6 +1103,7 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                                         }`}>
                                                             {margin.toFixed(2)}%
                                                         </TableCell>
+                                                        <TableCell>{item.nmgrupoproduto}</TableCell>
                                                     </TableRow>
                                                 )
                                             })}
