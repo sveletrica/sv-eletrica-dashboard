@@ -87,3 +87,8 @@ export async function saveToIndexedDB(data: any) {
     };
   });
 }
+
+// Add this function
+export const formatStockNumber = (num: number) => {
+    return new Intl.NumberFormat('pt-BR').format(num);
+}

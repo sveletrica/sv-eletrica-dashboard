@@ -9,6 +9,8 @@ import { Search, Calculator, Info } from 'lucide-react'
 import Loading from '../vendas-dia/loading'
 import { Roboto } from 'next/font/google'
 import { useRouter } from 'next/navigation'
+import { StockPopover } from "@/components/stock-popover"
+import { cn } from "@/lib/utils"
 
 const roboto = Roboto({
     weight: ['400', '500', '700'],
@@ -37,6 +39,17 @@ interface QuotationItem {
     dataextracao: string
 }
 
+interface StockData {
+    QtEstoque_Empresa1?: number;
+    QtEstoque_Empresa4?: number;
+    QtEstoque_Empresa12?: number;
+    QtEstoque_Empresa13?: number;
+    QtEstoque_Empresa15?: number;
+    QtEstoque_Empresa17?: number;
+    QtEstoque_Empresa59?: number;
+    StkTotal: number;
+}
+
 const getMarginStyle = (margin: number) => {
     if (margin > 5) {
         return "bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-900/10"
@@ -60,6 +73,9 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
     const [simulatedDiscounts, setSimulatedDiscounts] = useState<Record<string, number>>({})
     const [isSimulating, setIsSimulating] = useState(false)
     const [globalDiscount, setGlobalDiscount] = useState<string>('')
+    const [stockData, setStockData] = useState<Record<string, StockData>>({})
+    const [loadingStock, setLoadingStock] = useState<Record<string, boolean>>({})
+    const [openPopoverId, setOpenPopoverId] = useState<string | null>(null)
 
     const calculateMargin = (revenue: number, cost: number) => {
         return ((revenue - (revenue * 0.268 + cost)) / revenue) * 100
@@ -173,6 +189,46 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
         if (e.key === 'Enter') {
             e.preventDefault()
             applyGlobalDiscount()
+        }
+    }
+
+    const fetchStockData = async (cdproduto: string) => {
+        try {
+            setLoadingStock(prev => ({ ...prev, [cdproduto]: true }))
+            const response = await fetch(`/api/produto/${cdproduto}`)
+            if (!response.ok) {
+                const errorData = await response.json()
+                throw new Error(errorData.error || 'Failed to fetch stock data')
+            }
+            const data = await response.json()
+            
+            if (data.stock && data.stock[0]) {
+                const stockData = {
+                    QtEstoque_Empresa1: data.stock[0].QtEstoque_Empresa1 || data.stock[0].qtestoque_empresa1 || 0,
+                    QtEstoque_Empresa4: data.stock[0].QtEstoque_Empresa4 || data.stock[0].qtestoque_empresa4 || 0,
+                    QtEstoque_Empresa12: data.stock[0].QtEstoque_Empresa12 || data.stock[0].qtestoque_empresa12 || 0,
+                    QtEstoque_Empresa13: data.stock[0].QtEstoque_Empresa13 || data.stock[0].qtestoque_empresa13 || 0,
+                    QtEstoque_Empresa15: data.stock[0].QtEstoque_Empresa15 || data.stock[0].qtestoque_empresa15 || 0,
+                    QtEstoque_Empresa17: data.stock[0].QtEstoque_Empresa17 || data.stock[0].qtestoque_empresa17 || 0,
+                    QtEstoque_Empresa59: data.stock[0].QtEstoque_Empresa59 || data.stock[0].qtestoque_empresa59 || 0,
+                    StkTotal: data.stock[0].StkTotal || data.stock[0].sktotal || 
+                        (data.stock[0].QtEstoque_Empresa1 || data.stock[0].qtestoque_empresa1 || 0) +
+                        (data.stock[0].QtEstoque_Empresa4 || data.stock[0].qtestoque_empresa4 || 0) +
+                        (data.stock[0].QtEstoque_Empresa12 || data.stock[0].qtestoque_empresa12 || 0) +
+                        (data.stock[0].QtEstoque_Empresa13 || data.stock[0].qtestoque_empresa13 || 0) +
+                        (data.stock[0].QtEstoque_Empresa15 || data.stock[0].qtestoque_empresa15 || 0) +
+                        (data.stock[0].QtEstoque_Empresa17 || data.stock[0].qtestoque_empresa17 || 0) +
+                        (data.stock[0].QtEstoque_Empresa59 || data.stock[0].qtestoque_empresa59 || 0)
+                }
+                setStockData(prev => ({
+                    ...prev,
+                    [cdproduto]: stockData
+                }))
+            }
+        } catch (error) {
+            console.error('Error fetching stock data:', error)
+        } finally {
+            setLoadingStock(prev => ({ ...prev, [cdproduto]: false }))
         }
     }
 
@@ -457,7 +513,26 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                             <TableRow key={index}>
                                                 <TableCell>{item.cdproduto}</TableCell>
                                                 <TableCell>{item.nmproduto}</TableCell>
-                                                <TableCell className="text-right">{item.qtestoqueatualempresa}</TableCell>
+                                                <TableCell className="text-right">
+                                                    <StockPopover 
+                                                        stockData={stockData[item.cdproduto] || null}
+                                                        open={openPopoverId === item.cdproduto}
+                                                        onOpenChange={(open) => {
+                                                            setOpenPopoverId(open ? item.cdproduto : null)
+                                                            if (open && !stockData[item.cdproduto] && !loadingStock[item.cdproduto]) {
+                                                                fetchStockData(item.cdproduto)
+                                                            }
+                                                        }}
+                                                        loading={loadingStock[item.cdproduto]}
+                                                    >
+                                                        <button 
+                                                            className="cursor-pointer hover:underline"
+                                                            type="button"
+                                                        >
+                                                            {stockData[item.cdproduto]?.StkTotal || item.qtestoqueatualempresa}
+                                                        </button>
+                                                    </StockPopover>
+                                                </TableCell>
                                                 <TableCell className="text-right">{item.qtcomprada}</TableCell>
                                                 <TableCell className="text-right">{item.qtpedida}</TableCell>
                                                 <TableCell className="text-right">

@@ -13,12 +13,12 @@ interface StockData {
 
 const companyNames: Record<string, string> = {
     'QtEstoque_Empresa1': 'Matriz',
-    'QtEstoque_Empresa4': 'Filial 4',
-    'QtEstoque_Empresa12': 'Filial 12',
-    'QtEstoque_Empresa13': 'Filial 13',
-    'QtEstoque_Empresa15': 'Filial 15',
-    'QtEstoque_Empresa17': 'Filial 17',
-    'QtEstoque_Empresa59': 'Filial 59',
+    'QtEstoque_Empresa4': 'CD',
+    'QtEstoque_Empresa12': 'Express BM',
+    'QtEstoque_Empresa13': 'Express Maracanau',
+    'QtEstoque_Empresa15': 'Juazeiro',
+    'QtEstoque_Empresa17': 'Express Sobral',
+    'QtEstoque_Empresa59': 'Express WS',
 }
 
 export function ProductStockCard({ stockData }: { stockData: StockData }) {

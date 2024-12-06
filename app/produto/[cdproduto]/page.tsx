@@ -20,6 +20,7 @@ import Link from 'next/link'
 import { SortableColumnProps, SortDirection } from "@/components/ui/table"
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { ProductStockCard } from '@/components/product-stock-card'
+import { StockPopover } from "@/components/stock-popover"
 
 interface ProductSale {
     cdpedido: string
@@ -846,69 +847,26 @@ export default function ProductSalesDetails() {
                 </Card>
 
                 {data.stock && data.stock[0] && (
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Card className="h-full cursor-pointer hover:ring-2 hover:ring-primary/50">
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2">
-                                    <CardTitle className="text-xs sm:text-sm font-medium">
-                                        Estoque Total
-                                    </CardTitle>
-                                    <Package className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
-                                <CardContent className="p-2 md:p-4">
-                                    <div className="text-sm md:text-xl font-bold">
-                                        <AnimatedValue value={data.stock[0].StkTotal} suffix=" un" />
-                                    </div>
-                                    <p className="text-xs text-muted-foreground">
-                                        Em {Object.keys(data.stock[0] || {})
-                                            .filter(key => key.startsWith('QtEstoque_') && data.stock[0]?.[key as keyof StockData] > 0)
-                                            .length} filiais
-                                    </p>
-                                </CardContent>
-                            </Card>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-80" align="end">
-                            <div className="space-y-2 p-6">
-                                <h4 className="font-medium">Estoque por Filial</h4>
-                                <div className="grid gap-2">
-                                    {Object.entries(data.stock[0] || {})
-                                        .filter(([key]) => key.startsWith('QtEstoque_'))
-                                        .sort(([, a], [, b]) => (Number(b) || 0) - (Number(a) || 0))
-                                        .map(([key, value]) => {
-                                            if (!value || value === 0) return null;
-                                            const filialNumber = key.replace('QtEstoque_Empresa', '');
-                                            const percentage = ((value as number) / data.stock[0].StkTotal) * 100;
-                                            
-                                            return (
-                                                <div key={key} className="relative">
-                                                    <div className="flex justify-between items-center text-sm">
-                                                        <span className="font-medium">
-                                                            {filialNumber === '1' ? 'Matriz' : `Filial ${filialNumber}`}
-                                                        </span>
-                                                        <span>{formatStockNumber(value as number)} un</span>
-                                                    </div>
-                                                    <div className="mt-1 h-2 w-full bg-muted rounded-full overflow-hidden">
-                                                        <div 
-                                                            className="h-full bg-primary transition-all duration-500 ease-in-out"
-                                                            style={{ width: `${percentage}%` }}
-                                                        />
-                                                    </div>
-                                                    <span className="text-xs text-muted-foreground">
-                                                        {percentage.toFixed(1)}%
-                                                    </span>
-                                                </div>
-                                            );
-                                        })}
+                    <StockPopover stockData={data.stock[0]}>
+                        <Card className="h-full cursor-pointer hover:ring-2 hover:ring-primary/50">
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2">
+                                <CardTitle className="text-xs sm:text-sm font-medium">
+                                    Estoque Total
+                                </CardTitle>
+                                <Package className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent className="p-2 md:p-4">
+                                <div className="text-sm md:text-xl font-bold">
+                                    <AnimatedValue value={data.stock[0].StkTotal} suffix=" un" />
                                 </div>
-                                <div className="pt-2 border-t mt-2">
-                                    <div className="flex justify-between items-center font-medium">
-                                        <span>Total</span>
-                                        <span>{formatStockNumber(data.stock[0].StkTotal)} un</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </PopoverContent>
-                    </Popover>
+                                <p className="text-xs text-muted-foreground">
+                                    Em {Object.keys(data.stock[0])
+                                        .filter(key => key.startsWith('QtEstoque_') && data.stock[0]?.[key as keyof StockData] > 0)
+                                        .length} filiais
+                                </p>
+                            </CardContent>
+                        </Card>
+                    </StockPopover>
                 )}
             </div>
 
