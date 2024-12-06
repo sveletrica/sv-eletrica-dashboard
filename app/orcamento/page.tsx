@@ -52,11 +52,11 @@ interface StockData {
 
 const getMarginStyle = (margin: number) => {
     if (margin > 5) {
-        return "bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-900/10"
+        return "bg-gradient-to-br from-green-50 to-green-200 dark:from-green-900/20 dark:to-green-900/10"
     } else if (margin >= 0) {
-        return "bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-900/10"
+        return "bg-gradient-to-br from-yellow-50 to-yellow-200 dark:from-yellow-900/20 dark:to-yellow-900/10"
     } else {
-        return "bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-900/10"
+        return "bg-gradient-to-br from-red-50 to-red-200 dark:from-red-900/20 dark:to-red-900/10"
     }
 }
 
@@ -510,7 +510,13 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                             : item.vlfaturamento
 
                                         return (
-                                            <TableRow key={index}>
+                                            <TableRow 
+                                                key={index}
+                                                className={cn(
+                                                    "transition-colors",
+                                                    margin < 0 && "animate-pulseRow bg-red-500/50"
+                                                )}
+                                            >
                                                 <TableCell>{item.cdproduto}</TableCell>
                                                 <TableCell>{item.nmproduto}</TableCell>
                                                 <TableCell className="text-right">

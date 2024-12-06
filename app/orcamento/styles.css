@@ -1,0 +1,15 @@
+@keyframes pulseRow {
+    0% {
+        background-color: transparent;
+    }
+    50% {
+        background-color: rgba(216, 34, 34, 0.877);
+    }
+    100% {
+        background-color: transparent;
+    }
+}
+
+.animate-pulse-row {
+    animation: pulseRow 2s ease-in-out infinite;
+} 
