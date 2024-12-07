@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 
 // Configuration object that can be easily modified
 export const TIMER_CONFIG = {
-    warningThreshold: 19, // minutes
+    warningThreshold: 1, // minutes
     updateTimes: {
         morning: { hour: 5, minute: 3 },
         intervals: { minute: 33 }
