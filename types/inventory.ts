@@ -43,7 +43,7 @@ export const columnDefinitions = {
   PrecoDe: { label: 'Preço Original', show: false },
   DataInicio: { label: 'Início Promoção', show: false },
   DataFim: { label: 'Fim Promoção', show: false },
-  CdSigla: { label: 'Unidade', show: true }
+  CdSigla: { label: 'Un', show: true }
 } as const;
 
 export type ColumnId = keyof typeof columnDefinitions;
