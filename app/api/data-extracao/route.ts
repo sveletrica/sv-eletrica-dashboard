@@ -9,7 +9,7 @@ const supabase = createClient(
 export async function GET() {
     try {
         const { data, error } = await supabase
-            .from('iosvendames')
+            .from('vw_mssql_bivendas_aux_geral')
             .select('dataextracao')
             .order('dataextracao', { ascending: false })
             .limit(1)
