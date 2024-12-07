@@ -775,32 +775,35 @@ export default function MonthlySales() {
                                         {/* Existing filial lines */}
                                         {getSortedFilials(chartData)
                                             .filter(filial => selectedFilials.includes(filial))
-                                            .map((filial, index) => {
-                                                const chartIndex = (index % 5) + 1;
+                                            .map((filial, index, array) => {
+                                                const sortedIndex = getSortedFilials(chartData).indexOf(filial);
+                                                const color = generateFilialColor(sortedIndex, getSortedFilials(chartData).length);
+                                                
                                                 return (
                                                     <Line
                                                         key={filial}
-                                                        type="natural"
+                                                        type="monotone"
                                                         dataKey={filial}
                                                         name={filial}
-                                                        stroke={`hsl(var(--chart-${chartIndex}))`}
+                                                        stroke={color}
                                                         strokeWidth={2}
                                                         dot={{
                                                             r: 3,
-                                                            fill: `hsl(var(--chart-${chartIndex}))`,
+                                                            fill: color,
                                                             strokeWidth: 0
                                                         }}
                                                         activeDot={{
                                                             r: 5,
-                                                            strokeWidth: 0
+                                                            strokeWidth: 0,
+                                                            fill: color
                                                         }}
                                                         isAnimationActive={false}
                                                     >
                                                         <LabelList
-                                                            dataKey={filial as keyof DynamicDataEntry}
+                                                            dataKey={filial}
                                                             position="top"
                                                             offset={12}
-                                                            className="fill-foreground"
+                                                            fill="hsl(var(--foreground))"
                                                             fontSize={12}
                                                         />
                                                     </Line>
