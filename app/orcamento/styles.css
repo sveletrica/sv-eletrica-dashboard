@@ -1,4 +1,4 @@
-@keyframes pulse {
+@keyframes alert-pulse {
   0%, 100% {
     background-color: rgb(220 38 38); /* red-600 */
   }
@@ -7,12 +7,12 @@
   }
 }
 
-.animate-pulse {
-  animation: pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite,
-             scale 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+.alert-animate-pulse {
+  animation: alert-pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite,
+             alert-scale 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-@keyframes scale {
+@keyframes alert-scale {
   0%, 100% {
     transform: translate(-50%, 0) scale(1);
   }

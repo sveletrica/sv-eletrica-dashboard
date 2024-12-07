@@ -1245,7 +1245,7 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                             "fixed bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 bg-black text-white rounded-full shadow-lg text-center text-xs",
                             timeLeftMinutes !== null && 
                             timeLeftMinutes <= TIMER_CONFIG.warningThreshold && 
-                            "animate-pulse bg-red-600"
+                            "alert-animate-pulse bg-red-600"
                         )}>
                             <div>
                                 Dados atualizados em: {new Date(lastExtraction).toLocaleString('pt-BR', {
