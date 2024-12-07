@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { Home, BarChart2, Package, Menu, X, ShoppingCart, BarChart3, CalendarDays, TrendingUp, ChevronLeft, Calculator } from 'lucide-react'
+import { ContactRound, Home, BarChart2, Package, Menu, X, ShoppingCart, BarChart3, CalendarDays, TrendingUp, ChevronLeft, Calculator } from 'lucide-react'
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Button } from "@/components/ui/button"
 import { useState, useEffect } from 'react'
@@ -38,6 +38,11 @@ const sidebarLinks = [
         href: '/produto',
         label: 'Produtos',
         icon: BarChart3,
+    },
+    {
+        href: '/cliente',
+        label: 'Clientes',
+        icon: ContactRound,
     },
 ] as const
 
