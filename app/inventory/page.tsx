@@ -519,6 +519,8 @@ export default function Inventory() {
                     case 'QtEstoque_Empresa13':
                     case 'QtEstoque_Empresa15':
                     case 'QtEstoque_Empresa17':
+                    case 'CdSigla':
+                        return 40;
                     case 'StkTotal':
                         return 100;
                     default:
@@ -776,7 +778,7 @@ export default function Inventory() {
                                                     roboto.className,
                                                     "text-xs sm:text-sm",
                                                     cell.column.id === 'NmGrupoProduto' && "max-w-[100px] sm:max-w-[120px] truncate",
-                                                    cell.column.id === 'NmProduto' && "max-w-[300px] sm:max-w-[600px]",
+                                                    cell.column.id === 'NmProduto' && "max-w-[200px] sm:max-w-[600px]",
                                                     cell.column.id === 'NmFornecedorPrincipal' && "max-w-[120px] sm:max-w-[150px] truncate" // Add truncate for supplier
                                                 )}
                                                 style={{
