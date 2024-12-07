@@ -16,7 +16,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "sonner"
-import { CountdownTimer } from "@/components/countdown-timer"
+import { CountdownTimer, TIMER_CONFIG } from "@/components/countdown-timer"
 
 const roboto = Roboto({
     weight: ['400', '500', '700'],
@@ -208,6 +208,7 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
     const [groupDiscounts, setGroupDiscounts] = useState<Record<string, number>>({})
     const [showGroupDiscounts, setShowGroupDiscounts] = useState(false)
     const [lastExtraction, setLastExtraction] = useState<string | null>(null)
+    const [timeLeftMinutes, setTimeLeftMinutes] = useState<number | null>(null)
 
     const calculateMargin = (revenue: number, cost: number) => {
         return ((revenue - (revenue * 0.268 + cost)) / revenue) * 100
@@ -1240,18 +1241,23 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                         </CardContent>
                     </Card>
                     {lastExtraction && (
-                        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 bg-black text-white rounded-full shadow-lg text-center text-xs">
+                        <div className={cn(
+                            "fixed bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 bg-black text-white rounded-full shadow-lg text-center text-xs",
+                            timeLeftMinutes !== null && 
+                            timeLeftMinutes <= TIMER_CONFIG.warningThreshold && 
+                            "animate-pulse bg-red-600"
+                        )}>
                             <div>
                                 Dados atualizados em: {new Date(lastExtraction).toLocaleString('pt-BR', {
                                     day: '2-digit',
                                     month: '2-digit',
-                                    year: 'numeric',
+                                    year: 'numeric',    
                                     hour: '2-digit',
                                     minute: '2-digit'
                                 })}
                             </div>
                             <div>
-                                Próxima atualização em: <CountdownTimer />
+                                Próxima atualização em: <CountdownTimer onMinutesChange={setTimeLeftMinutes} />
                             </div>
                         </div>
                     )}

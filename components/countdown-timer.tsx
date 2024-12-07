@@ -2,6 +2,15 @@
 
 import { useState, useEffect } from 'react'
 
+// Configuration object that can be easily modified
+export const TIMER_CONFIG = {
+    warningThreshold: 19, // minutes
+    updateTimes: {
+        morning: { hour: 5, minute: 3 },
+        intervals: { minute: 33 }
+    }
+}
+
 function getNextCronTime(from: Date = new Date()): Date {
     const next = new Date(from)
     const hours = next.getHours()
@@ -9,7 +18,12 @@ function getNextCronTime(from: Date = new Date()): Date {
 
     // If outside operating hours (23:00-05:00), set to next 05:03
     if (hours >= 23 || hours < 5) {
-        next.setHours(5, 3, 0, 0)
+        next.setHours(
+            TIMER_CONFIG.updateTimes.morning.hour,
+            TIMER_CONFIG.updateTimes.morning.minute,
+            0,
+            0
+        )
         if (hours >= 23) {
             next.setDate(next.getDate() + 1)
         }
@@ -28,7 +42,12 @@ function getNextCronTime(from: Date = new Date()): Date {
         // If we moved past 23:00, set to next day 05:03
         if (next.getHours() >= 23) {
             next.setDate(next.getDate() + 1)
-            next.setHours(5, 3, 0, 0)
+            next.setHours(
+                TIMER_CONFIG.updateTimes.morning.hour,
+                TIMER_CONFIG.updateTimes.morning.minute,
+                0,
+                0
+            )
         }
     }
 
@@ -54,23 +73,40 @@ function formatTimeLeft(difference: number): string {
     return timeString.trim()
 }
 
-export function CountdownTimer() {
-    const [timeLeft, setTimeLeft] = useState(() => {
+interface CountdownTimerProps {
+    onMinutesChange?: (minutes: number) => void;
+}
+
+export function CountdownTimer({ onMinutesChange }: CountdownTimerProps) {
+    const [timeLeft, setTimeLeft] = useState<{ text: string; minutes: number }>(() => {
         const nextUpdate = getNextCronTime()
         const difference = nextUpdate.getTime() - new Date().getTime()
-        return formatTimeLeft(difference)
+        const minutes = Math.floor(difference / (1000 * 60))
+        return {
+            text: formatTimeLeft(difference),
+            minutes: minutes
+        }
     })
 
     useEffect(() => {
         const calculateTimeLeft = () => {
             const nextUpdate = getNextCronTime()
             const difference = nextUpdate.getTime() - new Date().getTime()
-            setTimeLeft(formatTimeLeft(difference))
+            const minutes = Math.floor(difference / (1000 * 60))
+            setTimeLeft({
+                text: formatTimeLeft(difference),
+                minutes: minutes
+            })
+            onMinutesChange?.(minutes)
         }
 
         const timer = setInterval(calculateTimeLeft, 1000)
         return () => clearInterval(timer)
-    }, [])
+    }, [onMinutesChange])
 
-    return <span>{timeLeft}</span>
+    return (
+        <span data-minutes={timeLeft.minutes}>
+            {timeLeft.text}
+        </span>
+    )
 } 

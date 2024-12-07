@@ -1,15 +1,22 @@
-@keyframes pulseRow {
-    0% {
-        background-color: transparent;
-    }
-    50% {
-        background-color: rgba(216, 34, 34, 0.877);
-    }
-    100% {
-        background-color: transparent;
-    }
+@keyframes pulse {
+  0%, 100% {
+    background-color: rgb(220 38 38); /* red-600 */
+  }
+  50% {
+    background-color: rgb(126, 19, 19); /* red-700 */
+  }
 }
 
-.animate-pulse-row {
-    animation: pulseRow 2s ease-in-out infinite;
-} 
+.animate-pulse {
+  animation: pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite,
+             scale 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes scale {
+  0%, 100% {
+    transform: translate(-50%, 0) scale(1);
+  }
+  50% {
+    transform: translate(-50%, 0) scale(1.05);
+  }
+}
