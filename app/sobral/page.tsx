@@ -146,13 +146,15 @@ export default function Sobral() {
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center pl-10">
                 <h1 className="text-3xl font-bold">Sobral</h1>
                 <div className="flex items-center gap-4">
                     {lastUpdate && (
-                        <span className="text-sm text-muted-foreground">
-                            Última atualização: {format(lastUpdate, "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                        </span>
+                        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-black text-white px-4 py-2 rounded-full">
+                            <span className="text-xs">
+                                Última atualização: {format(lastUpdate, "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                            </span>
+                        </div>
                     )}
                     <Button
                         variant="outline"
@@ -175,7 +177,7 @@ export default function Sobral() {
                 </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-3 md:grid-cols-3 gap-6">
                 <Card className="stats-card">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Total em Estoque</CardTitle>
@@ -192,7 +194,7 @@ export default function Sobral() {
                     </CardHeader>
                     <CardContent>
                         <p className="text-3xl font-bold">{safeData.produtosEtiquetados.toLocaleString('pt-BR')}</p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-xs md:text-sm text-muted-foreground">
                             {calculatePercentage(safeData.produtosEtiquetados, safeData.totalEstoque)}% do total
                         </p>
                     </CardContent>
@@ -205,10 +207,10 @@ export default function Sobral() {
                         </CardHeader>
                         <CardContent>
                             <p className="text-3xl font-bold">{safeData.emStkSemEtiq.toLocaleString('pt-BR')}</p>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-xs md:text-sm text-muted-foreground">
                                 {calculatePercentage(safeData.emStkSemEtiq, safeData.totalEstoque)}% do total
                             </p>
-                            <p className="text-sm text-muted-foreground mt-2 flex items-center gap-1 group-hover:text-primary transition-colors">
+                            <p className="text-xs md:text-sm  text-muted-foreground mt-2 flex items-center gap-1 group-hover:text-primary transition-colors">
                                 Ver detalhes <ArrowRight className="h-4 w-4" />
                             </p>
                         </CardContent>

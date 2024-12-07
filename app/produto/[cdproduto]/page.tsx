@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Package, ChevronLeft, ChevronRight, Check, AlertTriangle, XCircle, Search, X } from 'lucide-react'
-import Loading from '../../vendas-dia/loading'
 import { cn } from "@/lib/utils"
 import { useSpring, animated } from '@react-spring/web'
 import './styles.css'
@@ -21,6 +20,7 @@ import { SortableColumnProps, SortDirection } from "@/components/ui/table"
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { ProductStockCard } from '@/components/product-stock-card'
 import { StockPopover } from "@/components/stock-popover"
+import ProductLoading from './loading'
 
 interface ProductSale {
     cdpedido: string
@@ -683,7 +683,7 @@ export default function ProductSalesDetails() {
         )
     }
 
-    if (isLoading) return <Loading />
+    if (isLoading) return <ProductLoading />
 
     if (!data.product.length) {
         return (
