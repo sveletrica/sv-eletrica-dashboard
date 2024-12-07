@@ -4,10 +4,10 @@ import { Skeleton } from "@/components/ui/skeleton"
 export default function InventoryLoading() {
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Estoque</h1>
+      <h1 className="text-3xl font-bold text-center">Consulta Estoque</h1>
       <Card>
         <CardHeader>
-          <CardTitle>Inventory Items</CardTitle>
+          <CardTitle>Lista de produtos</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">

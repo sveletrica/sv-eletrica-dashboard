@@ -634,24 +634,7 @@ export default function Inventory() {
             <div className="flex flex-col gap-2">
                 <div className="flex justify-between items-center flex-col">
                     <h1 className="text-3xl font-bold">Consulta Estoque</h1>
-                    <div className="flex items-center gap-4">
-                        {lastUpdate && (
-                            <div className="flex flex-col items-end">
-                                <span className="text-xs text-muted-foreground">
-                                    Última atualização do banco de dados
-                                </span>
-                                <span className="text-sm font-medium self-start">
-                                    {new Date(lastUpdate).toLocaleString('pt-BR', {
-                                        day: '2-digit',
-                                        month: '2-digit',
-                                        year: 'numeric',
-                                        hour: '2-digit',
-                                        minute: '2-digit',
-                                        timeZone: 'UTC'
-                                    })}
-                                </span>
-                            </div>
-                        )}
+                    <div className="flex items-center gap-4 py-4">
                         <Button
                             variant="outline"
                             size="sm"
@@ -864,6 +847,24 @@ export default function Inventory() {
                     </div>
                 </CardContent>
             </Card>
+
+            {lastUpdate && (
+                <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 bg-black text-white px-6 py-3 rounded-full shadow-lg flex flex-col items-center">
+                    <span className="text-xs opacity-80">
+                        Última atualização do banco de dados
+                    </span>
+                    <span className="text-sm font-medium">
+                        {new Date(lastUpdate).toLocaleString('pt-BR', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            timeZone: 'UTC'
+                        })}
+                    </span>
+                </div>
+            )}
         </div>
     )
 }

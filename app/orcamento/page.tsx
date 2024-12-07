@@ -726,10 +726,10 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
 
                                 {/* Product Groups Section */}
                                 <div className="col-span-full">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <h3 className="text-sm font-medium">Desconto por Grupo de Produtos</h3>
+                                    <div className="flex items-center mb-4">
+                                        <h3 className="text-sm font-medium pr-6">Desconto por Grupo de Produtos</h3>
                                         <Button
-                                            variant="ghost"
+                                            variant="outline"
                                             size="sm"
                                             onClick={() => setShowGroupDiscounts(!showGroupDiscounts)}
                                         >
@@ -739,100 +739,104 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                     
                                     {showGroupDiscounts && (
                                         <div className="relative rounded-md border">
-                                            <Table>
-                                                <TableHeader>
-                                                    <TableRow>
-                                                        <TableHead>Grupo</TableHead>
-                                                        <TableHead className="text-right">Qtd</TableHead>
-                                                        <TableHead className="text-right">Preço Lista</TableHead>
-                                                        <TableHead className="text-right">Preço Final</TableHead>
-                                                        <TableHead className="text-right">Custo</TableHead>
-                                                        <TableHead className="text-right">Margem</TableHead>
-                                                        <TableHead className="text-right">Desconto %</TableHead>
-                                                        <TableHead></TableHead>
-                                                    </TableRow>
-                                                </TableHeader>
-                                                <TableBody>
-                                                    {getUniqueProductGroups().map(group => {
-                                                        const totals = calculateGroupTotals()[group]
-                                                        const margin = calculateMargin(totals.precoFinal, totals.custo)
-                                                        const currentDiscount = ((totals.precoLista - totals.precoFinal) / totals.precoLista) * 100
+                                            <div className="overflow-auto">
+                                                <div className="min-w-[800px]">
+                                                    <Table>
+                                                        <TableHeader>
+                                                            <TableRow>
+                                                                <TableHead className="w-[200px]">Grupo</TableHead>
+                                                                <TableHead className="w-[80px] text-right">Qtd</TableHead>
+                                                                <TableHead className="w-[120px] text-right">Preço Lista</TableHead>
+                                                                <TableHead className="w-[120px] text-right">Preço Final</TableHead>
+                                                                <TableHead className="w-[120px] text-right">Custo</TableHead>
+                                                                <TableHead className="w-[100px] text-right">Margem</TableHead>
+                                                                <TableHead className="w-[120px] text-right">Desconto %</TableHead>
+                                                                <TableHead className="w-[100px]"></TableHead>
+                                                            </TableRow>
+                                                        </TableHeader>
+                                                        <TableBody>
+                                                            {getUniqueProductGroups().map(group => {
+                                                                const totals = calculateGroupTotals()[group]
+                                                                const margin = calculateMargin(totals.precoFinal, totals.custo)
+                                                                const currentDiscount = ((totals.precoLista - totals.precoFinal) / totals.precoLista) * 100
 
-                                                        return (
-                                                            <TableRow key={group}>
-                                                                <TableCell className="font-medium">
-                                                                    {group}
-                                                                </TableCell>
-                                                                <TableCell className="text-right">
-                                                                    {totals.quantidade}
-                                                                </TableCell>
-                                                                <TableCell className="text-right">
-                                                                    {totals.precoLista.toLocaleString('pt-BR', {
-                                                                        style: 'currency',
-                                                                        currency: 'BRL'
-                                                                    })}
-                                                                </TableCell>
-                                                                <TableCell className="text-right">
-                                                                    {totals.precoFinal.toLocaleString('pt-BR', {
-                                                                        style: 'currency',
-                                                                        currency: 'BRL'
-                                                                    })}
-                                                                </TableCell>
-                                                                <TableCell className="text-right">
-                                                                    {totals.custo.toLocaleString('pt-BR', {
-                                                                        style: 'currency',
-                                                                        currency: 'BRL'
-                                                                    })}
-                                                                </TableCell>
-                                                                <TableCell className={`text-right ${
-                                                                    margin >= 0 
-                                                                        ? 'text-green-600 dark:text-green-400' 
-                                                                        : 'text-red-600 dark:text-red-400'
-                                                                }`}>
-                                                                    {margin.toFixed(2)}%
-                                                                </TableCell>
-                                                                <TableCell>
-                                                                    <div className="flex items-center gap-2 justify-end">
-                                                                        <Input
-                                                                            type="number"
-                                                                            value={groupDiscounts[group] ?? ''}
-                                                                            onChange={(e) => handleGroupDiscountChange(group, e.target.value)}
-                                                                            placeholder="Desconto %"
-                                                                            className="w-24"
-                                                                            min="0"
-                                                                            max="100"
-                                                                            step="0.1"
-                                                                            onKeyDown={(e) => {
-                                                                                if (e.key === 'Enter') {
-                                                                                    e.preventDefault()
+                                                                return (
+                                                                    <TableRow key={group}>
+                                                                        <TableCell className="font-medium">
+                                                                            {group}
+                                                                        </TableCell>
+                                                                        <TableCell className="text-right">
+                                                                            {totals.quantidade}
+                                                                        </TableCell>
+                                                                        <TableCell className="text-right">
+                                                                            {totals.precoLista.toLocaleString('pt-BR', {
+                                                                                style: 'currency',
+                                                                                currency: 'BRL'
+                                                                            })}
+                                                                        </TableCell>
+                                                                        <TableCell className="text-right">
+                                                                            {totals.precoFinal.toLocaleString('pt-BR', {
+                                                                                style: 'currency',
+                                                                                currency: 'BRL'
+                                                                            })}
+                                                                        </TableCell>
+                                                                        <TableCell className="text-right">
+                                                                            {totals.custo.toLocaleString('pt-BR', {
+                                                                                style: 'currency',
+                                                                                currency: 'BRL'
+                                                                            })}
+                                                                        </TableCell>
+                                                                        <TableCell className={`text-right ${
+                                                                            margin >= 0 
+                                                                                ? 'text-green-600 dark:text-green-400' 
+                                                                                : 'text-red-600 dark:text-red-400'
+                                                                        }`}>
+                                                                            {margin.toFixed(2)}%
+                                                                        </TableCell>
+                                                                        <TableCell>
+                                                                            <div className="flex items-center gap-2 justify-end">
+                                                                                <Input
+                                                                                    type="number"
+                                                                                    value={groupDiscounts[group] ?? ''}
+                                                                                    onChange={(e) => handleGroupDiscountChange(group, e.target.value)}
+                                                                                    placeholder="Desconto %"
+                                                                                    className="w-24"
+                                                                                    min="0"
+                                                                                    max="100"
+                                                                                    step="0.1"
+                                                                                    onKeyDown={(e) => {
+                                                                                        if (e.key === 'Enter') {
+                                                                                            e.preventDefault()
+                                                                                            const discount = Number(groupDiscounts[group])
+                                                                                            if (!isNaN(discount)) {
+                                                                                                applyGroupDiscount(group, discount)
+                                                                                            }
+                                                                                        }
+                                                                                    }}
+                                                                                />
+                                                                            </div>
+                                                                        </TableCell>
+                                                                        <TableCell>
+                                                                            <Button
+                                                                                onClick={() => {
                                                                                     const discount = Number(groupDiscounts[group])
                                                                                     if (!isNaN(discount)) {
                                                                                         applyGroupDiscount(group, discount)
                                                                                     }
-                                                                                }
-                                                                            }}
-                                                                        />
-                                                                    </div>
-                                                                </TableCell>
-                                                                <TableCell>
-                                                                    <Button
-                                                                        onClick={() => {
-                                                                            const discount = Number(groupDiscounts[group])
-                                                                            if (!isNaN(discount)) {
-                                                                                applyGroupDiscount(group, discount)
-                                                                            }
-                                                                        }}
-                                                                        disabled={groupDiscounts[group] === undefined}
-                                                                        size="sm"
-                                                                    >
-                                                                        Aplicar
-                                                                    </Button>
-                                                                </TableCell>
-                                                            </TableRow>
-                                                        )
-                                                    })}
-                                                </TableBody>
-                                            </Table>
+                                                                                }}
+                                                                                disabled={groupDiscounts[group] === undefined}
+                                                                                size="sm"
+                                                                            >
+                                                                                Aplicar
+                                                                            </Button>
+                                                                        </TableCell>
+                                                                    </TableRow>
+                                                                )
+                                                            })}
+                                                        </TableBody>
+                                                    </Table>
+                                                </div>
+                                            </div>
                                         </div>
                                     )}
                                 </div>
@@ -843,7 +847,7 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                         variant="outline" 
                                         onClick={clearSimulation}
                                     >
-                                        Limpar Simulação
+                                        Limpar
                                     </Button>
                                     <Button
                                         variant="secondary"
@@ -856,7 +860,7 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                         onClick={() => setSaveDialogOpen(true)}
                                         disabled={Object.keys(simulatedDiscounts).length === 0}
                                     >
-                                        Salvar Simulação
+                                        Salvar
                                     </Button>
                                 </div>
                             </div>
@@ -949,6 +953,7 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                     <p className="text-xs"><span className="font-bold">Cliente:</span> {data[0].nmpessoa}</p>
                                     <p className="text-xs"><span className="font-bold">Cidade:</span> {data[0].nmcidade}</p>
                                     <p className="text-xs"><span className="font-bold">Filial:</span> {data[0].nmempresacurtovenda}</p>
+                                    <p className="text-xs"><span className="font-bold">Vendedor:</span> {data[0].nmrepresentantevenda}</p>
                                 </div>
                             </CardContent>
                         </Card>
