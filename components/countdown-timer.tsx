@@ -7,30 +7,29 @@ function getNextCronTime(from: Date = new Date()): Date {
     const hours = next.getHours()
     const minutes = next.getMinutes()
 
-    // If outside operating hours (22:00-06:00), set to next 06:00
-    if (hours >= 22 || hours < 6) {
-        next.setHours(6, 0, 0, 0)
-        if (hours >= 22) {
+    // If outside operating hours (23:00-05:00), set to next 05:03
+    if (hours >= 23 || hours < 5) {
+        next.setHours(5, 3, 0, 0)
+        if (hours >= 23) {
             next.setDate(next.getDate() + 1)
         }
         return next
     }
 
-    // Calculate next 35-minute interval
-    const currentInterval = Math.floor(minutes / 35)
-    const nextIntervalMinutes = (currentInterval + 1) * 35
-
-    if (nextIntervalMinutes >= 60) {
-        // Move to next hour
-        next.setHours(hours + 1, nextIntervalMinutes - 60, 0, 0)
-        
-        // If we moved past 22:00, set to next day 06:00
-        if (next.getHours() >= 22) {
-            next.setDate(next.getDate() + 1)
-            next.setHours(6, 0, 0, 0)
-        }
+    // Calculate next update time (either :03 or :33)
+    if (minutes < 3) {
+        next.setMinutes(3, 0, 0)
+    } else if (minutes < 33) {
+        next.setMinutes(33, 0, 0)
     } else {
-        next.setMinutes(nextIntervalMinutes, 0, 0)
+        // Move to next hour
+        next.setHours(hours + 1, 3, 0, 0)
+        
+        // If we moved past 23:00, set to next day 05:03
+        if (next.getHours() >= 23) {
+            next.setDate(next.getDate() + 1)
+            next.setHours(5, 3, 0, 0)
+        }
     }
 
     return next
