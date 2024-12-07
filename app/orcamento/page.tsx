@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Search, Calculator, Info, Check, X, Copy, Share2 } from 'lucide-react'
-import Loading from '../vendas-dia/loading'
+import Loading from './loading'
 import { Roboto } from 'next/font/google'
 import { useRouter } from 'next/navigation'
 import { StockPopover } from "@/components/stock-popover"

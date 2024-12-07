@@ -193,193 +193,199 @@ export default function SaleDetails() {
                 </Card>
             </div>
 
-            <Card>
+            <Card className="overflow-hidden">
                 <CardHeader>
                     <CardTitle>Itens do Pedido</CardTitle>
                 </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="text-[12px] sm:text-sm">Cód</TableHead>
-                                <TableHead className="text-[12px] sm:text-sm">Produto</TableHead>
-                                <TableHead className="text-[12px] sm:text-sm">Grupo</TableHead>
-                                <TableHead 
-                                    className="text-[12px] sm:text-sm text-right cursor-pointer hover:bg-accent/50"
-                                    onClick={() => {
-                                        const newData = [...data].sort((a, b) => {
-                                            if (sortConfig.key === 'qtd' && sortConfig.direction === 'asc') {
-                                                return b.qtbrutaproduto - a.qtbrutaproduto
-                                            }
-                                            return a.qtbrutaproduto - b.qtbrutaproduto
-                                        })
-                                        setData(newData)
-                                        setSortConfig({ key: 'qtd', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })
-                                    }}
-                                >
-                                    <div className="flex items-center justify-end gap-2">
-                                        Qtd
-                                        {sortConfig.key === 'qtd' ? (
-                                            sortConfig.direction === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />
-                                        ) : <ArrowUpDown className="h-4 w-4" />}
-                                    </div>
-                                </TableHead>
-                                <TableHead 
-                                    className="text-[12px] sm:text-sm text-right cursor-pointer hover:bg-accent/50"
-                                    onClick={() => {
-                                        const newData = [...data].sort((a, b) => {
-                                            const aValue = a.vlfaturamento / a.qtbrutaproduto
-                                            const bValue = b.vlfaturamento / b.qtbrutaproduto
-                                            if (sortConfig.key === 'unitValue' && sortConfig.direction === 'asc') {
-                                                return bValue - aValue
-                                            }
-                                            return aValue - bValue
-                                        })
-                                        setData(newData)
-                                        setSortConfig({ key: 'unitValue', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })
-                                    }}
-                                >
-                                    <div className="flex items-center justify-end gap-2">
-                                        Valor Unit.
-                                        {sortConfig.key === 'unitValue' ? (
-                                            sortConfig.direction === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />
-                                        ) : <ArrowUpDown className="h-4 w-4" />}
-                                    </div>
-                                </TableHead>
-                                <TableHead 
-                                    className="text-[12px] sm:text-sm text-right cursor-pointer hover:bg-accent/50"
-                                    onClick={() => {
-                                        const newData = [...data].sort((a, b) => {
-                                            if (sortConfig.key === 'total' && sortConfig.direction === 'asc') {
-                                                return b.vlfaturamento - a.vlfaturamento
-                                            }
-                                            return a.vlfaturamento - b.vlfaturamento
-                                        })
-                                        setData(newData)
-                                        setSortConfig({ key: 'total', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })
-                                    }}
-                                >
-                                    <div className="flex items-center justify-end gap-2">
-                                        Total
-                                        {sortConfig.key === 'total' ? (
-                                            sortConfig.direction === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />
-                                        ) : <ArrowUpDown className="h-4 w-4" />}
-                                    </div>
-                                </TableHead>
-                                <TableHead 
-                                    className="text-[12px] sm:text-sm text-right cursor-pointer hover:bg-accent/50"
-                                    onClick={() => {
-                                        const newData = [...data].sort((a, b) => {
-                                            if (sortConfig.key === 'cost' && sortConfig.direction === 'asc') {
-                                                return b.vltotalcustoproduto - a.vltotalcustoproduto
-                                            }
-                                            return a.vltotalcustoproduto - b.vltotalcustoproduto
-                                        })
-                                        setData(newData)
-                                        setSortConfig({ key: 'cost', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })
-                                    }}
-                                >
-                                    <div className="flex items-center justify-end gap-2">
-                                        Custo
-                                        {sortConfig.key === 'cost' ? (
-                                            sortConfig.direction === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />
-                                        ) : <ArrowUpDown className="h-4 w-4" />}
-                                    </div>
-                                </TableHead>
-                                <TableHead 
-                                    className="text-[12px] sm:text-sm text-right cursor-pointer hover:bg-accent/50"
-                                    onClick={() => {
-                                        const newData = [...data].sort((a, b) => {
-                                            const aMargin = parseFloat(a.margem)
-                                            const bMargin = parseFloat(b.margem)
-                                            if (sortConfig.key === 'margin' && sortConfig.direction === 'asc') {
-                                                return bMargin - aMargin
-                                            }
-                                            return aMargin - bMargin
-                                        })
-                                        setData(newData)
-                                        setSortConfig({ key: 'margin', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })
-                                    }}
-                                >
-                                    <div className="flex items-center justify-end gap-2">
-                                        Margem
-                                        {sortConfig.key === 'margin' ? (
-                                            sortConfig.direction === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />
-                                        ) : <ArrowUpDown className="h-4 w-4" />}
-                                    </div>
-                                </TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody className={roboto.className}>
-                            {data.map((item, index) => (
-                                <TableRow 
-                                    key={index}
-                                    className={cn(
-                                        highlightedProduct && item.cdproduto.trim() === highlightedProduct.trim() && 
-                                        "bg-yellow-300 dark:bg-red-800/50 animate-pulse-slow",
-                                        "transition-colors hover:bg-accent/50"
-                                    )}
-                                >
-                                    <TableCell className="text-xs sm:text-sm">
-                                        <Link 
-                                            href={`/produto/${item.cdproduto.trim()}`}
-                                            className="text-blue-500 hover:underline"
-                                        >
-                                            {item.cdproduto.trim()}
-                                        </Link>
-                                    </TableCell>
-                                    <TableCell className="text-xs sm:text-sm min-w-64">{item.nmproduto}</TableCell>
-                                    <TableCell className="text-xs sm:text-sm max-w-[100px] sm:max-w-none">
-                                        <span className="block truncate sm:text-clip">
-                                            {item.nmgrupoproduto}
-                                        </span>
-                                    </TableCell>
-                                    <TableCell className="text-xs sm:text-sm text-right">{item.qtbrutaproduto}</TableCell>
+                <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead className="text-[12px] sm:text-sm">Cód</TableHead>
+                                    <TableHead className="text-[12px] sm:text-sm">Produto</TableHead>
+                                    <TableHead className="text-[12px] sm:text-sm">Grupo</TableHead>
+                                    <TableHead 
+                                        className="text-[12px] sm:text-sm text-right cursor-pointer hover:bg-accent/50"
+                                        onClick={() => {
+                                            const newData = [...data].sort((a, b) => {
+                                                if (sortConfig.key === 'qtd' && sortConfig.direction === 'asc') {
+                                                    return b.qtbrutaproduto - a.qtbrutaproduto
+                                                }
+                                                return a.qtbrutaproduto - b.qtbrutaproduto
+                                            })
+                                            setData(newData)
+                                            setSortConfig({ key: 'qtd', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })
+                                        }}
+                                    >
+                                        <div className="flex items-center justify-end gap-2">
+                                            Qtd
+                                            {sortConfig.key === 'qtd' ? (
+                                                sortConfig.direction === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />
+                                            ) : <ArrowUpDown className="h-4 w-4" />}
+                                        </div>
+                                    </TableHead>
+                                    <TableHead 
+                                        className="text-[12px] sm:text-sm text-right cursor-pointer hover:bg-accent/50"
+                                        onClick={() => {
+                                            const newData = [...data].sort((a, b) => {
+                                                const aValue = a.vlfaturamento / a.qtbrutaproduto
+                                                const bValue = b.vlfaturamento / b.qtbrutaproduto
+                                                if (sortConfig.key === 'unitValue' && sortConfig.direction === 'asc') {
+                                                    return bValue - aValue
+                                                }
+                                                return aValue - bValue
+                                            })
+                                            setData(newData)
+                                            setSortConfig({ key: 'unitValue', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })
+                                        }}
+                                    >
+                                        <div className="flex items-center justify-end gap-2">
+                                            Valor Unit.
+                                            {sortConfig.key === 'unitValue' ? (
+                                                sortConfig.direction === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />
+                                            ) : <ArrowUpDown className="h-4 w-4" />}
+                                        </div>
+                                    </TableHead>
+                                    <TableHead 
+                                        className="text-[12px] sm:text-sm text-right cursor-pointer hover:bg-accent/50"
+                                        onClick={() => {
+                                            const newData = [...data].sort((a, b) => {
+                                                if (sortConfig.key === 'total' && sortConfig.direction === 'asc') {
+                                                    return b.vlfaturamento - a.vlfaturamento
+                                                }
+                                                return a.vlfaturamento - b.vlfaturamento
+                                            })
+                                            setData(newData)
+                                            setSortConfig({ key: 'total', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })
+                                        }}
+                                    >
+                                        <div className="flex items-center justify-end gap-2">
+                                            Total
+                                            {sortConfig.key === 'total' ? (
+                                                sortConfig.direction === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />
+                                            ) : <ArrowUpDown className="h-4 w-4" />}
+                                        </div>
+                                    </TableHead>
+                                    <TableHead 
+                                        className="text-[12px] sm:text-sm text-right cursor-pointer hover:bg-accent/50"
+                                        onClick={() => {
+                                            const newData = [...data].sort((a, b) => {
+                                                if (sortConfig.key === 'cost' && sortConfig.direction === 'asc') {
+                                                    return b.vltotalcustoproduto - a.vltotalcustoproduto
+                                                }
+                                                return a.vltotalcustoproduto - b.vltotalcustoproduto
+                                            })
+                                            setData(newData)
+                                            setSortConfig({ key: 'cost', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })
+                                        }}
+                                    >
+                                        <div className="flex items-center justify-end gap-2">
+                                            Custo
+                                            {sortConfig.key === 'cost' ? (
+                                                sortConfig.direction === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />
+                                            ) : <ArrowUpDown className="h-4 w-4" />}
+                                        </div>
+                                    </TableHead>
+                                    <TableHead 
+                                        className="text-[12px] sm:text-sm text-right cursor-pointer hover:bg-accent/50"
+                                        onClick={() => {
+                                            const newData = [...data].sort((a, b) => {
+                                                const aMargin = parseFloat(a.margem)
+                                                const bMargin = parseFloat(b.margem)
+                                                if (sortConfig.key === 'margin' && sortConfig.direction === 'asc') {
+                                                    return bMargin - aMargin
+                                                }
+                                                return aMargin - bMargin
+                                            })
+                                            setData(newData)
+                                            setSortConfig({ key: 'margin', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })
+                                        }}
+                                    >
+                                        <div className="flex items-center justify-end gap-2">
+                                            Margem
+                                            {sortConfig.key === 'margin' ? (
+                                                sortConfig.direction === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />
+                                            ) : <ArrowUpDown className="h-4 w-4" />}
+                                        </div>
+                                    </TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody className={roboto.className}>
+                                {data.map((item, index) => (
+                                    <TableRow 
+                                        key={index}
+                                        className={cn(
+                                            highlightedProduct && item.cdproduto.trim() === highlightedProduct.trim() && 
+                                            "bg-yellow-300 dark:bg-red-800/50 animate-pulse-slow",
+                                            "transition-colors hover:bg-accent/50"
+                                        )}
+                                    >
+                                        <TableCell className="text-xs sm:text-sm">
+                                            <Link 
+                                                href={`/produto/${item.cdproduto.trim()}`}
+                                                className="text-blue-500 hover:underline"
+                                            >
+                                                {item.cdproduto.trim()}
+                                            </Link>
+                                        </TableCell>
+                                        <TableCell className="text-xs sm:text-sm whitespace-nowrap max-w-[150px] sm:max-w-none">
+                                            <span className="block truncate sm:text-clip sm:whitespace-normal">
+                                                {item.nmproduto}
+                                            </span>
+                                        </TableCell>
+                                        <TableCell className="text-xs sm:text-sm max-w-[100px] sm:max-w-none whitespace-nowrap">
+                                            <span className="block truncate sm:text-clip sm:whitespace-normal">
+                                                {item.nmgrupoproduto}
+                                            </span>
+                                        </TableCell>
+                                        <TableCell className="text-xs sm:text-sm text-right">{item.qtbrutaproduto}</TableCell>
+                                        <TableCell className="text-xs sm:text-sm text-right">
+                                            {(item.vlfaturamento / item.qtbrutaproduto).toLocaleString('pt-BR', {
+                                                style: 'currency',
+                                                currency: 'BRL'
+                                            })}
+                                        </TableCell>
+                                        <TableCell className="text-xs sm:text-sm text-right">
+                                            {item.vlfaturamento.toLocaleString('pt-BR', {
+                                                style: 'currency',
+                                                currency: 'BRL'
+                                            })}
+                                        </TableCell>
+                                        <TableCell className="text-xs sm:text-sm text-right">
+                                            {item.vltotalcustoproduto.toLocaleString('pt-BR', {
+                                                style: 'currency',
+                                                currency: 'BRL'
+                                            })}
+                                        </TableCell>
+                                        <TableCell className="text-xs sm:text-sm text-right">
+                                            {item.margem}
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                                <TableRow className="font-bold">
+                                    <TableCell colSpan={3} className="text-xs sm:text-sm">Total</TableCell>
+                                    <TableCell className="text-xs sm:text-sm text-right">{totals.quantidade}</TableCell>
+                                    <TableCell className="text-xs sm:text-sm text-right">-</TableCell>
                                     <TableCell className="text-xs sm:text-sm text-right">
-                                        {(item.vlfaturamento / item.qtbrutaproduto).toLocaleString('pt-BR', {
+                                        {totals.faturamento.toLocaleString('pt-BR', {
                                             style: 'currency',
                                             currency: 'BRL'
                                         })}
                                     </TableCell>
                                     <TableCell className="text-xs sm:text-sm text-right">
-                                        {item.vlfaturamento.toLocaleString('pt-BR', {
+                                        {totals.custo.toLocaleString('pt-BR', {
                                             style: 'currency',
                                             currency: 'BRL'
                                         })}
                                     </TableCell>
                                     <TableCell className="text-xs sm:text-sm text-right">
-                                        {item.vltotalcustoproduto.toLocaleString('pt-BR', {
-                                            style: 'currency',
-                                            currency: 'BRL'
-                                        })}
-                                    </TableCell>
-                                    <TableCell className="text-xs sm:text-sm text-right">
-                                        {item.margem}
+                                        {marginPercentage.toFixed(2)}%
                                     </TableCell>
                                 </TableRow>
-                            ))}
-                            <TableRow className="font-bold">
-                                <TableCell colSpan={3} className="text-xs sm:text-sm">Total</TableCell>
-                                <TableCell className="text-xs sm:text-sm text-right">{totals.quantidade}</TableCell>
-                                <TableCell className="text-xs sm:text-sm text-right">-</TableCell>
-                                <TableCell className="text-xs sm:text-sm text-right">
-                                    {totals.faturamento.toLocaleString('pt-BR', {
-                                        style: 'currency',
-                                        currency: 'BRL'
-                                    })}
-                                </TableCell>
-                                <TableCell className="text-xs sm:text-sm text-right">
-                                    {totals.custo.toLocaleString('pt-BR', {
-                                        style: 'currency',
-                                        currency: 'BRL'
-                                    })}
-                                </TableCell>
-                                <TableCell className="text-xs sm:text-sm text-right">
-                                    {marginPercentage.toFixed(2)}%
-                                </TableCell>
-                            </TableRow>
-                        </TableBody>
-                    </Table>
+                            </TableBody>
+                        </Table>
+                    </div>
                 </CardContent>
             </Card>
         </div>
