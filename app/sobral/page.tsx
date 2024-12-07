@@ -275,17 +275,17 @@ export default function Sobral() {
 const chartConfig = {
     totalTagged: { 
         label: "Total Etiquetado", 
-        color: `hsl(var(--chart-1))`,
+        color: "#16a34a",
         showValue: true
     },
     tagsUsedTwice: { 
         label: "Etiquetas Duplicadas", 
-        color: `hsl(var(--chart-2))`,
+        color: "#eab308",
         showValue: true
     },
     taggedNoStock: { 
         label: "Etiquetados sem Estoque", 
-        color: `hsl(var(--chart-3))`,
+        color: "#dc2626",
         showValue: true
     },
 } 
