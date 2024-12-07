@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Search, Calculator, Info, Check, X } from 'lucide-react'
+import { Search, Calculator, Info, Check, X, Copy, Share2 } from 'lucide-react'
 import Loading from '../vendas-dia/loading'
 import { Roboto } from 'next/font/google'
 import { useRouter } from 'next/navigation'
@@ -60,7 +60,7 @@ interface StockData {
 interface SaveSimulationDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSave: (notes: string) => Promise<void>
+  onSave: (notes: string) => Promise<{ shareUrl?: string } | void>
 }
 
 interface SavedSimulation {
@@ -70,6 +70,8 @@ interface SavedSimulation {
   created_at: string
   notes?: string
   created_by?: string
+  share_id?: string
+  shareUrl?: string
 }
 
 interface DataExtractionInfo {
@@ -93,13 +95,15 @@ interface QuotationDetailsProps {
 function SaveSimulationDialog({ open, onOpenChange, onSave }: SaveSimulationDialogProps) {
   const [notes, setNotes] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  const [shareUrl, setShareUrl] = useState<string | null>(null)
 
   const handleSave = async () => {
     setIsSaving(true)
     try {
-      await onSave(notes)
-      onOpenChange(false)
-      setNotes('')
+      const result = await onSave(notes)
+      if (result?.shareUrl) {
+        setShareUrl(result.shareUrl)
+      }
     } catch (error) {
       console.error('Error saving simulation:', error)
     } finally {
@@ -107,21 +111,53 @@ function SaveSimulationDialog({ open, onOpenChange, onSave }: SaveSimulationDial
     }
   }
 
+  const copyShareUrl = async () => {
+    if (shareUrl) {
+      const fullUrl = `${window.location.origin}${shareUrl}`
+      await navigator.clipboard.writeText(fullUrl)
+      toast.success('Link copiado para a área de transferência!')
+    }
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(newOpen) => {
+      if (!newOpen) {
+        setShareUrl(null)
+        setNotes('')
+      }
+      onOpenChange(newOpen)
+    }}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Salvar Simulação</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Observaçes</label>
+            <label className="text-sm font-medium">Observações</label>
             <Textarea
               placeholder="Adicione observações sobre esta simulação..."
               value={notes}
-              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNotes(e.target.value)}
+              onChange={(e) => setNotes(e.target.value)}
             />
           </div>
+          {shareUrl && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Link para compartilhar</label>
+              <div className="flex items-center gap-2">
+                <Input
+                  value={`${window.location.origin}${shareUrl}`}
+                  readOnly
+                />
+                <Button
+                  size="icon"
+                  variant="outline"
+                  onClick={copyShareUrl}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
         <DialogFooter>
           <Button
@@ -129,14 +165,16 @@ function SaveSimulationDialog({ open, onOpenChange, onSave }: SaveSimulationDial
             onClick={() => onOpenChange(false)}
             disabled={isSaving}
           >
-            Cancelar
+            Fechar
           </Button>
-          <Button
-            onClick={handleSave}
-            disabled={isSaving}
-          >
-            {isSaving ? "Salvando..." : "Salvar Simulação"}
-          </Button>
+          {!shareUrl && (
+            <Button
+              onClick={handleSave}
+              disabled={isSaving}
+            >
+              {isSaving ? "Salvando..." : "Salvar Simulação"}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -370,7 +408,7 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
     const calculateDiscountForTargetMargin = (listPrice: number, cost: number, targetMarginPercent: number) => {
         // We need to solve: (price * (1 - x) - (price * (1 - x) * 0.268 + cost)) / (price * (1 - x)) = targetMargin/100
         // Where x is the discount percentage we want to find
-        // Simplified: price * (1 - x) * (1 - 0.268) - cost = price * (1 - x) * (targetMargin/100)
+        // Simplified: price * (1 - x) * (1 - 0.268 - targetMargin/100) = cost
         // Therefore: price * (1 - x) * (1 - 0.268 - targetMargin/100) = cost
         // x = 1 - (cost / (price * (1 - 0.268 - targetMargin/100)))
         const taxRate = 0.268
@@ -417,6 +455,7 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
 
             toast.success('Simulação salva com sucesso!')
             loadSavedSimulations()
+            return data // Return the full response including shareUrl
         } catch (error) {
             console.error('Error saving simulation:', error)
             toast.error(error instanceof Error ? error.message : 'Erro ao salvar simulação')
@@ -557,6 +596,32 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
     useEffect(() => {
         fetchLastExtraction();
     }, []);
+
+    useEffect(() => {
+        if (initialCode) {
+            const searchParams = new URLSearchParams(window.location.search)
+            const simId = searchParams.get('sim')
+            
+            if (simId) {
+                const loadSimulation = async () => {
+                    try {
+                        const response = await fetch(`/api/simulations/${initialCode}`)
+                        const simulations = await response.json()
+                        
+                        const simulation = simulations.find((sim: SavedSimulation) => sim.share_id === simId)
+                        if (simulation) {
+                            updateDiscountsAndGroupDiscounts(simulation.discounts)
+                            setIsSimulating(true)
+                        }
+                    } catch (error) {
+                        console.error('Error loading shared simulation:', error)
+                    }
+                }
+                
+                loadSimulation()
+            }
+        }
+    }, [initialCode])
 
     if (isLoading) return <Loading />
 
@@ -892,6 +957,19 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                                         >
                                                             Aplicar
                                                         </Button>
+                                                        {sim.share_id && (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={async () => {
+                                                                    const shareUrl = `${window.location.origin}/orcamento/${sim.cdpedidodevenda}?sim=${sim.share_id}`
+                                                                    await navigator.clipboard.writeText(shareUrl)
+                                                                    toast.success('Link copiado para a área de transferência!')
+                                                                }}
+                                                            >
+                                                                <Share2 className="h-4 w-4" />
+                                                            </Button>
+                                                        )}
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
@@ -1187,4 +1265,4 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
             />
         </div>
     )
-} 
+}
