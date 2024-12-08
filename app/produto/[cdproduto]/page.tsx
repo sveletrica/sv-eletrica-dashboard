@@ -1166,7 +1166,7 @@ export default function ProductSalesDetails() {
 
             <Card>
                 <CardHeader>
-                    <CardTitle className="flex justify-between items-center">
+                    <CardTitle className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
                         <div>
                             Histórico de Vendas
                             {selectedMonth && (
@@ -1199,128 +1199,132 @@ export default function ProductSalesDetails() {
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead 
-                                    sortable 
-                                    sortDirection={sortConfig.column === 'dtemissao' ? sortConfig.direction : null}
-                                    onSort={() => handleSort('dtemissao')}
-                                >
-                                    Data
-                                </TableHead>
-                                <TableHead 
-                                    sortable 
-                                    sortDirection={sortConfig.column === 'cdpedido' ? sortConfig.direction : null}
-                                    onSort={() => handleSort('cdpedido')}
-                                >
-                                    Pedido
-                                </TableHead>
-                                <TableHead 
-                                    sortable 
-                                    sortDirection={sortConfig.column === 'nrdocumento' ? sortConfig.direction : null}
-                                    onSort={() => handleSort('nrdocumento')}
-                                >
-                                    Documento
-                                </TableHead>
-                                <TableHead 
-                                    sortable 
-                                    sortDirection={sortConfig.column === 'nmpessoa' ? sortConfig.direction : null}
-                                    onSort={() => handleSort('nmpessoa')}
-                                >
-                                    Cliente
-                                </TableHead>
-                                <TableHead 
-                                    sortable 
-                                    sortDirection={sortConfig.column === 'tppessoa' ? sortConfig.direction : null}
-                                    onSort={() => handleSort('tppessoa')}
-                                >
-                                    Tipo
-                                </TableHead>
-                                <TableHead 
-                                    sortable 
-                                    sortDirection={sortConfig.column === 'nmempresacurtovenda' ? sortConfig.direction : null}
-                                    onSort={() => handleSort('nmempresacurtovenda')}
-                                >
-                                    Filial
-                                </TableHead>
-                                <TableHead 
-                                    sortable 
-                                    sortDirection={sortConfig.column === 'qtbrutaproduto' ? sortConfig.direction : null}
-                                    onSort={() => handleSort('qtbrutaproduto')}
-                                    className="text-right"
-                                >
-                                    Qtd
-                                </TableHead>
-                                <TableHead 
-                                    sortable 
-                                    sortDirection={sortConfig.column === 'vlfaturamento' ? sortConfig.direction : null}
-                                    onSort={() => handleSort('vlfaturamento')}
-                                    className="text-right"
-                                >
-                                    Faturamento
-                                </TableHead>
-                                <TableHead 
-                                    sortable 
-                                    sortDirection={sortConfig.column === 'vltotalcustoproduto' ? sortConfig.direction : null}
-                                    onSort={() => handleSort('vltotalcustoproduto')}
-                                    className="text-right"
-                                >
-                                    Custo
-                                </TableHead>
-                                <TableHead 
-                                    sortable 
-                                    sortDirection={sortConfig.column === 'margem' ? sortConfig.direction : null}
-                                    onSort={() => handleSort('margem')}
-                                    className="text-right"
-                                >
-                                    Margem
-                                </TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody className={cn(roboto.className, "text-xs sm:text-sm")}>
-                            {filteredData
-                                .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
-                                .map((item, index) => (
-                                    <TableRow key={index}>
-                                        <TableCell>{item.dtemissao}</TableCell>
-                                        <TableCell>
-                                            <Link
-                                                href={`/vendas-dia/${item.cdpedido}?nrdocumento=${item.nrdocumento}&dtemissao=${item.dtemissao}&fromProduct=${item.cdproduto}`}
-                                                className="text-blue-500 hover:text-blue-700 underline"
-                                            >
-                                                {item.cdpedido}
-                                            </Link>
-                                        </TableCell>
-                                        <TableCell>{item.nrdocumento}</TableCell>
-                                        <TableCell>
-                                            <Link
-                                                href={`/cliente/${encodeURIComponent(item.nmpessoa)}?returnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`}
-                                                className="text-blue-500 hover:text-blue-700 underline"
-                                            >
-                                                {item.nmpessoa}
-                                            </Link>
-                                        </TableCell>
-                                        <TableCell>{item.tppessoa}</TableCell>
-                                        <TableCell>{item.nmempresacurtovenda}</TableCell>
-                                        <TableCell className="text-right">{item.qtbrutaproduto}</TableCell>
-                                        <TableCell className="text-right">
-                                            {item.vlfaturamento.toLocaleString('pt-BR', {
-                                                style: 'currency',
-                                                currency: 'BRL'
-                                            })}
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            {item.vltotalcustoproduto.toLocaleString('pt-BR', {
-                                                style: 'currency',
-                                                currency: 'BRL'
-                                            })}
-                                        </TableCell>
-                                        <TableCell className="text-right">{item.margem}</TableCell>
+                    <div className="overflow-x-auto -mx-6 px-6">
+                        <div className="min-w-[900px]">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead 
+                                            sortable 
+                                            sortDirection={sortConfig.column === 'dtemissao' ? sortConfig.direction : null}
+                                            onSort={() => handleSort('dtemissao')}
+                                        >
+                                            Data
+                                        </TableHead>
+                                        <TableHead 
+                                            sortable 
+                                            sortDirection={sortConfig.column === 'cdpedido' ? sortConfig.direction : null}
+                                            onSort={() => handleSort('cdpedido')}
+                                        >
+                                            Pedido
+                                        </TableHead>
+                                        <TableHead 
+                                            sortable 
+                                            sortDirection={sortConfig.column === 'nrdocumento' ? sortConfig.direction : null}
+                                            onSort={() => handleSort('nrdocumento')}
+                                        >
+                                            Documento
+                                        </TableHead>
+                                        <TableHead 
+                                            sortable 
+                                            sortDirection={sortConfig.column === 'nmpessoa' ? sortConfig.direction : null}
+                                            onSort={() => handleSort('nmpessoa')}
+                                        >
+                                            Cliente
+                                        </TableHead>
+                                        <TableHead 
+                                            sortable 
+                                            sortDirection={sortConfig.column === 'tppessoa' ? sortConfig.direction : null}
+                                            onSort={() => handleSort('tppessoa')}
+                                        >
+                                            Tipo
+                                        </TableHead>
+                                        <TableHead 
+                                            sortable 
+                                            sortDirection={sortConfig.column === 'nmempresacurtovenda' ? sortConfig.direction : null}
+                                            onSort={() => handleSort('nmempresacurtovenda')}
+                                        >
+                                            Filial
+                                        </TableHead>
+                                        <TableHead 
+                                            sortable 
+                                            sortDirection={sortConfig.column === 'qtbrutaproduto' ? sortConfig.direction : null}
+                                            onSort={() => handleSort('qtbrutaproduto')}
+                                            className="text-right"
+                                        >
+                                            Qtd
+                                        </TableHead>
+                                        <TableHead 
+                                            sortable 
+                                            sortDirection={sortConfig.column === 'vlfaturamento' ? sortConfig.direction : null}
+                                            onSort={() => handleSort('vlfaturamento')}
+                                            className="text-right"
+                                        >
+                                            Faturamento
+                                        </TableHead>
+                                        <TableHead 
+                                            sortable 
+                                            sortDirection={sortConfig.column === 'vltotalcustoproduto' ? sortConfig.direction : null}
+                                            onSort={() => handleSort('vltotalcustoproduto')}
+                                            className="text-right"
+                                        >
+                                            Custo
+                                        </TableHead>
+                                        <TableHead 
+                                            sortable 
+                                            sortDirection={sortConfig.column === 'margem' ? sortConfig.direction : null}
+                                            onSort={() => handleSort('margem')}
+                                            className="text-right"
+                                        >
+                                            Margem
+                                        </TableHead>
                                     </TableRow>
-                                ))}
-                        </TableBody>
-                    </Table>
+                                </TableHeader>
+                                <TableBody className={cn(roboto.className, "text-xs sm:text-sm")}>
+                                    {filteredData
+                                        .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                                        .map((item, index) => (
+                                            <TableRow key={index}>
+                                                <TableCell>{item.dtemissao}</TableCell>
+                                                <TableCell>
+                                                    <Link
+                                                        href={`/vendas-dia/${item.cdpedido}?nrdocumento=${item.nrdocumento}&dtemissao=${item.dtemissao}&fromProduct=${item.cdproduto}`}
+                                                        className="text-blue-500 hover:text-blue-700 underline"
+                                                    >
+                                                        {item.cdpedido}
+                                                    </Link>
+                                                </TableCell>
+                                                <TableCell>{item.nrdocumento}</TableCell>
+                                                <TableCell>
+                                                    <Link
+                                                        href={`/cliente/${encodeURIComponent(item.nmpessoa)}?returnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`}
+                                                        className="text-blue-500 hover:text-blue-700 underline"
+                                                    >
+                                                        {item.nmpessoa}
+                                                    </Link>
+                                                </TableCell>
+                                                <TableCell>{item.tppessoa}</TableCell>
+                                                <TableCell>{item.nmempresacurtovenda}</TableCell>
+                                                <TableCell className="text-right">{item.qtbrutaproduto}</TableCell>
+                                                <TableCell className="text-right">
+                                                    {item.vlfaturamento.toLocaleString('pt-BR', {
+                                                        style: 'currency',
+                                                        currency: 'BRL'
+                                                    })}
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    {item.vltotalcustoproduto.toLocaleString('pt-BR', {
+                                                        style: 'currency',
+                                                        currency: 'BRL'
+                                                    })}
+                                                </TableCell>
+                                                <TableCell className="text-right">{item.margem}</TableCell>
+                                            </TableRow>
+                                        ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </div>
                 </CardContent>
             </Card>
 
