@@ -209,11 +209,6 @@ export function Sidebar() {
                                 )
                             ))}
                             
-                            <div className={cn(
-                                "mx-2 my-4 h-[1px] bg-border",
-                                isCollapsed && "mx-1"
-                            )} />
-
                             {/* Store Links Section */}
                             {user?.permissions.tags && (
                                 <>

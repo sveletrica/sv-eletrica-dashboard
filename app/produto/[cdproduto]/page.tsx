@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -17,7 +17,7 @@ import { useMediaQuery } from "@/hooks/use-media-query"
 import { Roboto } from 'next/font/google'
 import Link from 'next/link'
 import { SortableColumnProps, SortDirection } from "@/components/ui/table"
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceArea, ReferenceLine } from 'recharts'
 import { ProductStockCard } from '@/components/product-stock-card'
 import { StockPopover } from "@/components/stock-popover"
 import ProductLoading from './loading'
@@ -67,6 +67,11 @@ interface StockData {
     StkTotal: number;
 }
 
+interface DateRange {
+    start: string | null;
+    end: string | null;
+}
+
 // Add this font configuration after the imports
 const roboto = Roboto({
     weight: ['400', '500'],
@@ -75,7 +80,7 @@ const roboto = Roboto({
 })
 
 // Hook personalizado para animar números
-function useCountUp(end: number, duration: number = 2000) {
+function useCountUp(end: number, duration: number = 500) {
     const [count, setCount] = useState(0)
 
     useEffect(() => {
@@ -415,6 +420,19 @@ const formatStockNumber = (num: number) => {
     return new Intl.NumberFormat('pt-BR').format(num);
 }
 
+// Add this helper function at the top level, outside of the component
+const isDateInRange = (date: string, range: string) => {
+    const [start, end] = range.split(' - ').map(d => {
+        const [month, year] = d.split('/')
+        return new Date(Number(year), Number(month) - 1)
+    })
+    
+    const [month, year] = date.split('/')
+    const checkDate = new Date(Number(year), Number(month) - 1)
+    
+    return checkDate >= start && checkDate <= end
+}
+
 // Create a wrapper component for the main content
 function ProductSalesDetailsContent() {
     const router = useRouter()
@@ -443,6 +461,10 @@ function ProductSalesDetailsContent() {
     })
     const monthlyData = useMemo(() => prepareMonthlyData(data.product), [data.product])
     const [selectedMonth, setSelectedMonth] = useState<string | null>(null)
+    const [selecting, setSelecting] = useState(false)
+    const [dateRange, setDateRange] = useState<DateRange>({ start: null, end: null })
+    const chartRef = useRef<any>(null)
+    const isFirstRender = useRef(true)
 
     useEffect(() => {
         const fetchData = async () => {
@@ -597,11 +619,21 @@ function ProductSalesDetailsContent() {
 
         // Apply month filter
         if (selectedMonth) {
-            const [month, year] = selectedMonth.split('/')
-            filtered = filtered.filter(sale => {
-                const [, saleMonth, saleYear] = sale.dtemissao.split('/')
-                return saleMonth === month && saleYear === year
-            })
+            if (selectedMonth.includes(' - ')) {
+                // Range filter
+                filtered = filtered.filter(sale => {
+                    const [, saleMonth, saleYear] = sale.dtemissao.split('/')
+                    const saleDate = `${saleMonth}/${saleYear}`
+                    return isDateInRange(saleDate, selectedMonth)
+                })
+            } else {
+                // Single month filter
+                const [month, year] = selectedMonth.split('/')
+                filtered = filtered.filter(sale => {
+                    const [, saleMonth, saleYear] = sale.dtemissao.split('/')
+                    return saleMonth === month && saleYear === year
+                })
+            }
         }
 
         return filtered
@@ -613,6 +645,52 @@ function ProductSalesDetailsContent() {
         }
     }
 
+    // Move the memoized calculations here, before any conditional returns
+    const totals = useMemo(() => {
+        if (!filteredData?.length) return { faturamento: 0, quantidade: 0 }
+        return filteredData.reduce((acc, item) => ({
+            faturamento: acc.faturamento + item.vlfaturamento,
+            quantidade: acc.quantidade + item.qtbrutaproduto
+        }), { faturamento: 0, quantidade: 0 })
+    }, [filteredData])
+
+    const filialTotals = useMemo(() => {
+        if (!filteredData?.length) return {}
+        return filteredData.reduce((acc, item) => {
+            const filial = item.nmempresacurtovenda
+            if (!acc[filial]) {
+                acc[filial] = {
+                    quantidade: 0,
+                    faturamento: 0,
+                    custo: 0
+                }
+            }
+            acc[filial].quantidade += item.qtbrutaproduto
+            acc[filial].faturamento += item.vlfaturamento
+            acc[filial].custo += item.vltotalcustoproduto
+            return acc
+        }, {} as Record<string, { quantidade: number, faturamento: number, custo: number }>)
+    }, [filteredData])
+
+    const stockDisplay = useMemo(() => {
+        if (!data.stock?.[0]) return { total: 0, filialCount: 0 }
+        
+        const stockData = data.stock[0]
+        const filialCount = Object.keys(stockData)
+            .filter(key => key.startsWith('QtEstoque_') && stockData[key as keyof StockData] > 0)
+            .length
+        
+        return {
+            total: stockData.StkTotal,
+            filialCount
+        }
+    }, [data.stock])
+
+    const calculateMargin = (faturamento: number, custo: number) => {
+        return ((faturamento - (faturamento * 0.268 + custo)) / faturamento) * 100
+    }
+
+    // Then handle conditional returns
     if (!data.product.length && !isLoading) {
         return (
             <div className="space-y-6">
@@ -710,36 +788,10 @@ function ProductSalesDetailsContent() {
         )
     }
 
-    const totals = data.product.reduce((acc, item) => ({
-        faturamento: acc.faturamento + item.vlfaturamento,
-        quantidade: acc.quantidade + item.qtbrutaproduto
-    }), { faturamento: 0, quantidade: 0 })
-
-    const filialTotals = data.product.reduce((acc, item) => {
-        const filial = item.nmempresacurtovenda
-        if (!acc[filial]) {
-            acc[filial] = {
-                quantidade: 0,
-                faturamento: 0,
-                custo: 0
-            }
-        }
-        acc[filial].quantidade += item.qtbrutaproduto
-        acc[filial].faturamento += item.vlfaturamento
-        acc[filial].custo += item.vltotalcustoproduto
-        return acc
-    }, {} as Record<string, { quantidade: number, faturamento: number, custo: number }>)
-
-    // Função para calcular margem
-    const calculateMargin = (faturamento: number, custo: number) => {
-        return ((faturamento - (faturamento * 0.268 + custo)) / faturamento) * 100
-    }
-
-    // Ordenar filiais por quantidade
+    // Calculate derived values that don't need memoization
     const sortedFilials = Object.entries(filialTotals)
         .sort(([, a], [, b]) => b.quantidade - a.quantidade)
 
-    // Encontrar a maior quantidade para calcular as proporções
     const maxQuantity = Math.max(...Object.values(filialTotals).map(v => v.quantidade))
 
     // Paginação
@@ -831,7 +883,7 @@ function ProductSalesDetailsContent() {
                 <Card className="h-full">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2">
                         <CardTitle className="text-xs sm:text-sm font-medium">
-                            Total Vendido
+                            Total Vendido {selectedMonth && `(${selectedMonth})`}
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="p-2 md:p-4">
@@ -861,12 +913,10 @@ function ProductSalesDetailsContent() {
                             </CardHeader>
                             <CardContent className="p-2 md:p-4">
                                 <div className="text-sm md:text-xl font-bold">
-                                    <AnimatedValue value={data.stock[0].StkTotal} suffix=" un" />
+                                    <AnimatedValue value={stockDisplay.total} suffix=" un" />
                                 </div>
                                 <p className="text-xs text-muted-foreground">
-                                    Em {Object.keys(data.stock[0])
-                                        .filter(key => key.startsWith('QtEstoque_') && data.stock[0]?.[key as keyof StockData] > 0)
-                                        .length} filiais
+                                    Em {stockDisplay.filialCount} filiais
                                 </p>
                             </CardContent>
                         </Card>
@@ -1023,31 +1073,31 @@ function ProductSalesDetailsContent() {
                                             />
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            {calculateMargin(totals.faturamento, data.product.reduce((acc, item) => acc + item.vltotalcustoproduto, 0)) >= 0 ? (
+                                            {calculateMargin(totals.faturamento, filteredData.reduce((acc, item) => acc + item.vltotalcustoproduto, 0)) >= 0 ? (
                                                 <div className="flex justify-end">
                                                     <div className={cn(
                                                         "inline-flex items-center gap-1 rounded-full px-2 py-1",
-                                                        getMarginStyle(calculateMargin(totals.faturamento, data.product.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).background,
-                                                        getMarginStyle(calculateMargin(totals.faturamento, data.product.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).text
+                                                        getMarginStyle(calculateMargin(totals.faturamento, filteredData.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).background,
+                                                        getMarginStyle(calculateMargin(totals.faturamento, filteredData.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).text
                                                     )}>
                                                         <AnimatedValue 
-                                                            value={calculateMargin(totals.faturamento, data.product.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))}
+                                                            value={calculateMargin(totals.faturamento, filteredData.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))}
                                                             formatter={(value) => value.toFixed(2)}
                                                             suffix="%"
                                                         />
-                                                        {getMarginStyle(calculateMargin(totals.faturamento, data.product.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).icon}
+                                                        {getMarginStyle(calculateMargin(totals.faturamento, filteredData.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).icon}
                                                     </div>
                                                 </div>
                                             ) : (
                                                 <div className="flex justify-end">
                                                     <div className={cn(
                                                         "inline-flex items-center gap-1 rounded-full px-2 py-1",
-                                                        getMarginStyle(calculateMargin(totals.faturamento, data.product.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).background,
-                                                        getMarginStyle(calculateMargin(totals.faturamento, data.product.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).text
+                                                        getMarginStyle(calculateMargin(totals.faturamento, filteredData.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).background,
+                                                        getMarginStyle(calculateMargin(totals.faturamento, filteredData.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).text
                                                     )}>
-                                                        {getMarginStyle(calculateMargin(totals.faturamento, data.product.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).icon}
+                                                        {getMarginStyle(calculateMargin(totals.faturamento, filteredData.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).icon}
                                                         <AnimatedValue 
-                                                            value={calculateMargin(totals.faturamento, data.product.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))}
+                                                            value={calculateMargin(totals.faturamento, filteredData.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))}
                                                             formatter={(value) => value.toFixed(2)}
                                                             suffix="%"
                                                         />
@@ -1105,6 +1155,33 @@ function ProductSalesDetailsContent() {
                                     data={monthlyData}
                                     margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
                                     onClick={handleMonthClick}
+                                    onMouseDown={(e) => {
+                                        if (e && e.activeLabel) {
+                                            setSelecting(true)
+                                            setDateRange({ start: e.activeLabel, end: null })
+                                        }
+                                    }}
+                                    onMouseMove={(e) => {
+                                        if (selecting && e && e.activeLabel) {
+                                            setDateRange(prev => ({ 
+                                                ...prev, 
+                                                end: e.activeLabel as string 
+                                            }))
+                                        }
+                                    }}
+                                    onMouseUp={() => {
+                                        setSelecting(false)
+                                        if (dateRange.start && dateRange.end) {
+                                            const [start, end] = [dateRange.start, dateRange.end].sort((a, b) => {
+                                                const [monthA, yearA] = a.split('/')
+                                                const [monthB, yearB] = b.split('/')
+                                                return new Date(Number(yearA), Number(monthA) - 1).getTime() -
+                                                       new Date(Number(yearB), Number(monthB) - 1).getTime()
+                                            })
+                                            setSelectedMonth(`${start} - ${end}`)
+                                        }
+                                    }}
+                                    ref={chartRef}
                                 >
                                     <defs>
                                         <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
@@ -1112,6 +1189,7 @@ function ProductSalesDetailsContent() {
                                             <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
                                         </linearGradient>
                                     </defs>
+                                    <CartesianGrid strokeDasharray="3 3" />
                                     <XAxis 
                                         dataKey="month" 
                                         fontSize={12}
@@ -1126,7 +1204,7 @@ function ProductSalesDetailsContent() {
                                             }).format(value)
                                         }
                                     />
-                                    <Tooltip content={<CustomTooltip selectedMonth={selectedMonth} />} />
+                                    
                                     <Area
                                         key="quantity-area"
                                         type="monotone"
@@ -1134,20 +1212,26 @@ function ProductSalesDetailsContent() {
                                         stroke="#2563eb"
                                         strokeWidth={2}
                                         fill="url(#colorValue)"
+                                        isAnimationActive={isFirstRender.current}
+                                        onAnimationEnd={() => {
+                                            isFirstRender.current = false
+                                        }}
                                         dot={(props: any) => {
-                                            const isSelected = selectedMonth && props.payload.month === selectedMonth
+                                            const isInRange = selectedMonth?.includes(' - ') 
+                                                ? isDateInRange(props.payload.month, selectedMonth)
+                                                : selectedMonth === props.payload.month
                                             return (
                                                 <circle
                                                     key={`dot-${props.payload.month}`}
                                                     cx={props.cx}
                                                     cy={props.cy}
-                                                    r={isSelected ? 6 : 4}
-                                                    fill={isSelected ? "#2563eb" : "#fff"}
+                                                    r={isInRange ? 6 : 4}
+                                                    fill={isInRange ? "#2563eb" : "#fff"}
                                                     stroke="#2563eb"
-                                                    strokeWidth={isSelected ? 3 : 2}
+                                                    strokeWidth={isInRange ? 3 : 2}
                                                     className={cn(
                                                         "transition-all duration-200",
-                                                        isSelected && "drop-shadow-md"
+                                                        isInRange && "drop-shadow-md"
                                                     )}
                                                 />
                                             )
@@ -1161,6 +1245,83 @@ function ProductSalesDetailsContent() {
                                             className: "drop-shadow-md"
                                         }}
                                     />
+
+                                    {/* Reference lines for selected range */}
+                                    {selectedMonth?.includes(' - ') && !selecting && (
+                                        <>
+                                            <ReferenceLine
+                                                x={selectedMonth.split(' - ')[0]}
+                                                stroke="#2563eb"
+                                                strokeDasharray="3 3"
+                                                strokeWidth={2}
+                                                isFront={true}
+                                                label={{
+                                                    value: '',
+                                                    position: 'top',
+                                                    fill: '#2563eb',
+                                                    fontSize: 12
+                                                }}
+                                            />
+                                            <ReferenceLine
+                                                x={selectedMonth.split(' - ')[1]}
+                                                stroke="#2563eb"
+                                                strokeDasharray="3 3"
+                                                strokeWidth={2}
+                                                isFront={true}
+                                                label={{
+                                                    value: '',
+                                                    position: 'top',
+                                                    fill: '#2563eb',
+                                                    fontSize: 12
+                                                }}
+                                            />
+                                        </>
+                                    )}
+
+                                    {/* Reference lines while selecting */}
+                                    {selecting && dateRange.start && dateRange.end && (
+                                        <>
+                                            <ReferenceLine
+                                                x={dateRange.start}
+                                                stroke="#2563eb"
+                                                strokeDasharray="3 3"
+                                                strokeWidth={2}
+                                                isFront={true}
+                                                label={{
+                                                    value: '',
+                                                    position: 'top',
+                                                    fill: '#2563eb',
+                                                    fontSize: 12
+                                                }}
+                                            />
+                                            <ReferenceLine
+                                                x={dateRange.end}
+                                                stroke="#2563eb"
+                                                strokeDasharray="3 3"
+                                                strokeWidth={2}
+                                                isFront={true}
+                                                label={{
+                                                    value: '',
+                                                    position: 'top',
+                                                    fill: '#2563eb',
+                                                    fontSize: 12
+                                                }}
+                                            />
+                                        </>
+                                    )}
+
+                                    {/* Selection overlay */}
+                                    {selecting && dateRange.start && dateRange.end && (
+                                        <ReferenceArea
+                                            x1={dateRange.start}
+                                            x2={dateRange.end}
+                                            fill="#2563eb"
+                                            fillOpacity={0.1}
+                                            strokeOpacity={0}
+                                        />
+                                    )}
+
+                                    <Tooltip content={<CustomTooltip selectedMonth={selectedMonth} />} />
                                 </AreaChart>
                             </ResponsiveContainer>
                         </div>
