@@ -88,6 +88,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const logout = async () => {
         try {
+            // First clear the state
+            setUser(null)
+            setIsAuthenticated(false)
+            
+            // Then make the API call
             await fetch('/api/auth/logout', {
                 method: 'POST',
                 credentials: 'include',
@@ -95,8 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } catch (error) {
             console.error('Logout failed:', error)
         } finally {
-            setUser(null)
-            setIsAuthenticated(false)
+            // Ensure we navigate after everything else
             router.push('/login')
         }
     }

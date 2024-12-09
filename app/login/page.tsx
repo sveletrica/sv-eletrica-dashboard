@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -17,6 +17,15 @@ export default function Login() {
     const { login } = useAuth()
     const router = useRouter()
 
+    useEffect(() => {
+        return () => {
+            setEmail('')
+            setPassword('')
+            setShowPassword(false)
+            setIsLoading(false)
+        }
+    }, [])
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setIsLoading(true)
@@ -28,6 +37,8 @@ export default function Login() {
             toast.error('Email ou senha inválidos')
         } finally {
             setIsLoading(false)
+            setEmail('')
+            setPassword('')
         }
     }
 

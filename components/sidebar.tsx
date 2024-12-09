@@ -102,6 +102,15 @@ export function Sidebar() {
         return () => window.removeEventListener('resize', checkIsMobile)
     }, [])
 
+    const handleLogout = async (e: React.MouseEvent) => {
+        e.preventDefault()
+        try {
+            await logout()
+        } catch (error) {
+            console.error('Logout error:', error)
+        }
+    }
+
     return (
         <>
             {/* Mobile Menu Button */}
@@ -246,25 +255,28 @@ export function Sidebar() {
                             <div className="mt-auto space-y-2">
                                 {user ? (
                                     <>
-                                        <div className={cn(
-                                            "px-3 py-2",
-                                            isCollapsed && "hidden"
-                                        )}>
+                                        <Link
+                                            href="/profile"
+                                            className={cn(
+                                                "block px-3 py-2 hover:bg-accent rounded-md transition-colors",
+                                                isCollapsed && "hidden"
+                                            )}
+                                        >
                                             <div className="flex items-center gap-2 text-sm">
                                                 <User className="h-4 w-4" />
-                                                <span>{user.name}</span>
+                                                <span className="truncate">{user.name}</span>
                                             </div>
-                                            <div className="text-xs text-muted-foreground">
+                                            <div className="text-xs text-muted-foreground truncate">
                                                 {user.email}
                                             </div>
-                                        </div>
+                                        </Link>
                                         <Button
                                             variant="ghost"
                                             className={cn(
                                                 "w-full",
                                                 isCollapsed ? "px-2 justify-center" : "justify-start"
                                             )}
-                                            onClick={logout}
+                                            onClick={handleLogout}
                                             title={isCollapsed ? "Sair" : undefined}
                                         >
                                             <LogOut className="h-4 w-4" />
