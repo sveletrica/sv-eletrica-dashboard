@@ -92,3 +92,16 @@ export async function saveToIndexedDB(data: any) {
 export const formatStockNumber = (num: number) => {
     return new Intl.NumberFormat('pt-BR').format(num);
 }
+
+export function generateRandomPassword(length: number = 12): string {
+    const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*"
+    let password = ""
+    for (let i = 0; i < length; i++) {
+        password += charset.charAt(Math.floor(Math.random() * charset.length))
+    }
+    return password
+}
+
+export function formatCredentials(name: string, email: string, password: string): string {
+    return `Nome: ${name}\nEmail: ${email}\nSenha: ${password}`
+}

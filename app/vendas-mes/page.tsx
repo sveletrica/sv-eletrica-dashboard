@@ -1,5 +1,5 @@
 'use client'
-
+import { PermissionGuard } from '@/components/guards/permission-guard'
 import { useState, useMemo, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { format, parseISO, startOfMonth } from 'date-fns'
@@ -426,6 +426,7 @@ export default function MonthlySales() {
     };
 
     return (
+        <PermissionGuard permission="sales">
         <div className="space-y-4">
             {error && (
                 <div className="bg-muted rounded-lg p-8 text-center">
@@ -823,5 +824,6 @@ export default function MonthlySales() {
                 </Card>
             </div>
         </div>
+        </PermissionGuard>
     )
 } 

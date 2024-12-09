@@ -1,5 +1,5 @@
 'use client'
-
+import { PermissionGuard } from '@/components/guards/permission-guard'
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -291,6 +291,7 @@ export default function ClientSearch() {
     }
 
     return (
+        <PermissionGuard permission="clients">
         <div className="container mx-auto py-10 p-0">
             <Card className="max-w-full mx-auto">
                 <CardHeader>
@@ -429,5 +430,6 @@ export default function ClientSearch() {
                 </CardContent>
             </Card>
         </div>
+        </PermissionGuard>
     )
 }

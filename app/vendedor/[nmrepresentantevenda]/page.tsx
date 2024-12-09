@@ -1,5 +1,5 @@
 'use client'
-
+import { PermissionGuard } from '@/components/guards/permission-guard'
 import { useState, useEffect } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -318,6 +318,7 @@ export default function SalesmanDetails() {
     )
 
     return (
+        <PermissionGuard permission="sales">
         <div className="space-y-4">
             <div className="flex justify-end mb-4">
                 <Button
@@ -651,5 +652,6 @@ export default function SalesmanDetails() {
                 </CardContent>
             </Card>
         </div>
+        </PermissionGuard>
     )
 } 

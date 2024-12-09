@@ -2,75 +2,105 @@
 
 import { createContext, useContext, useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
+import { toast } from 'sonner'
+
+interface User {
+    id: string
+    name: string
+    email: string
+    permissions: {
+        inventory: boolean
+        sales: boolean
+        quotations: boolean
+        clients: boolean
+        tags: boolean
+        admin: boolean
+    }
+}
 
 interface AuthContextType {
+    user: User | null
     isAuthenticated: boolean
-    setIsAuthenticated: (value: boolean) => void
+    login: (email: string, password: string) => Promise<void>
     logout: () => void
 }
 
 const AuthContext = createContext<AuthContextType>({
+    user: null,
     isAuthenticated: false,
-    setIsAuthenticated: () => {},
+    login: async () => {},
     logout: () => {},
 })
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+    const [user, setUser] = useState<User | null>(null)
     const [isAuthenticated, setIsAuthenticated] = useState(false)
-    const [isLoading, setIsLoading] = useState(true)
     const router = useRouter()
     const pathname = usePathname()
 
     useEffect(() => {
-        const checkAuth = () => {
-            const auth = localStorage.getItem('isAuthenticated')
-            const authCookie = document.cookie.includes('auth=true')
-            
-            const isAuth = auth === 'true' && authCookie
-            setIsAuthenticated(isAuth)
-            setIsLoading(false)
-
-            if (!isAuth) {
-                document.cookie = 'auth=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT'
-                localStorage.removeItem('isAuthenticated')
-            }
-        }
-
         checkAuth()
+    }, [pathname])
 
-        const handleStorageChange = (e: StorageEvent) => {
-            if (e.key === 'isAuthenticated') {
-                checkAuth()
+    const checkAuth = async () => {
+        try {
+            const response = await fetch('/api/auth/me')
+            if (response.ok) {
+                const userData = await response.json()
+                setUser(userData)
+                setIsAuthenticated(true)
+            } else if (pathname !== '/login') {
+                router.push('/login')
+            }
+        } catch (error) {
+            console.error('Auth check failed:', error)
+            if (pathname !== '/login') {
+                router.push('/login')
             }
         }
-
-        window.addEventListener('storage', handleStorageChange)
-        return () => window.removeEventListener('storage', handleStorageChange)
-    }, [])
-
-    useEffect(() => {
-        if (!isLoading) {
-            if (!isAuthenticated && pathname !== '/login') {
-                router.replace('/login')
-            } else if (isAuthenticated && pathname === '/login') {
-                router.replace('/')
-            }
-        }
-    }, [isAuthenticated, isLoading, pathname, router])
-
-    const logout = () => {
-        document.cookie = 'auth=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT'
-        localStorage.removeItem('isAuthenticated')
-        setIsAuthenticated(false)
-        router.replace('/login')
     }
 
-    if (isLoading) {
-        return null
+    const login = async (email: string, password: string) => {
+        try {
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password }),
+                credentials: 'include', // Important for cookies
+            })
+
+            if (!response.ok) {
+                const data = await response.json()
+                throw new Error(data.error || 'Failed to login')
+            }
+
+            const userData = await response.json()
+            setUser(userData)
+            setIsAuthenticated(true)
+            router.push('/')
+        } catch (error) {
+            console.error('Login failed:', error)
+            throw error
+        }
+    }
+
+    const logout = async () => {
+        try {
+            await fetch('/api/auth/logout', {
+                method: 'POST',
+                credentials: 'include',
+            })
+        } catch (error) {
+            console.error('Logout failed:', error)
+        } finally {
+            setUser(null)
+            setIsAuthenticated(false)
+            router.push('/login')
+        }
     }
 
     return (
-        <AuthContext.Provider value={{ isAuthenticated, setIsAuthenticated, logout }}>
+        <AuthContext.Provider value={{ user, isAuthenticated, login, logout }}>
             {children}
         </AuthContext.Provider>
     )

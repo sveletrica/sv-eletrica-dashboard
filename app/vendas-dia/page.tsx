@@ -1,5 +1,5 @@
 'use client'
-
+import { PermissionGuard } from '@/components/guards/permission-guard'
 import { Roboto } from 'next/font/google'
 import './styles.css'
 import { useState, useEffect, useMemo } from 'react'
@@ -801,6 +801,7 @@ export default function DailySales() {
     }
 
     return (
+        <PermissionGuard permission="sales">
         <div className={`space-y-6 min-w-[300px] ${roboto.className}`}>
             <div className="flex flex-col gap-2">
                 <div className="flex justify-center items-center flex-wrap gap-x-4">
@@ -1341,5 +1342,6 @@ export default function DailySales() {
                 </Button>
             )}
         </div>
+        </PermissionGuard>
     )
 } 

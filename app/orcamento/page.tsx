@@ -1,5 +1,5 @@
 'use client'
-
+import { PermissionGuard } from '@/components/guards/permission-guard'
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -628,6 +628,7 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
 
     if (!initialCode && data.length === 0) {
         return (
+            <PermissionGuard permission="quotations">
             <div className="h-[80vh] flex items-center justify-center">
                 <Card className="w-full max-w-2xl mx-auto">
                     <CardHeader>
@@ -691,10 +692,12 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                     )}
                 </Card>
             </div>
+            </PermissionGuard>
         )
     }
 
     return (
+        <PermissionGuard permission="quotations">
         <div className="space-y-4">
             <div className="flex gap-4">
                 <Input
@@ -1270,5 +1273,6 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                 onSave={saveSimulation}
             />
         </div>
+        </PermissionGuard>
     )
 }

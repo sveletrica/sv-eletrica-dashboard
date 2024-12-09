@@ -21,6 +21,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { ProductStockCard } from '@/components/product-stock-card'
 import { StockPopover } from "@/components/stock-popover"
 import ProductLoading from './loading'
+import { PermissionGuard } from '@/components/guards/permission-guard'
 
 interface ProductSale {
     cdpedido: string
@@ -747,6 +748,7 @@ export default function ProductSalesDetails() {
     )
 
     return (
+        <PermissionGuard permission="inventory">
         <div className="space-y-2">
             <Button
                 variant="ghost"
@@ -1332,5 +1334,6 @@ export default function ProductSalesDetails() {
                 <ProductStockCard stockData={data.stock[0]} />
             )}
         </div>
+        </PermissionGuard>
     )
 } 

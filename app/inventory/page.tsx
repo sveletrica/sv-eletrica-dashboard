@@ -1,5 +1,5 @@
 'use client'
-
+import { PermissionGuard } from '@/components/guards/permission-guard'
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -632,6 +632,7 @@ export default function Inventory() {
     }
 
     return (
+        <PermissionGuard permission="inventory">
         <div className="space-y-6">
             <div className="flex flex-col gap-2">
                 <div className="flex justify-between items-center flex-col">
@@ -868,5 +869,6 @@ export default function Inventory() {
                 </div>
             )}
         </div>
+        </PermissionGuard>
     )
 }

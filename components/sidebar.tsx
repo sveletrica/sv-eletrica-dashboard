@@ -2,47 +2,61 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { ContactRound, Home, BarChart2, Package, Menu, X, ShoppingCart, BarChart3, CalendarDays, TrendingUp, ChevronLeft, Calculator } from 'lucide-react'
+import { ContactRound, Home, BarChart2, Package, Menu, X, ShoppingCart, BarChart3, CalendarDays, TrendingUp, ChevronLeft, Calculator, LogOut, LogIn, User } from 'lucide-react'
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Button } from "@/components/ui/button"
 import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
+import { useAuth } from '@/components/providers/auth-provider'
 
 const sidebarLinks = [
     {
         href: '/',
         label: 'Dashboard',
         icon: Home,
+        permission: null,
     },
     {
         href: '/inventory',
         label: 'Estoque',
         icon: Package,
+        permission: 'inventory' as const,
     },
     {
         href: '/vendas-dia',
         label: 'Vendas do Dia',
         icon: CalendarDays,
+        permission: 'sales' as const,
     },
     {
         href: '/vendas-mes',
         label: 'Vendas do Mês',
         icon: TrendingUp,
+        permission: 'sales' as const,
     },
     {
         href: '/orcamento',
         label: 'Orçamento',
         icon: Calculator,
+        permission: 'quotations' as const,
     },
     {
         href: '/produto',
         label: 'Produtos',
         icon: BarChart3,
+        permission: 'inventory' as const,
     },
     {
         href: '/cliente',
         label: 'Clientes',
         icon: ContactRound,
+        permission: 'clients' as const,
+    },
+    {
+        href: '/users',
+        label: 'Usuários',
+        icon: User,
+        permission: 'admin' as const,
     },
 ] as const
 
@@ -51,16 +65,19 @@ const storeLinks = [
         href: '/sobral',
         label: 'Sobral',
         icon: BarChart2,
+        permission: 'tags' as const,
     },
     {
         href: '/maracanau',
         label: 'Maracanau',
         icon: BarChart2,
+        permission: 'tags' as const,
     },
     {
         href: '/caucaia',
         label: 'Caucaia',
         icon: BarChart2,
+        permission: 'tags' as const,
     },
 ] as const
 
@@ -68,6 +85,7 @@ export function Sidebar() {
     const [isOpen, setIsOpen] = useState(false)
     const [isMobile, setIsMobile] = useState(false)
     const [isCollapsed, setIsCollapsed] = useState(false)
+    const { user, logout } = useAuth()
 
     useEffect(() => {
         const checkIsMobile = () => {
@@ -174,19 +192,21 @@ export function Sidebar() {
                     <div className="flex-1 overflow-y-auto">
                         <nav className="p-2">
                             {sidebarLinks.map((link) => (
-                                <Link 
-                                    key={link.href}
-                                    href={link.href} 
-                                    className={cn(
-                                        "flex items-center gap-2 px-4 py-3 text-foreground rounded-md hover:bg-accent hover:text-accent-foreground",
-                                        isCollapsed && "px-2 justify-center"
-                                    )}
-                                    onClick={() => isMobile && setIsOpen(false)}
-                                    title={isCollapsed ? link.label : undefined}
-                                >
-                                    <link.icon size={20} />
-                                    {!isCollapsed && <span>{link.label}</span>}
-                                </Link>
+                                (!link.permission || (user?.permissions[link.permission])) && (
+                                    <Link 
+                                        key={link.href}
+                                        href={link.href} 
+                                        className={cn(
+                                            "flex items-center gap-2 px-4 py-3 text-foreground rounded-md hover:bg-accent hover:text-accent-foreground",
+                                            isCollapsed && "px-2 justify-center"
+                                        )}
+                                        onClick={() => isMobile && setIsOpen(false)}
+                                        title={isCollapsed ? link.label : undefined}
+                                    >
+                                        <link.icon size={20} />
+                                        {!isCollapsed && <span>{link.label}</span>}
+                                    </Link>
+                                )
                             ))}
                             
                             <div className={cn(
@@ -194,21 +214,83 @@ export function Sidebar() {
                                 isCollapsed && "mx-1"
                             )} />
 
-                            {storeLinks.map((link) => (
-                                <Link 
-                                    key={link.href}
-                                    href={link.href} 
-                                    className={cn(
-                                        "flex items-center gap-2 px-4 py-3 text-foreground rounded-md hover:bg-accent hover:text-accent-foreground",
-                                        isCollapsed && "px-2 justify-center"
+                            {/* Store Links Section */}
+                            {user?.permissions.tags && (
+                                <>
+                                    <div className={cn(
+                                        "mx-2 my-4 h-[1px] bg-border",
+                                        isCollapsed && "mx-1"
+                                    )} />
+
+                                    {!isCollapsed && (
+                                        <div className="px-4 py-2">
+                                            <h2 className="text-sm font-semibold text-muted-foreground">
+                                                Etiquetas
+                                            </h2>
+                                        </div>
                                     )}
-                                    onClick={() => isMobile && setIsOpen(false)}
-                                    title={isCollapsed ? link.label : undefined}
-                                >
-                                    <link.icon size={20} />
-                                    {!isCollapsed && <span>{link.label}</span>}
-                                </Link>
-                            ))}
+
+                                    {storeLinks.map((link) => (
+                                        <Link 
+                                            key={link.href}
+                                            href={link.href} 
+                                            className={cn(
+                                                "flex items-center gap-2 px-4 py-3 text-foreground rounded-md hover:bg-accent hover:text-accent-foreground",
+                                                isCollapsed && "px-2 justify-center"
+                                            )}
+                                            onClick={() => isMobile && setIsOpen(false)}
+                                            title={isCollapsed ? link.label : undefined}
+                                        >
+                                            <link.icon size={20} />
+                                            {!isCollapsed && <span>{link.label}</span>}
+                                        </Link>
+                                    ))}
+                                </>
+                            )}
+
+                            <div className="mt-auto space-y-2">
+                                {user ? (
+                                    <>
+                                        <div className={cn(
+                                            "px-3 py-2",
+                                            isCollapsed && "hidden"
+                                        )}>
+                                            <div className="flex items-center gap-2 text-sm">
+                                                <User className="h-4 w-4" />
+                                                <span>{user.name}</span>
+                                            </div>
+                                            <div className="text-xs text-muted-foreground">
+                                                {user.email}
+                                            </div>
+                                        </div>
+                                        <Button
+                                            variant="ghost"
+                                            className={cn(
+                                                "w-full",
+                                                isCollapsed ? "px-2 justify-center" : "justify-start"
+                                            )}
+                                            onClick={logout}
+                                            title={isCollapsed ? "Sair" : undefined}
+                                        >
+                                            <LogOut className="h-4 w-4" />
+                                            {!isCollapsed && <span className="ml-2">Sair</span>}
+                                        </Button>
+                                    </>
+                                ) : (
+                                    <Button
+                                        variant="ghost"
+                                        className={cn(
+                                            "w-full",
+                                            isCollapsed ? "px-2 justify-center" : "justify-start"
+                                        )}
+                                        onClick={() => window.location.href = '/login'}
+                                        title={isCollapsed ? "Entrar" : undefined}
+                                    >
+                                        <LogIn className="h-4 w-4" />
+                                        {!isCollapsed && <span className="ml-2">Entrar</span>}
+                                    </Button>
+                                )}
+                            </div>
                         </nav>
                     </div>
                 </div>
