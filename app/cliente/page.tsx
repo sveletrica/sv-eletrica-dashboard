@@ -185,10 +185,11 @@ export default function ClientSearch() {
         return () => window.removeEventListener('resize', handleResize)
     }, [])
 
-    // Modify the updateCache effect to store all clients
+    // Modify the updateCache effect
     useEffect(() => {
         const updateCache = async () => {
             try {
+                setIsLoading(true)
                 console.log('Checking if cache needs update...')
                 const needsUpdate = await clientsDB.needsUpdate()
                 console.log('Cache needs update:', needsUpdate)
@@ -217,6 +218,7 @@ export default function ClientSearch() {
                 setError(err.message || 'Failed to update cache')
             } finally {
                 setIsCaching(false)
+                setIsLoading(false)
             }
         }
 
@@ -316,7 +318,17 @@ export default function ClientSearch() {
                         />
                     </div>
 
-                    <div className="rounded-md border overflow-x-auto">
+                    <div className="rounded-md border overflow-x-auto relative">
+                        {isLoading && (
+                            <div className="absolute inset-0 bg-white/50 backdrop-blur-sm flex items-center justify-center z-50">
+                                <div className="flex items-center gap-2">
+                                    <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+                                    <span className="text-sm text-muted-foreground">
+                                        Carregando clientes...
+                                    </span>
+                                </div>
+                            </div>
+                        )}
                         <Table>
                             <TableHeader>
                                 <TableRow>

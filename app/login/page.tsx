@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -14,6 +15,7 @@ export default function Login() {
     const [showPassword, setShowPassword] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
     const { login } = useAuth()
+    const router = useRouter()
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -22,6 +24,7 @@ export default function Login() {
         try {
             await login(email, password)
             toast.success('Login realizado com sucesso')
+            router.push('/')
         } catch (error) {
             toast.error('Email ou senha inválidos')
         } finally {
