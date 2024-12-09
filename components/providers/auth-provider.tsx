@@ -77,7 +77,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const userData = await response.json()
             setUser(userData)
             setIsAuthenticated(true)
-            router.push('/')
+            
+            // Force a hard navigation to ensure proper page reload
+            window.location.href = '/'
         } catch (error) {
             console.error('Login failed:', error)
             throw error

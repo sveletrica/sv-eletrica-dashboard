@@ -24,7 +24,6 @@ export default function Login() {
         try {
             await login(email, password)
             toast.success('Login realizado com sucesso')
-            router.push('/')
         } catch (error) {
             toast.error('Email ou senha inválidos')
         } finally {

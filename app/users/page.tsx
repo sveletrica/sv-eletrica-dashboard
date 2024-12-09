@@ -1,12 +1,13 @@
 'use client'
 
+import React, { Fragment } from 'react'
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Plus, Trash2, Save, Edit, Key, Copy } from 'lucide-react'
+import { Plus, Trash2, Save, Edit, Key, Copy, Eye, EyeOff } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { toast } from 'sonner'
@@ -55,6 +56,8 @@ export default function Users() {
     const [credentialsToShow, setCredentialsToShow] = useState<string>('')
     const [showCredentialsDialog, setShowCredentialsDialog] = useState(false)
     const { copy } = useClipboard()
+    const [searchQuery, setSearchQuery] = useState('')
+    const [showPassword, setShowPassword] = useState(false)
 
     useEffect(() => {
         fetchUsers()
@@ -207,10 +210,15 @@ export default function Users() {
         }
     }
 
+    const filteredUsers = users.filter(user => 
+        user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+
     return (
         <PermissionGuard permission="admin">
-        <div className="space-y-6">
-            <h1 className="text-3xl font-bold">Gerenciamento de Usuários</h1>
+        <div className="space-y-6 p-4">
+            <h1 className="text-2xl md:text-3xl font-bold">Gerenciamento de Usuários</h1>
 
             <Card>
                 <CardHeader>
@@ -218,38 +226,73 @@ export default function Users() {
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <Input
-                                placeholder="Nome"
-                                value={newUser.name}
-                                onChange={(e) => setNewUser(prev => ({
-                                    ...prev,
-                                    name: e.target.value
-                                }))}
-                            />
-                            <Input
-                                placeholder="Email"
-                                type="email"
-                                value={newUser.email}
-                                onChange={(e) => setNewUser(prev => ({
-                                    ...prev,
-                                    email: e.target.value
-                                }))}
-                            />
-                            <Input
-                                placeholder="Senha"
-                                type="password"
-                                value={newUser.password}
-                                onChange={(e) => setNewUser(prev => ({
-                                    ...prev,
-                                    password: e.target.value
-                                }))}
-                            />
+                        <div className="flex flex-col md:flex-row md:space-x-4 space-y-4 md:space-y-0">
+                            <div className="space-y-2 flex-1">
+                                <Label>Nome</Label>
+                                <Input
+                                    placeholder="Nome"
+                                    value={newUser.name}
+                                    onChange={(e) => setNewUser(prev => ({
+                                        ...prev,
+                                        name: e.target.value
+                                    }))}
+                                />
+                            </div>
+                            <div className="space-y-2 flex-1">
+                                <Label>Email</Label>
+                                <Input
+                                    placeholder="Email"
+                                    type="email"
+                                    value={newUser.email}
+                                    onChange={(e) => setNewUser(prev => ({
+                                        ...prev,
+                                        email: e.target.value
+                                    }))}
+                                />
+                            </div>
+                            <div className="space-y-2 flex-1">
+                                <Label>Senha</Label>
+                                <div className="relative">
+                                    <Input
+                                        placeholder="Senha"
+                                        type={showPassword ? "text" : "password"}
+                                        value={newUser.password}
+                                        onChange={(e) => setNewUser(prev => ({
+                                            ...prev,
+                                            password: e.target.value
+                                        }))}
+                                        className="pr-20"
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        className="absolute inset-y-0 right-10 flex items-center pr-3"
+                                        onClick={() => setShowPassword(prev => !prev)}
+                                    >
+                                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="absolute inset-y-0 right-0 flex items-center pr-3"
+                                        onClick={() => {
+                                            const newPassword = generateRandomPassword()
+                                            setNewUser(prev => ({
+                                                ...prev,
+                                                password: newPassword
+                                            }))
+                                            toast.success('Senha gerada com sucesso')
+                                        }}
+                                    >
+                                        <Key className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </div>
                         </div>
 
                         <div className="space-y-2">
                             <h3 className="text-sm font-medium">Permissões:</h3>
-                            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                            <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
                                 <label className="flex items-center space-x-2">
                                     <Checkbox
                                         checked={newUser.permissions.inventory}
@@ -351,79 +394,108 @@ export default function Users() {
                 <CardHeader>
                     <CardTitle>Usuários Cadastrados</CardTitle>
                 </CardHeader>
-                <CardContent>
-                    <div className="rounded-md border">
+                <CardContent className="px-0 sm:px-6">
+                    <div className="px-4 sm:px-0 mb-4">
+                        <Input
+                            placeholder="Buscar usuário..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="max-w-sm"
+                        />
+                    </div>
+                    <div className="rounded-md border overflow-x-auto">
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Nome</TableHead>
-                                    <TableHead>Email</TableHead>
-                                    <TableHead>Permissões</TableHead>
-                                    <TableHead className="w-[200px]">Ações</TableHead>
+                                    <TableHead className="hidden sm:table-cell">Nome</TableHead>
+                                    <TableHead className="hidden sm:table-cell">Email</TableHead>
+                                    <TableHead className="hidden sm:table-cell">Permissões</TableHead>
+                                    <TableHead className="hidden sm:table-cell">Ações</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {users.length === 0 ? (
+                                {filteredUsers.length === 0 ? (
                                     <TableRow>
                                         <TableCell 
                                             colSpan={4} 
                                             className="text-center text-muted-foreground"
                                         >
-                                            Nenhum usuário cadastrado
+                                            {users.length === 0 ? 'Nenhum usuário cadastrado' : 'Nenhum usuário encontrado'}
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    users.map((user) => (
-                                        <TableRow key={user.id}>
-                                            <TableCell>{user.name}</TableCell>
-                                            <TableCell>{user.email}</TableCell>
-                                            <TableCell>
-                                                <div className="flex flex-wrap gap-1">
-                                                    {Object.entries(user.permissions)
-                                                        .filter(([_, value]) => value)
-                                                        .map(([key]) => (
+                                    filteredUsers.map((user) => (
+                                        <Fragment key={user.id}>
+                                            <TableRow className="sm:table-row flex flex-col sm:flex-row">
+                                                <TableCell className="sm:font-medium">
+                                                    <span className="font-medium sm:hidden">Nome: </span>
+                                                    {user.name}
+                                                </TableCell>
+                                                <TableCell className="break-all">
+                                                    <span className="font-medium sm:hidden">Email: </span>
+                                                    {user.email}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <span className="font-medium sm:hidden block mb-2">Permissões: </span>
+                                                    <div className="flex flex-row flex-wrap gap-1">
+                                                        {user.permissions.admin && (
                                                             <span 
-                                                                key={key}
-                                                                className="bg-primary/10 text-primary text-xs px-2 py-1 rounded"
+                                                                key="admin"
+                                                                className="bg-destructive/10 text-destructive text-xs px-2 py-1 rounded truncate max-w-[100px]"
                                                             >
-                                                                {key}
+                                                                admin
                                                             </span>
-                                                        ))
-                                                    }
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="flex gap-2">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={() => {
-                                                            setEditingUser(user)
-                                                            setIsEditDialogOpen(true)
-                                                        }}
-                                                    >
-                                                        <Edit className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={() => {
-                                                            setEditingUser(user)
-                                                            setIsResetPasswordDialogOpen(true)
-                                                        }}
-                                                    >
-                                                        <Key className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="destructive"
-                                                        size="sm"
-                                                        onClick={() => handleDeleteUser(user.id)}
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
+                                                        )}
+                                                        {Object.entries(user.permissions)
+                                                            .filter(([key, value]) => value && key !== 'admin')
+                                                            .map(([key]) => (
+                                                                <span 
+                                                                    key={key}
+                                                                    className="bg-primary/10 text-primary text-xs px-2 py-1 rounded truncate max-w-[100px]"
+                                                                >
+                                                                    {key}
+                                                                </span>
+                                                            ))
+                                                        }
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="sm:w-[100px]">
+                                                    <span className="font-medium sm:hidden block mb-2">Ações: </span>
+                                                    <div className="flex flex-row gap-2 justify-end">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => {
+                                                                setEditingUser(user)
+                                                                setIsEditDialogOpen(true)
+                                                            }}
+                                                        >
+                                                            <Edit className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => {
+                                                                setEditingUser(user)
+                                                                setIsResetPasswordDialogOpen(true)
+                                                            }}
+                                                        >
+                                                            <Key className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="destructive"
+                                                            size="sm"
+                                                            onClick={() => handleDeleteUser(user.id)}
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                            <TableRow className="sm:hidden border-b-8 border-background">
+                                                <TableCell colSpan={4} className="p-0"></TableCell>
+                                            </TableRow>
+                                        </Fragment>
                                     ))
                                 )}
                             </TableBody>
