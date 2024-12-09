@@ -67,11 +67,11 @@ export default function Profile() {
                     <CardContent className="space-y-4">
                         <div className="space-y-2">
                             <Label>Nome</Label>
-                            <Input value={user?.name} disabled />
+                            <Input value={user?.name || ''} disabled />
                         </div>
                         <div className="space-y-2">
                             <Label>Email</Label>
-                            <Input value={user?.email} disabled />
+                            <Input value={user?.email || ''} disabled />
                         </div>
                         <div className="space-y-2">
                             <Label>Permissões</Label>
