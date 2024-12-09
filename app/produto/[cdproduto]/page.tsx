@@ -22,6 +22,7 @@ import { ProductStockCard } from '@/components/product-stock-card'
 import { StockPopover } from "@/components/stock-popover"
 import ProductLoading from './loading'
 import { PermissionGuard } from '@/components/guards/permission-guard'
+import { Suspense } from 'react'
 
 interface ProductSale {
     cdpedido: string
@@ -414,7 +415,8 @@ const formatStockNumber = (num: number) => {
     return new Intl.NumberFormat('pt-BR').format(num);
 }
 
-export default function ProductSalesDetails() {
+// Create a wrapper component for the main content
+function ProductSalesDetailsContent() {
     const router = useRouter()
     const params = useParams()
     const searchParams = useSearchParams()
@@ -1335,5 +1337,14 @@ export default function ProductSalesDetails() {
             )}
         </div>
         </PermissionGuard>
+    )
+}
+
+// Main component with Suspense boundary
+export default function ProductSalesDetails() {
+    return (
+        <Suspense fallback={<ProductLoading />}>
+            <ProductSalesDetailsContent />
+        </Suspense>
     )
 } 
