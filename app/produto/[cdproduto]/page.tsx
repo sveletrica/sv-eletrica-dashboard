@@ -51,9 +51,16 @@ interface MonthlyData {
     quantity: number
 }
 
+interface PriceData {
+    cdchamada: string;
+    vlprecosugerido: string;
+    vlprecoreposicao: string;
+}
+
 interface ApiResponse {
     product: ProductSale[];
     stock: StockData[];
+    price?: PriceData;
 }
 
 interface StockData {
@@ -473,17 +480,26 @@ function ProductSalesDetailsContent() {
 
             setIsLoading(true)
             try {
-                const response = await fetch(`/api/produto/${cdproduto}`)
+                const [productResponse, priceResponse] = await Promise.all([
+                    fetch(`/api/produto/${cdproduto}`),
+                    fetch(`/api/produto/${cdproduto}/preco`)
+                ])
                 
-                if (!response.ok) {
+                if (!productResponse.ok) {
                     throw new Error('Failed to fetch product sales')
                 }
-                const responseData = await response.json()
-                setData(responseData)
+
+                const productData = await productResponse.json()
+                const priceData = priceResponse.ok ? await priceResponse.json() : null
+
+                setData({
+                    ...productData,
+                    price: priceData
+                })
             } catch (err) {
                 const error = err as Error
-                console.error('Error fetching product sales:', error)
-                setError(error.message || 'Failed to fetch product sales')
+                console.error('Error fetching product data:', error)
+                setError(error.message || 'Failed to fetch product data')
             } finally {
                 setIsLoading(false)
             }
@@ -815,7 +831,7 @@ function ProductSalesDetailsContent() {
 
             <h1 className="text-3xl font-bold tracking-tight flex justify-center">Detalhe do Produto</h1>
 
-            <div className="grid gap-2 grid-cols-2 md:grid-cols-5">
+            <div className="grid gap-2 grid-cols-3 md:grid-cols-6">
                 <Card 
                     className="h-full cursor-pointer hover:ring-2 hover:ring-primary/50"
                     onClick={() => !isEditing && setIsEditing(true)}
@@ -846,7 +862,7 @@ function ProductSalesDetailsContent() {
                 </Card>
 
                 <Card 
-                    className="h-full col-span-1 md:col-span-2 cursor-pointer hover:ring-2 hover:ring-primary/50"
+                    className="h-full col-span-2 md:col-span-2 cursor-pointer hover:ring-2 hover:ring-primary/50"
                     onClick={() => setIsSearchOpen(true)}
                 >
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2">
@@ -921,6 +937,47 @@ function ProductSalesDetailsContent() {
                             </CardContent>
                         </Card>
                     </StockPopover>
+                )}
+
+                {data.price && (
+                    <Card className="h-full">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2">
+                            <CardTitle className="text-xs sm:text-sm font-medium">
+                                Preços
+                            </CardTitle>
+                            <Package className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent className="p-2 md:p-4">
+                            <div className="space-y-2">
+                                <div>
+                                    <div className="text-xs md:text-sm text-muted-foreground">
+                                        Preço Sugerido
+                                    </div>
+                                    <div className="text-xs md:text-xl font-bold">
+                                        {Number(data.price.vlprecosugerido || 0).toLocaleString('pt-BR', {
+                                            style: 'currency',
+                                            currency: 'BRL',
+                                            minimumFractionDigits: 2,
+                                            maximumFractionDigits: 2
+                                        })}
+                                    </div>
+                                </div>
+                                <div>
+                                    <div className="text-xs md:text-sm text-muted-foreground">
+                                        Preço Reposição
+                                    </div>
+                                    <div className="text-xs md:text-xl font-bold">
+                                        {Number(data.price.vlprecoreposicao || 0).toLocaleString('pt-BR', {
+                                            style: 'currency',
+                                            currency: 'BRL',
+                                            minimumFractionDigits: 2,
+                                            maximumFractionDigits: 2
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
                 )}
             </div>
 
