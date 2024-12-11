@@ -253,12 +253,19 @@ export default function Sobral() {
                                 </p>
                             </div>
                         </div>
-                        <div className="flex flex-row items-center space-x-2">
-                            <PackageX className="h-7 w-7 text-muted-foreground" />
-                            <div>
-                                <h3 className="font-semibold">Bind sem Estoque</h3>
-                                <p className="text-2xl font-bold">{safeData.bindSemStk.toLocaleString('pt-BR')}</p>
-                            </div>
+                        <div className="flex flex-row items-center space-x-2 group cursor-pointer">
+                            <Link href="/bind-sem-estoque" className="flex flex-row items-center space-x-2">
+                                <PackageX className="h-7 w-7 text-muted-foreground group-hover:text-primary transition-colors" />
+                                <div>
+                                    <h3 className="font-semibold group-hover:text-primary transition-colors">Bind sem Estoque</h3>
+                                    <p className="text-2xl font-bold group-hover:text-primary transition-colors">
+                                        {safeData.bindSemStk.toLocaleString('pt-BR')}
+                                    </p>
+                                    <p className="text-xs md:text-sm text-muted-foreground flex items-center gap-1 group-hover:text-primary transition-colors">
+                                        Ver detalhes <ArrowRight className="h-4 w-4" />
+                                    </p>
+                                </div>
+                            </Link>
                         </div>
                         <div className="flex flex-row items-center space-x-2">
                             <CheckCircle2 className="h-7 w-7 text-muted-foreground" />
