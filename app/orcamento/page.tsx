@@ -1114,7 +1114,7 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                                 <TableHead>Código</TableHead>
                                                 <TableHead>Produto</TableHead>
                                                 <TableHead className="text-right">Estoque</TableHead>
-                                                <TableHead className="text-right">Comprado</TableHead>
+                                                <TableHead className="text-right">Solicitado</TableHead>
                                                 <TableHead className="text-right">Qtd</TableHead>
                                                 <TableHead className="text-right">Preço Lista</TableHead>
                                                 <TableHead className="text-right">Desconto</TableHead>
