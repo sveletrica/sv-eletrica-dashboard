@@ -8,4 +8,5 @@ export const API_ROUTES = {
     inventory: '/api/inventory',
     untaggedItems: '/api/untagged-items',
     sobral: '/api/sobral',
+    maracanau: '/api/maracanau',
 } as const
