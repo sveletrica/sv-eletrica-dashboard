@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "sonner"
 import { CountdownTimer, TIMER_CONFIG } from "@/components/countdown-timer"
+import { useAuth } from '@/components/providers/auth-provider'
 
 const roboto = Roboto({
     weight: ['400', '500', '700'],
@@ -69,7 +70,7 @@ interface SavedSimulation {
   discounts: Record<string, number>
   created_at: string
   notes?: string
-  created_by?: string
+  created_by_email?: string
   share_id?: string
   shareUrl?: string
 }
@@ -209,6 +210,7 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
     const [showGroupDiscounts, setShowGroupDiscounts] = useState(false)
     const [lastExtraction, setLastExtraction] = useState<string | null>(null)
     const [timeLeftMinutes, setTimeLeftMinutes] = useState<number | null>(null)
+    const { user } = useAuth()
 
     const calculateMargin = (revenue: number, cost: number) => {
         return ((revenue - (revenue * 0.268 + cost)) / revenue) * 100
@@ -435,7 +437,15 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
     }
 
     const saveSimulation = async (notes: string) => {
+        if (!user?.email) {
+            console.error('No user email available:', user)
+            toast.error('Erro: Email do usuário não encontrado')
+            return
+        }
+
         try {
+            console.log('Saving simulation with user:', user) // Debug log
+            
             const response = await fetch('/api/simulations', {
                 method: 'POST',
                 headers: {
@@ -445,6 +455,7 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                     cdpedidodevenda: quotationCode,
                     discounts: simulatedDiscounts,
                     notes,
+                    created_by_email: user.email,
                 }),
             })
 
@@ -456,7 +467,7 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
 
             toast.success('Simulação salva com sucesso!')
             loadSavedSimulations()
-            return data // Return the full response including shareUrl
+            return data
         } catch (error) {
             console.error('Error saving simulation:', error)
             toast.error(error instanceof Error ? error.message : 'Erro ao salvar simulação')
@@ -623,6 +634,10 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
             }
         }
     }, [initialCode])
+
+    useEffect(() => {
+        console.log('Current auth user:', user) // Debug log
+    }, [user])
 
     if (isLoading) return <Loading />
 
@@ -943,46 +958,60 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                             {savedSimulations.map((sim) => (
                                                 <div
                                                     key={sim.id}
-                                                    className="flex items-center justify-between p-2 rounded border"
+                                                    className="flex flex-col sm:flex-row sm:items-center gap-2 p-2 rounded border"
                                                 >
-                                                    <div className="flex-1">
-                                                        <p className="text-sm font-medium">
-                                                            {new Date(sim.created_at).toLocaleString()}
-                                                        </p>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex flex-wrap items-center gap-2">
+                                                            <p className="text-sm font-medium truncate">
+                                                                {new Date(sim.created_at).toLocaleString()}
+                                                            </p>
+                                                            {sim.created_by_email && (
+                                                                <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded truncate">
+                                                                    {sim.created_by_email}
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                         {sim.notes && (
-                                                            <p className="text-sm text-muted-foreground">{sim.notes}</p>
+                                                            <p className="text-sm text-muted-foreground mt-1 truncate">
+                                                                {sim.notes}
+                                                            </p>
                                                         )}
                                                     </div>
-                                                    <div className="flex gap-2">
+                                                    <div className="flex items-center gap-1">
                                                         <Button
                                                             variant="ghost"
-                                                            size="sm"
+                                                            size="icon"
                                                             onClick={() => updateDiscountsAndGroupDiscounts(sim.discounts)}
+                                                            className="h-8 w-8"
+                                                            title="Aplicar"
                                                         >
-                                                            Aplicar
+                                                            <Check className="h-4 w-4" />
                                                         </Button>
                                                         {sim.share_id && (
                                                             <Button
                                                                 variant="ghost"
-                                                                size="sm"
+                                                                size="icon"
                                                                 onClick={async () => {
                                                                     const shareUrl = `${window.location.origin}/orcamento/${sim.cdpedidodevenda}?sim=${sim.share_id}`
                                                                     await navigator.clipboard.writeText(shareUrl)
                                                                     toast.success('Link copiado para a área de transferência!')
                                                                 }}
+                                                                className="h-8 w-8"
+                                                                title="Copiar link"
                                                             >
                                                                 <Share2 className="h-4 w-4" />
                                                             </Button>
                                                         )}
                                                         <Button
                                                             variant="ghost"
-                                                            size="sm"
-                                                            className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                                                            size="icon"
+                                                            className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
                                                             onClick={() => {
                                                                 if (window.confirm('Tem certeza que deseja excluir esta simulação?')) {
                                                                     deleteSimulation(sim.id)
                                                                 }
                                                             }}
+                                                            title="Excluir"
                                                         >
                                                             <X className="h-4 w-4" />
                                                         </Button>
