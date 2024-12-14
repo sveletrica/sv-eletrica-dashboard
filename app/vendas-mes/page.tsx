@@ -58,6 +58,11 @@ interface ChartConfig {
     };
 }
 
+interface SalesComparison {
+    corporate: number;
+    retail: number;
+}
+
 export default function MonthlySales() {
     const router = useRouter()
     const searchParams = useSearchParams()
@@ -423,6 +428,22 @@ export default function MonthlySales() {
             };
             return config;
         }, {} as ChartConfig);
+    };
+
+    const calculateSalesComparison = (data: ChartDataEntry[]): SalesComparison => {
+        return data.reduce((acc, dayData) => {
+            Object.entries(dayData).forEach(([key, value]) => {
+                if (key !== 'date') {
+                    const amount = Number(value) || 0;
+                    if (key === 'SV FILIAL' || key === 'SV MATRIZ') {
+                        acc.corporate += amount;
+                    } else {
+                        acc.retail += amount;
+                    }
+                }
+            });
+            return acc;
+        }, { corporate: 0, retail: 0 });
     };
 
     return (
@@ -817,6 +838,94 @@ export default function MonthlySales() {
                             <div className="flex items-center justify-center h-[400px]">
                                 <p className="text-muted-foreground">
                                     Nenhum dado de pedidos disponível para o período selecionado
+                                </p>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Corporativo vs Varejo</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        {data.length > 0 && chartData.length > 0 ? (
+                            <div className="space-y-6">
+                                {(() => {
+                                    const comparison = calculateSalesComparison(chartData);
+                                    const total = comparison.corporate + comparison.retail;
+                                    const corporatePercentage = (comparison.corporate / total) * 100;
+                                    const retailPercentage = (comparison.retail / total) * 100;
+
+                                    return (
+                                        <>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div className="space-y-2">
+                                                    <div className="flex justify-between">
+                                                        <span className="text-sm font-medium">Corporativo</span>
+                                                        <span className="text-sm text-muted-foreground">
+                                                            {corporatePercentage.toFixed(1)}%
+                                                        </span>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <div className="h-2 rounded-full bg-primary/20">
+                                                            <div 
+                                                                className="h-2 rounded-full bg-primary" 
+                                                                style={{ width: `${corporatePercentage}%` }}
+                                                            />
+                                                        </div>
+                                                        <div className="text-sm text-muted-foreground">
+                                                            {new Intl.NumberFormat('pt-BR', {
+                                                                style: 'currency',
+                                                                currency: 'BRL'
+                                                            }).format(comparison.corporate)}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="space-y-2">
+                                                    <div className="flex justify-between">
+                                                        <span className="text-sm font-medium">Varejo</span>
+                                                        <span className="text-sm text-muted-foreground">
+                                                            {retailPercentage.toFixed(1)}%
+                                                        </span>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <div className="h-2 rounded-full bg-secondary/20">
+                                                            <div 
+                                                                className="h-2 rounded-full bg-secondary" 
+                                                                style={{ width: `${retailPercentage}%` }}
+                                                            />
+                                                        </div>
+                                                        <div className="text-sm text-muted-foreground">
+                                                            {new Intl.NumberFormat('pt-BR', {
+                                                                style: 'currency',
+                                                                currency: 'BRL'
+                                                            }).format(comparison.retail)}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="pt-4 border-t">
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-sm font-medium">Total Geral</span>
+                                                    <span className="text-sm">
+                                                        {new Intl.NumberFormat('pt-BR', {
+                                                            style: 'currency',
+                                                            currency: 'BRL'
+                                                        }).format(total)}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </>
+                                    );
+                                })()}
+                            </div>
+                        ) : !error && (
+                            <div className="flex items-center justify-center h-[200px]">
+                                <p className="text-muted-foreground">
+                                    Nenhum dado disponível para o período selecionado
                                 </p>
                             </div>
                         )}
