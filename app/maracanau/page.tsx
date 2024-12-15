@@ -15,13 +15,15 @@ import {
     PackageX, 
     CheckCircle2,
     RefreshCw,
-    ArrowRight
+    ArrowRight,
+    Check
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { MaracanauStats } from '@/types/maracanau'
 import MaracanauLoading from './loading'
 import './styles.css'
 import Link from 'next/link'
+import { toast } from "sonner"
 
 const CACHE_KEY = 'maracanauData'
 const CACHE_DURATION = 24 * 60 * 60 * 1000 // 24 hours in milliseconds
@@ -37,6 +39,7 @@ export default function Maracanau() {
     const [data, setData] = useState<MaracanauStats | null>(null)
     const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
     const [error, setError] = useState<string | null>(null)
+    const [isUpdatingESL, setIsUpdatingESL] = useState(false)
 
     const loadFromCache = () => {
         if (typeof window !== 'undefined') {
@@ -114,6 +117,26 @@ export default function Maracanau() {
         setIsRefreshing(false)
     }
 
+    const handleESLUpdate = async () => {
+        setIsUpdatingESL(true)
+        try {
+            const response = await fetch('https://wh.sveletrica.com/webhook/8c9ae829-f325-409e-8d56-2aa6ab387668', {
+                method: 'POST',
+            })
+            
+            if (response.ok) {
+                toast.success('ESL atualizado com sucesso!')
+            } else {
+                throw new Error('Falha ao atualizar ESL')
+            }
+        } catch (error) {
+            toast.error('Erro ao atualizar ESL')
+            console.error('Error updating ESL:', error)
+        } finally {
+            setIsUpdatingESL(false)
+        }
+    }
+
     useEffect(() => {
         fetchData()
     }, [])
@@ -167,6 +190,20 @@ export default function Maracanau() {
                             isRefreshing && "animate-spin"
                         )} />
                         Atualizar
+                    </Button>
+                    <Button
+                        variant="default"
+                        size="sm"
+                        onClick={handleESLUpdate}
+                        disabled={isUpdatingESL}
+                        className="bg-green-600 hover:bg-green-700"
+                    >
+                        {isUpdatingESL ? (
+                            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                            <Check className="h-4 w-4 mr-2" />
+                        )}
+                        Atualizar ESL
                     </Button>
                 </div>
             </div>
