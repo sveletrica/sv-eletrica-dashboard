@@ -9,6 +9,7 @@ import {
     CartesianGrid,
     Tooltip,
     ResponsiveContainer,
+    Legend,
 } from 'recharts'
 import { useState } from 'react'
 
@@ -25,9 +26,22 @@ type ChartProps = {
 export function Chart({ data, config }: ChartProps) {
     const [activeBar, setActiveBar] = useState<string>(Object.keys(config)[0])
 
+    const maxValue = Math.max(
+        ...data.flatMap(item => 
+            Object.keys(config).map(key => Number(item[key]) || 0)
+        )
+    )
+
+    const yAxisMax = Math.ceil(maxValue / 500) * 500
+
+    const yAxisTicks = Array.from(
+        { length: (yAxisMax / 500) + 1 },
+        (_, i) => i * 500
+    )
+
     return (
         <ResponsiveContainer width="100%" height={350}>
-            <BarChart data={data}>
+            <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis
                     dataKey="name"
@@ -42,6 +56,8 @@ export function Chart({ data, config }: ChartProps) {
                     tickLine={false}
                     axisLine={false}
                     tickFormatter={(value) => `${value}`}
+                    domain={[0, yAxisMax]}
+                    ticks={yAxisTicks}
                 />
                 <Tooltip
                     cursor={{ fill: 'transparent' }}
@@ -83,6 +99,25 @@ export function Chart({ data, config }: ChartProps) {
                             </Card>
                         )
                     }}
+                />
+                <Legend 
+                    formatter={(value) => {
+                        const labelMap: Record<string, string> = {
+                            totalTagged: "Total",
+                            tagsUsedTwice: "Duplicadas",
+                            taggedNoStock: "Sem Estoque"
+                        }
+                        return labelMap[value] || value
+                    }}
+                    wrapperStyle={{ 
+                        paddingBottom: '20px',
+                        fontSize: '0.75rem',
+                        lineHeight: '1rem'
+                    }}
+                    align="right"
+                    verticalAlign="top"
+                    iconSize={8}
+                    iconType="circle"
                 />
                 {Object.entries(config).map(([key, { color, showValue }]) => (
                     <Bar

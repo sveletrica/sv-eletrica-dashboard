@@ -273,7 +273,7 @@ export default function Maracanau() {
                         <div className="flex flex-row items-center space-x-2">
                             <Tags className="h-7 w-7 text-muted-foreground" />
                             <div>
-                                <h3 className="font-semibold">SKU comMúltiplas Etiquetas</h3>
+                                <h3 className="font-semibold">SKU com Múltiplas Etiquetas</h3>
                                 <p className="text-2xl font-bold">{safeData.produtosMultiplasEtiquetas.toLocaleString('pt-BR')}</p>
                                 <p className="text-sm text-muted-foreground">
                                     {calculatePercentage(safeData.produtosMultiplasEtiquetas, safeData.totalEstoque)}% do total
