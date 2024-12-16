@@ -10,6 +10,7 @@ interface WorkflowUpdate {
     stepName: string
     workflowId: string
     timestamp: string
+    status?: 'completed' | 'in_progress' | 'error'
 }
 
 export function WorkflowProgress() {
@@ -21,8 +22,21 @@ export function WorkflowProgress() {
 
         eventSource.onmessage = (event) => {
             try {
-                const data = JSON.parse(event.data)
+                const data = JSON.parse(event.data) as WorkflowUpdate
                 setProgress(data)
+
+                // Check if workflow is completed
+                if (data.status === 'completed' || data.step === data.totalSteps) {
+                    eventSource.close()
+                    // Dispatch completion event
+                    window.dispatchEvent(new CustomEvent('workflowComplete'))
+                }
+
+                // Handle error status
+                if (data.status === 'error') {
+                    setError('Workflow failed')
+                    eventSource.close()
+                }
             } catch (err) {
                 console.error('Error parsing SSE data:', err)
                 setError('Failed to parse progress update')
@@ -54,7 +68,16 @@ export function WorkflowProgress() {
     }
 
     if (!progress) {
-        return null
+        return (
+            <Card>
+                <CardHeader>
+                    <CardTitle>Iniciando atualização...</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <Progress value={0} />
+                </CardContent>
+            </Card>
+        )
     }
 
     const percentComplete = (progress.step / progress.totalSteps) * 100
@@ -62,17 +85,17 @@ export function WorkflowProgress() {
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Workflow Progress</CardTitle>
+                <CardTitle>Atualizando ESL</CardTitle>
             </CardHeader>
             <CardContent>
                 <div className="space-y-4">
                     <div className="flex justify-between text-sm">
-                        <span>Step {progress.step} of {progress.totalSteps}</span>
+                        <span>Etapa {progress.step} de {progress.totalSteps}</span>
                         <span>{Math.round(percentComplete)}%</span>
                     </div>
                     <Progress value={percentComplete} />
                     <p className="text-sm text-muted-foreground">
-                        Current step: {progress.stepName}
+                        {progress.stepName}
                     </p>
                 </div>
             </CardContent>

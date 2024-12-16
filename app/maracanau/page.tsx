@@ -24,6 +24,7 @@ import MaracanauLoading from './loading'
 import './styles.css'
 import Link from 'next/link'
 import { toast } from "sonner"
+import { WorkflowProgress } from "@/components/workflow-progress"
 
 const CACHE_KEY = 'maracanauData'
 const CACHE_DURATION = 24 * 60 * 60 * 1000 // 24 hours in milliseconds
@@ -40,6 +41,7 @@ export default function Maracanau() {
     const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
     const [error, setError] = useState<string | null>(null)
     const [isUpdatingESL, setIsUpdatingESL] = useState(false)
+    const [showWorkflow, setShowWorkflow] = useState(false)
 
     const loadFromCache = () => {
         if (typeof window !== 'undefined') {
@@ -119,6 +121,7 @@ export default function Maracanau() {
 
     const handleESLUpdate = async () => {
         setIsUpdatingESL(true)
+        setShowWorkflow(true)
         try {
             const response = await fetch('https://wh.sveletrica.com/webhook/8c9ae829-f325-409e-8d56-2aa6ab387668', {
                 method: 'POST',
@@ -133,9 +136,20 @@ export default function Maracanau() {
             toast.error('Erro ao atualizar ESL')
             console.error('Error updating ESL:', error)
         } finally {
-            setIsUpdatingESL(false)
+            // We'll let the workflow completion handle this now
+            // setIsUpdatingESL(false)
         }
     }
+
+    useEffect(() => {
+        const handleWorkflowComplete = () => {
+            setIsUpdatingESL(false)
+            setShowWorkflow(false)
+        }
+
+        window.addEventListener('workflowComplete', handleWorkflowComplete)
+        return () => window.removeEventListener('workflowComplete', handleWorkflowComplete)
+    }, [])
 
     useEffect(() => {
         fetchData()
@@ -314,6 +328,14 @@ export default function Maracanau() {
                     </div>
                 </CardContent>
             </Card>
+
+            {showWorkflow && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-background p-6 rounded-lg shadow-lg w-full max-w-md">
+                        <WorkflowProgress />
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

@@ -23,6 +23,7 @@ import { StockPopover } from "@/components/stock-popover"
 import ProductLoading from './loading'
 import { PermissionGuard } from '@/components/guards/permission-guard'
 import { Suspense } from 'react'
+import Image from 'next/image'
 
 interface ProductSale {
     cdpedido: string
@@ -77,6 +78,11 @@ interface StockData {
 interface DateRange {
     start: string | null;
     end: string | null;
+}
+
+interface GoogleImageResult {
+    url: string;
+    alt: string;
 }
 
 // Add this font configuration after the imports
@@ -440,6 +446,119 @@ const isDateInRange = (date: string, range: string) => {
     return checkDate >= start && checkDate <= end
 }
 
+// Add this function after the interfaces
+async function getProductImage(productName: string): Promise<GoogleImageResult | null> {
+    try {
+        const response = await fetch(`/api/produto/image?query=${encodeURIComponent(productName)}`, {
+            next: { revalidate: 86400 } // Cache for 24 hours
+        });
+        
+        if (!response.ok) return null;
+        
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('Error fetching product image:', error);
+        return null;
+    }
+}
+
+// Update the ProductImageCard component
+const ProductImageCard = ({ productName }: { productName: string }) => {
+    const [imageData, setImageData] = useState<GoogleImageResult | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [imgError, setImgError] = useState(false);
+    const [showModal, setShowModal] = useState(false);
+
+    useEffect(() => {
+        const fetchImage = async () => {
+            setIsLoading(true);
+            setImgError(false);
+            try {
+                const data = await getProductImage(productName);
+                setImageData(data);
+            } catch (err) {
+                setError('Failed to load image');
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        if (productName) {
+            fetchImage();
+        }
+    }, [productName]);
+
+    if (!productName) return null;
+
+    return (
+        <>
+            <Card className="p-0">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2">
+            <CardTitle className="text-xs sm:text-sm font-medium">
+                        Imagem
+                    </CardTitle>
+                </CardHeader>
+                <CardContent 
+                    className="flex items-center justify-center p-4"
+                    onClick={() => imageData && !imgError && setShowModal(true)}
+                >
+                    {isLoading ? (
+                        <div className="w-full h-28 bg-muted animate-pulse rounded-md" />
+                    ) : error || imgError ? (
+                        <div className="text-sm text-muted-foreground">
+                            Não foi possível carregar a imagem
+                        </div>
+                    ) : imageData ? (
+                        <div className="relative w-full h-28 cursor-pointer hover:opacity-90 transition-opacity">
+                            <Image
+                                src={imageData.url}
+                                alt={imageData.alt || productName}
+                                fill
+                                className="object-contain rounded-md"
+                                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                                onError={() => setImgError(true)}
+                                unoptimized
+                            />
+                        </div>
+                    ) : (
+                        <div className="text-sm text-muted-foreground">
+                            Nenhuma imagem encontrada
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+
+            <Dialog open={showModal} onOpenChange={setShowModal}>
+                <DialogContent className="sm:max-w-[800px] p-0">
+                    <DialogTitle className="sr-only">
+                        Imagem do produto {productName}
+                    </DialogTitle>
+                    <div className="relative w-full h-[500px] p-4">
+                        {imageData && (
+                            <Image
+                                src={imageData.url}
+                                alt={imageData.alt || productName}
+                                fill
+                                className="object-contain rounded-md"
+                                sizes="(max-width: 768px) 100vw, 800px"
+                                onError={() => setImgError(true)}
+                                unoptimized
+                            />
+                        )}
+                    </div>
+                    <div className="p-4 bg-background border-t">
+                        <p className="text-sm font-medium text-center">
+                            {productName}
+                        </p>
+                    </div>
+                </DialogContent>
+            </Dialog>
+        </>
+    );
+};
+
 // Create a wrapper component for the main content
 function ProductSalesDetailsContent() {
     const router = useRouter()
@@ -479,6 +598,8 @@ function ProductSalesDetailsContent() {
             if (!cdproduto) return;
 
             setIsLoading(true)
+            setError(null) // Reset error state
+            
             try {
                 const [productResponse, priceResponse] = await Promise.all([
                     fetch(`/api/produto/${cdproduto}`),
@@ -486,10 +607,16 @@ function ProductSalesDetailsContent() {
                 ])
                 
                 if (!productResponse.ok) {
-                    throw new Error('Failed to fetch product sales')
+                    throw new Error(`Failed to fetch product data: ${productResponse.statusText}`)
                 }
 
                 const productData = await productResponse.json()
+                
+                // Check if product data is valid
+                if (!productData?.product?.length) {
+                    throw new Error('No product data found')
+                }
+
                 const priceData = priceResponse.ok ? await priceResponse.json() : null
 
                 setData({
@@ -689,15 +816,17 @@ function ProductSalesDetailsContent() {
     }, [filteredData])
 
     const stockDisplay = useMemo(() => {
-        if (!data.stock?.[0]) return { total: 0, filialCount: 0 }
+        if (!data?.stock?.length) return { total: 0, filialCount: 0 }
         
         const stockData = data.stock[0]
+        if (!stockData) return { total: 0, filialCount: 0 }
+
         const filialCount = Object.keys(stockData)
             .filter(key => key.startsWith('QtEstoque_') && stockData[key as keyof StockData] > 0)
             .length
         
         return {
-            total: stockData.StkTotal,
+            total: stockData.StkTotal || 0,
             filialCount
         }
     }, [data.stock])
@@ -831,7 +960,7 @@ function ProductSalesDetailsContent() {
 
             <h1 className="text-3xl font-bold tracking-tight flex justify-center">Detalhe do Produto</h1>
 
-            <div className="grid gap-2 grid-cols-3 md:grid-cols-6">
+            <div className="grid gap-2 grid-cols-3 md:grid-cols-7">
                 <Card 
                     className="h-full cursor-pointer hover:ring-2 hover:ring-primary/50"
                     onClick={() => !isEditing && setIsEditing(true)}
@@ -895,6 +1024,10 @@ function ProductSalesDetailsContent() {
                         </DialogContent>
                     </Dialog>
                 </Card>
+
+                <div className="col-span-3 md:col-span-1">
+                    <ProductImageCard productName={data.product[0]?.nmproduto || ''} />
+                </div>
 
                 <Card className="h-full">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2">
