@@ -16,52 +16,79 @@ interface WorkflowUpdate {
 export function WorkflowProgress() {
     const [progress, setProgress] = useState<WorkflowUpdate | null>(null)
     const [error, setError] = useState<string | null>(null)
+    const [retryCount, setRetryCount] = useState(0)
+    const MAX_RETRIES = 3
 
     useEffect(() => {
-        const eventSource = new EventSource('/api/workflow-progress')
+        let eventSource: EventSource | null = null
 
-        eventSource.onmessage = (event) => {
-            try {
-                const data = JSON.parse(event.data) as WorkflowUpdate
-                setProgress(data)
+        const connectSSE = () => {
+            if (retryCount >= MAX_RETRIES) {
+                setError('Falha na conexão após várias tentativas')
+                return
+            }
 
-                // Check if workflow is completed
-                if (data.status === 'completed' || data.step === data.totalSteps) {
-                    eventSource.close()
-                    // Dispatch completion event
-                    window.dispatchEvent(new CustomEvent('workflowComplete'))
+            eventSource = new EventSource('/api/workflow-progress')
+
+            eventSource.onopen = () => {
+                setError(null)
+                setRetryCount(0)
+            }
+
+            eventSource.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data) as WorkflowUpdate
+                    setProgress(data)
+
+                    if (data.status === 'completed' || data.step === data.totalSteps) {
+                        eventSource?.close()
+                        window.dispatchEvent(new CustomEvent('workflowComplete'))
+                    }
+
+                    if (data.status === 'error') {
+                        setError('Falha na atualização')
+                        eventSource?.close()
+                    }
+                } catch (err) {
+                    console.error('Error parsing SSE data:', err)
+                    setError('Erro ao processar atualização')
                 }
+            }
 
-                // Handle error status
-                if (data.status === 'error') {
-                    setError('Workflow failed')
-                    eventSource.close()
-                }
-            } catch (err) {
-                console.error('Error parsing SSE data:', err)
-                setError('Failed to parse progress update')
+            eventSource.onerror = (err) => {
+                console.error('SSE connection error:', err)
+                eventSource?.close()
+                setRetryCount(prev => prev + 1)
+                
+                // Attempt to reconnect after a delay
+                setTimeout(() => {
+                    connectSSE()
+                }, 1000 * (retryCount + 1)) // Exponential backoff
             }
         }
 
-        eventSource.onerror = (err) => {
-            console.error('SSE connection error:', err)
-            setError('Connection error')
-            eventSource.close()
-        }
+        connectSSE()
 
         return () => {
-            eventSource.close()
+            if (eventSource) {
+                eventSource.close()
+            }
         }
-    }, [])
+    }, [retryCount])
 
     if (error) {
         return (
             <Card className="bg-destructive/10">
                 <CardHeader>
-                    <CardTitle>Workflow Progress Error</CardTitle>
+                    <CardTitle>Erro na Atualização</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <p>{error}</p>
+                    {retryCount < MAX_RETRIES && (
+                        <p className="text-sm text-muted-foreground mt-2">
+                            Tentando reconectar... ({retryCount + 1}/{MAX_RETRIES})
+                        </p>
+                    )}
                 </CardContent>
             </Card>
         )

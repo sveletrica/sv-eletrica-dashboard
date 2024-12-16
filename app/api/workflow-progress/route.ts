@@ -1,107 +1,65 @@
 import { NextResponse } from 'next/server'
-import { headers } from 'next/headers'
 
-// Store active SSE connections
-const clients = new Map<string, ReadableStreamDefaultController>()
+const clients = new Set<ReadableStreamDefaultController>()
 
-// Helper function to create SSE response
-function createSSEStream() {
-    let controller: ReadableStreamDefaultController
-
+export async function GET() {
     const stream = new ReadableStream({
-        start(c) {
-            controller = c
-            const clientId = Date.now().toString()
-            clients.set(clientId, controller)
+        start(controller) {
+            clients.add(controller)
 
-            // Cleanup on close
-            return () => {
-                clients.delete(clientId)
+            // Send initial message
+            const initialData = {
+                step: 0,
+                totalSteps: 5,
+                stepName: "Iniciando...",
+                workflowId: "esl-update",
+                timestamp: new Date().toISOString(),
+                status: "in_progress"
             }
+            
+            controller.enqueue(`data: ${JSON.stringify(initialData)}\n\n`)
         },
         cancel() {
-            // Handle client disconnect
-            const clientId = Array.from(clients.entries())
-                .find(([_, c]) => c === controller)?.[0]
-            if (clientId) {
-                clients.delete(clientId)
-            }
+            clients.delete(controller)
         }
     })
-
-    return stream
-}
-
-// GET endpoint for SSE connections
-export async function GET() {
-    const stream = createSSEStream()
 
     return new NextResponse(stream, {
         headers: {
             'Content-Type': 'text/event-stream',
             'Cache-Control': 'no-cache',
             'Connection': 'keep-alive',
-            'Access-Control-Allow-Origin': '*'
-        }
+        },
     })
 }
 
-// POST endpoint for n8n to send updates
 export async function POST(request: Request) {
     try {
-        const body = await request.json()
-        const { step, totalSteps, stepName, workflowId } = body
-
-        // Validate required fields
-        if (typeof step === 'undefined') {
-            return NextResponse.json(
-                { error: 'Step number is required' },
-                { status: 400 }
-            )
-        }
-
-        // Create update data
-        const updateData = {
-            step,
-            totalSteps,
-            stepName,
-            workflowId,
-            timestamp: new Date().toISOString()
-        }
-
-        // Broadcast to all connected clients
-        const encoder = new TextEncoder()
-        const message = encoder.encode(`data: ${JSON.stringify(updateData)}\n\n`)
+        const data = await request.json()
         
-        clients.forEach(controller => {
-            try {
-                controller.enqueue(message)
-            } catch (error) {
-                console.error('Error sending to client:', error)
-            }
+        // Broadcast to all connected clients
+        clients.forEach(client => {
+            client.enqueue(`data: ${JSON.stringify(data)}\n\n`)
         })
 
-        return NextResponse.json({
-            message: 'Progress updated successfully',
-            connectedClients: clients.size
+        return NextResponse.json({ 
+            message: "Progress updated successfully",
+            connectedClients: clients.size 
         })
     } catch (error) {
         console.error('Error processing progress update:', error)
-        return NextResponse.json(
-            { error: 'Internal server error' },
-            { status: 500 }
-        )
+        return NextResponse.json({ error: 'Failed to process update' }, { status: 500 })
     }
 }
 
-// OPTIONS for CORS
-export async function OPTIONS() {
-    return NextResponse.json(null, {
-        status: 204,
-        headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type',
-        },
+// Optional: Helper function to close all connections
+export function closeAllConnections() {
+    clients.forEach(client => {
+        try {
+            client.close()
+        } catch (error) {
+            console.error('Error closing client:', error)
+        }
     })
+    clients.clear()
 } 
