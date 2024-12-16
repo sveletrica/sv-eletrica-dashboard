@@ -10,71 +10,51 @@ interface WorkflowUpdate {
     stepName: string
     workflowId: string
     timestamp: string
-    status?: 'completed' | 'in_progress' | 'error'
+    status?: 'completed' | 'in_progress' | 'error' | 'waiting'
 }
 
 export function WorkflowProgress() {
     const [progress, setProgress] = useState<WorkflowUpdate | null>(null)
     const [error, setError] = useState<string | null>(null)
-    const [retryCount, setRetryCount] = useState(0)
-    const MAX_RETRIES = 3
+    const POLLING_INTERVAL = 1000 // 1 second
 
     useEffect(() => {
-        let eventSource: EventSource | null = null
+        let pollInterval: NodeJS.Timeout
 
-        const connectSSE = () => {
-            if (retryCount >= MAX_RETRIES) {
-                setError('Falha na conexão após várias tentativas')
-                return
-            }
-
-            eventSource = new EventSource('/api/workflow-progress')
-
-            eventSource.onopen = () => {
-                setError(null)
-                setRetryCount(0)
-            }
-
-            eventSource.onmessage = (event) => {
-                try {
-                    const data = JSON.parse(event.data) as WorkflowUpdate
-                    setProgress(data)
-
-                    if (data.status === 'completed' || data.step === data.totalSteps) {
-                        eventSource?.close()
-                        window.dispatchEvent(new CustomEvent('workflowComplete'))
-                    }
-
-                    if (data.status === 'error') {
-                        setError('Falha na atualização')
-                        eventSource?.close()
-                    }
-                } catch (err) {
-                    console.error('Error parsing SSE data:', err)
-                    setError('Erro ao processar atualização')
-                }
-            }
-
-            eventSource.onerror = (err) => {
-                console.error('SSE connection error:', err)
-                eventSource?.close()
-                setRetryCount(prev => prev + 1)
+        const fetchProgress = async () => {
+            try {
+                const response = await fetch('/api/workflow-progress')
+                if (!response.ok) throw new Error('Failed to fetch progress')
                 
-                // Attempt to reconnect after a delay
-                setTimeout(() => {
-                    connectSSE()
-                }, 1000 * (retryCount + 1)) // Exponential backoff
+                const data = await response.json()
+                setProgress(data)
+
+                if (data.status === 'completed' || data.step === data.totalSteps) {
+                    window.dispatchEvent(new CustomEvent('workflowComplete'))
+                    clearInterval(pollInterval)
+                }
+
+                if (data.status === 'error') {
+                    setError('Falha na atualização')
+                    clearInterval(pollInterval)
+                }
+            } catch (err) {
+                console.error('Error fetching progress:', err)
+                setError('Erro ao buscar atualização')
+                clearInterval(pollInterval)
             }
         }
 
-        connectSSE()
+        // Initial fetch
+        fetchProgress()
+
+        // Start polling
+        pollInterval = setInterval(fetchProgress, POLLING_INTERVAL)
 
         return () => {
-            if (eventSource) {
-                eventSource.close()
-            }
+            clearInterval(pollInterval)
         }
-    }, [retryCount])
+    }, [])
 
     if (error) {
         return (
@@ -84,11 +64,6 @@ export function WorkflowProgress() {
                 </CardHeader>
                 <CardContent>
                     <p>{error}</p>
-                    {retryCount < MAX_RETRIES && (
-                        <p className="text-sm text-muted-foreground mt-2">
-                            Tentando reconectar... ({retryCount + 1}/{MAX_RETRIES})
-                        </p>
-                    )}
                 </CardContent>
             </Card>
         )

@@ -1,34 +1,21 @@
 import { NextResponse } from 'next/server'
 
-const clients = new Set<ReadableStreamDefaultController>()
+// Store the latest progress update
+let currentProgress = {
+    step: 0,
+    totalSteps: 5,
+    stepName: "Aguardando início...",
+    workflowId: "esl-update",
+    timestamp: new Date().toISOString(),
+    status: "waiting"
+}
 
 export async function GET() {
-    const stream = new ReadableStream({
-        start(controller) {
-            clients.add(controller)
-
-            // Send initial message
-            const initialData = {
-                step: 0,
-                totalSteps: 5,
-                stepName: "Iniciando...",
-                workflowId: "esl-update",
-                timestamp: new Date().toISOString(),
-                status: "in_progress"
-            }
-            
-            controller.enqueue(`data: ${JSON.stringify(initialData)}\n\n`)
-        },
-        cancel() {
-            clients.delete(controller)
-        }
-    })
-
-    return new NextResponse(stream, {
+    return NextResponse.json(currentProgress, {
         headers: {
-            'Content-Type': 'text/event-stream',
-            'Cache-Control': 'no-cache',
-            'Connection': 'keep-alive',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         },
     })
 }
@@ -37,29 +24,45 @@ export async function POST(request: Request) {
     try {
         const data = await request.json()
         
-        // Broadcast to all connected clients
-        clients.forEach(client => {
-            client.enqueue(`data: ${JSON.stringify(data)}\n\n`)
-        })
+        // Update the current progress
+        currentProgress = {
+            ...data,
+            timestamp: new Date().toISOString()
+        }
 
         return NextResponse.json({ 
             message: "Progress updated successfully",
-            connectedClients: clients.size 
+            currentProgress 
+        }, {
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            }
         })
     } catch (error) {
         console.error('Error processing progress update:', error)
-        return NextResponse.json({ error: 'Failed to process update' }, { status: 500 })
+        return NextResponse.json(
+            { error: 'Failed to process update' }, 
+            { 
+                status: 500,
+                headers: {
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+                    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+                }
+            }
+        )
     }
 }
 
-// Optional: Helper function to close all connections
-export function closeAllConnections() {
-    clients.forEach(client => {
-        try {
-            client.close()
-        } catch (error) {
-            console.error('Error closing client:', error)
-        }
+export async function OPTIONS() {
+    return new NextResponse(null, {
+        status: 204,
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        },
     })
-    clients.clear()
 } 
