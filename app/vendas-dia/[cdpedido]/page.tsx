@@ -312,57 +312,61 @@ export default function SaleDetails() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody className={roboto.className}>
-                                {data.map((item, index) => (
-                                    <TableRow 
-                                        key={index}
-                                        className={cn(
-                                            highlightedProduct && item.cdproduto.trim() === highlightedProduct.trim() && 
-                                            "bg-yellow-300 dark:bg-red-800/50 animate-pulse-slow",
-                                            "transition-colors hover:bg-accent/50"
-                                        )}
-                                    >
-                                        <TableCell className="text-xs sm:text-sm">
-                                            <Link 
-                                                href={`/produto/${item.cdproduto.trim()}`}
-                                                className="text-blue-500 hover:underline"
-                                            >
-                                                {item.cdproduto.trim()}
-                                            </Link>
-                                        </TableCell>
-                                        <TableCell className="text-xs sm:text-sm whitespace-nowrap max-w-[150px] sm:max-w-none">
-                                            <span className="block truncate sm:text-clip sm:whitespace-normal">
-                                                {item.nmproduto}
-                                            </span>
-                                        </TableCell>
-                                        <TableCell className="text-xs sm:text-sm max-w-[100px] sm:max-w-none whitespace-nowrap">
-                                            <span className="block truncate sm:text-clip sm:whitespace-normal">
-                                                {item.nmgrupoproduto}
-                                            </span>
-                                        </TableCell>
-                                        <TableCell className="text-xs sm:text-sm text-right">{item.qtbrutaproduto}</TableCell>
-                                        <TableCell className="text-xs sm:text-sm text-right">
-                                            {(item.vlfaturamento / item.qtbrutaproduto).toLocaleString('pt-BR', {
-                                                style: 'currency',
-                                                currency: 'BRL'
-                                            })}
-                                        </TableCell>
-                                        <TableCell className="text-xs sm:text-sm text-right">
-                                            {item.vlfaturamento.toLocaleString('pt-BR', {
-                                                style: 'currency',
-                                                currency: 'BRL'
-                                            })}
-                                        </TableCell>
-                                        <TableCell className="text-xs sm:text-sm text-right">
-                                            {item.vltotalcustoproduto.toLocaleString('pt-BR', {
-                                                style: 'currency',
-                                                currency: 'BRL'
-                                            })}
-                                        </TableCell>
-                                        <TableCell className="text-xs sm:text-sm text-right">
-                                            {item.margem}
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
+                                {data.map((item, index) => {
+                                    const margin = parseFloat(item.margem)
+                                    return (
+                                        <TableRow 
+                                            key={index}
+                                            className={cn(
+                                                highlightedProduct && item.cdproduto.trim() === highlightedProduct.trim() && 
+                                                "bg-yellow-300 dark:bg-red-800/50 animate-pulse-slow",
+                                                margin <= 0 && "bg-red-200 dark:bg-red-900/90",
+                                                "transition-colors hover:bg-accent/50"
+                                            )}
+                                        >
+                                            <TableCell className="text-xs sm:text-sm">
+                                                <Link 
+                                                    href={`/produto/${item.cdproduto.trim()}`}
+                                                    className="text-blue-500 hover:underline"
+                                                >
+                                                    {item.cdproduto.trim()}
+                                                </Link>
+                                            </TableCell>
+                                            <TableCell className="text-xs sm:text-sm whitespace-nowrap max-w-[150px] sm:max-w-none">
+                                                <span className="block truncate sm:text-clip sm:whitespace-normal">
+                                                    {item.nmproduto}
+                                                </span>
+                                            </TableCell>
+                                            <TableCell className="text-xs sm:text-sm max-w-[100px] sm:max-w-none whitespace-nowrap">
+                                                <span className="block truncate sm:text-clip sm:whitespace-normal">
+                                                    {item.nmgrupoproduto}
+                                                </span>
+                                            </TableCell>
+                                            <TableCell className="text-xs sm:text-sm text-right">{item.qtbrutaproduto}</TableCell>
+                                            <TableCell className="text-xs sm:text-sm text-right">
+                                                {(item.vlfaturamento / item.qtbrutaproduto).toLocaleString('pt-BR', {
+                                                    style: 'currency',
+                                                    currency: 'BRL'
+                                                })}
+                                            </TableCell>
+                                            <TableCell className="text-xs sm:text-sm text-right">
+                                                {item.vlfaturamento.toLocaleString('pt-BR', {
+                                                    style: 'currency',
+                                                    currency: 'BRL'
+                                                })}
+                                            </TableCell>
+                                            <TableCell className="text-xs sm:text-sm text-right">
+                                                {item.vltotalcustoproduto.toLocaleString('pt-BR', {
+                                                    style: 'currency',
+                                                    currency: 'BRL'
+                                                })}
+                                            </TableCell>
+                                            <TableCell className="text-xs sm:text-sm text-right">
+                                                {item.margem}
+                                            </TableCell>
+                                        </TableRow>
+                                    )
+                                })}
                                 <TableRow className="font-bold">
                                     <TableCell colSpan={3} className="text-xs sm:text-sm">Total</TableCell>
                                     <TableCell className="text-xs sm:text-sm text-right">{totals.quantidade}</TableCell>
