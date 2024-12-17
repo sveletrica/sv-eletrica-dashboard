@@ -17,7 +17,6 @@ import {
     RefreshCw,
     ArrowRight,
     Check,
-    MoreVertical,
     MoreHorizontal
 } from 'lucide-react'
 import { cn } from '@/lib/utils'

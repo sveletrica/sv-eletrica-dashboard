@@ -16,7 +16,8 @@ import {
     CheckCircle2,
     RefreshCw,
     ArrowRight,
-    Check
+    Check,
+    MoreHorizontal
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { SobralStats } from '@/types/sobral'
@@ -24,6 +25,8 @@ import SobralLoading from './loading'
 import './styles.css'
 import Link from 'next/link'
 import { toast } from "sonner"
+import { WorkflowProgress } from "@/components/workflow-progress"
+import { Progress } from "@/components/ui/progress"
 
 const CACHE_KEY = 'sobralData'
 const CACHE_DURATION = 24 * 60 * 60 * 1000 // 24 hours in milliseconds
@@ -40,8 +43,9 @@ export default function Sobral() {
     const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
     const [error, setError] = useState<string | null>(null)
     const [isUpdatingESL, setIsUpdatingESL] = useState(false)
+    const [showWorkflow, setShowWorkflow] = useState(false)
 
-    const loadFromCache = () => {
+        const loadFromCache = () => {
         if (typeof window !== 'undefined') {
             const cached = localStorage.getItem(CACHE_KEY)
             if (cached) {
@@ -119,6 +123,8 @@ export default function Sobral() {
 
     const handleESLUpdate = async () => {
         setIsUpdatingESL(true)
+        setShowWorkflow(true)
+
         try {
             const response = await fetch('https://wh.sveletrica.com/webhook/fd642b0f-9a54-4658-9743-9c80b884775a', {
                 method: 'POST',
@@ -133,9 +139,18 @@ export default function Sobral() {
             toast.error('Erro ao atualizar ESL')
             console.error('Error updating ESL:', error)
         } finally {
-            setIsUpdatingESL(false)
+            // setIsUpdatingESL(false)
         }
     }
+    useEffect(() => {
+        const handleWorkflowComplete = () => {
+            setIsUpdatingESL(false)
+            setShowWorkflow(false)
+        }
+
+        window.addEventListener('workflowComplete', handleWorkflowComplete)
+        return () => window.removeEventListener('workflowComplete', handleWorkflowComplete)
+    }, [])
 
     useEffect(() => {
         fetchData()
@@ -169,11 +184,11 @@ export default function Sobral() {
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center pl-10">
-                <h1 className="text-3xl font-bold">Sobral</h1>
-                <div className="flex items-center gap-4">
+            <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 px-4 md:px-10">
+                <h1 className="text-3xl font-bold text-center md:text-left">Sobral</h1>
+                <div className="flex flex-row justify-center items-center gap-4">
                     {lastUpdate && (
-                        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-black text-white px-4 py-2 rounded-full">
+                        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-black text-white px-4 py-1 rounded-full max-w-full sm:max-w-sm text-center whitespace-nowrap">
                             <span className="text-xs">
                                 Última atualização: {format(lastUpdate, "dd/MM/yyyy HH:mm", { locale: ptBR })}
                             </span>
@@ -214,44 +229,71 @@ export default function Sobral() {
                 </div>
             )}
 
-            <div className="grid grid-cols-3 md:grid-cols-3 gap-6">
+<div className="grid grid-cols-3 md:grid-cols-3 gap-2">
                 <Card className="stats-card">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total em Estoque</CardTitle>
-                        <Package className="h-7 w-7 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-3xl font-bold">{safeData.totalEstoque.toLocaleString('pt-BR')}</p>
-                    </CardContent>
-                </Card>
-                <Card className="stats-card">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Etiquetas em uso</CardTitle>
-                        <Tag className="h-7 w-7 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-3xl font-bold">{safeData.produtosEtiquetados.toLocaleString('pt-BR')}</p>
-                        <p className="text-xs md:text-sm text-muted-foreground">
-                            {calculatePercentage(safeData.produtosEtiquetados, safeData.totalEstoque)}% do total
-                        </p>
-                    </CardContent>
-                </Card>
-                <Card className="stats-card group">
-                    <Link href="/sem-etiqueta">
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Em Stk sem Etiqueta</CardTitle>
-                            <AlertTriangle className="h-7 w-7 text-muted-foreground" />
+                    <div className="relative">
+                        <div className="absolute top-2 right-2">
+                            <Package className="h-5 w-5 md:h-7 md:w-7 text-muted-foreground" />
+                        </div>
+                        <CardHeader className="flex flex-row items-center space-y-0 pb-2 pr-6">
+                            <CardTitle className="text-sm font-medium leading-tight">Total em Estoque</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <p className="text-3xl font-bold">{safeData.emStkSemEtiq.toLocaleString('pt-BR')}</p>
-                            <p className="text-xs md:text-sm text-muted-foreground">
-                                {calculatePercentage(safeData.emStkSemEtiq, safeData.totalEstoque)}% do total
-                            </p>
-                            <p className="text-xs md:text-sm  text-muted-foreground mt-2 flex items-center gap-1 group-hover:text-primary transition-colors">
-                                Ver detalhes <ArrowRight className="h-4 w-4" />
-                            </p>
+                            <p className="text-3xl font-bold">{safeData.totalEstoque.toLocaleString('pt-BR')}</p>
                         </CardContent>
-                    </Link>
+                    </div>
+                </Card>
+                <Card className="stats-card">
+                    <div className="relative">
+                        <div className="absolute top-2 right-2">
+                            <Tag className="h-5 w-5 md:h-7 md:w-7 text-muted-foreground" />
+                        </div>
+                        <CardHeader className="flex flex-row items-center space-y-0 pb-2 pr-12">
+                            <CardTitle className="text-sm font-medium">Etiquetas em uso</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p className="text-3xl font-bold">{safeData.produtosEtiquetados.toLocaleString('pt-BR')}</p>
+                            <div className="space-y-2">
+                                <p className="text-xs md:text-sm text-muted-foreground">
+                                    {calculatePercentage(safeData.produtosEtiquetados, safeData.totalEstoque)}% do total
+                                </p>
+                                <Progress 
+                                    value={Number(calculatePercentage(safeData.produtosEtiquetados, safeData.totalEstoque))} 
+                                    className="h-2"
+                                />
+                            </div>
+                        </CardContent>
+                    </div>
+                </Card>
+                <Card className="stats-card group">
+                    <div className="relative">
+                        <div className="absolute top-2 right-2">
+                            <AlertTriangle className="h-5 w-5 md:h-7 md:w-7 text-muted-foreground" />
+                        </div>
+                        <Link href="/sem-etiqueta-sobral">
+                            <CardHeader className="flex flex-row items-center space-y-0 pb-2 pr-12">
+                                <CardTitle className="text-sm font-medium">Stk sem Etiqueta</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <p className="text-3xl font-bold">{safeData.emStkSemEtiq.toLocaleString('pt-BR')}</p>
+                                <div className="space-y-2">
+                                    <p className="text-xs md:text-sm text-muted-foreground">
+                                        {calculatePercentage(safeData.emStkSemEtiq, safeData.totalEstoque)}% do total
+                                    </p>
+                                    <Progress 
+                                        value={Number(calculatePercentage(safeData.emStkSemEtiq, safeData.totalEstoque))} 
+                                        className="h-2"
+                                    />
+                                </div>
+                                <p className="text-xs md:text-sm text-muted-foreground mt-2 items-center gap-1 group-hover:text-primary transition-colors hidden md:flex">
+                                    Ver detalhes <ArrowRight className="h-4 w-4" />
+                                </p>
+                            </CardContent>
+                        </Link>
+                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 md:hidden">
+                            <MoreHorizontal className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                    </div>
                 </Card>
             </div>
 
@@ -314,6 +356,14 @@ export default function Sobral() {
                     </div>
                 </CardContent>
             </Card>
+
+            {showWorkflow && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-background p-6 rounded-lg shadow-lg w-full max-w-md">
+                        <WorkflowProgress />
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
