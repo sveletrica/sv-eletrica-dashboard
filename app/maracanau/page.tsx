@@ -187,7 +187,7 @@ export default function Maracanau() {
                 <h1 className="text-3xl font-bold">Maracanau</h1>
                 <div className="flex items-center gap-4">
                     {lastUpdate && (
-                        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-black text-white px-4 py-2 rounded-full w-full max-w-sm text-center">
+                        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-black text-white px-4 py-1 rounded-full max-w-full sm:max-w-sm text-center whitespace-nowrap">
                             <span className="text-xs">
                                 Última atualização: {format(lastUpdate, "dd/MM/yyyy HH:mm", { locale: ptBR })}
                             </span>
