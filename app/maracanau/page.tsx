@@ -305,7 +305,7 @@ export default function Maracanau() {
                             </div>
                         </div>
                         <div className="flex flex-row items-center space-x-2 group cursor-pointer">
-                            <Link href="/bind-sem-estoque" className="flex flex-row items-center space-x-2">
+                            <Link href="/bind-sem-estoque-maracanau" className="flex flex-row items-center space-x-2">
                                 <PackageX className="h-7 w-7 text-muted-foreground group-hover:text-primary transition-colors" />
                                 <div>
                                     <h3 className="font-semibold group-hover:text-primary transition-colors">Bind sem Estoque</h3>
