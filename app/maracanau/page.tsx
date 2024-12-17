@@ -16,7 +16,8 @@ import {
     CheckCircle2,
     RefreshCw,
     ArrowRight,
-    Check
+    Check,
+    MoreVertical
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { MaracanauStats } from '@/types/maracanau'
@@ -183,9 +184,9 @@ export default function Maracanau() {
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center pl-10">
-                <h1 className="text-3xl font-bold">Maracanau</h1>
-                <div className="flex items-center gap-4">
+            <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 px-4 md:px-10">
+                <h1 className="text-3xl font-bold text-center md:text-left">Maracanau</h1>
+                <div className="flex flex-row justify-center items-center gap-4">
                     {lastUpdate && (
                         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-black text-white px-4 py-1 rounded-full max-w-full sm:max-w-sm text-center whitespace-nowrap">
                             <span className="text-xs">
@@ -251,21 +252,26 @@ export default function Maracanau() {
                     </CardContent>
                 </Card>
                 <Card className="stats-card group">
-                    <Link href="/sem-etiqueta-maracanau">
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Em Stk sem Etiqueta</CardTitle>
-                            <AlertTriangle className="h-7 w-7 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-3xl font-bold">{safeData.emStkSemEtiq.toLocaleString('pt-BR')}</p>
-                            <p className="text-xs md:text-sm text-muted-foreground">
-                                {calculatePercentage(safeData.emStkSemEtiq, safeData.totalEstoque)}% do total
-                            </p>
-                            <p className="text-xs md:text-sm  text-muted-foreground mt-2 flex items-center gap-1 group-hover:text-primary transition-colors">
-                                Ver detalhes <ArrowRight className="h-4 w-4" />
-                            </p>
-                        </CardContent>
-                    </Link>
+                    <div className="relative">
+                        <div className="absolute top-2 right-2 md:hidden">
+                            <MoreVertical className="h-7 w-7 text-muted-foreground" />
+                        </div>
+                        <Link href="/sem-etiqueta-maracanau">
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">Em Stk sem Etiqueta</CardTitle>
+                                <AlertTriangle className="h-7 w-7 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                <p className="text-3xl font-bold">{safeData.emStkSemEtiq.toLocaleString('pt-BR')}</p>
+                                <p className="text-xs md:text-sm text-muted-foreground">
+                                    {calculatePercentage(safeData.emStkSemEtiq, safeData.totalEstoque)}% do total
+                                </p>
+                                <p className="text-xs md:text-sm text-muted-foreground mt-2 items-center gap-1 group-hover:text-primary transition-colors hidden md:flex">
+                                    Ver detalhes <ArrowRight className="h-4 w-4" />
+                                </p>
+                            </CardContent>
+                        </Link>
+                    </div>
                 </Card>
             </div>
 
