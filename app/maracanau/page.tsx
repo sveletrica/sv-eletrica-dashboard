@@ -17,7 +17,8 @@ import {
     RefreshCw,
     ArrowRight,
     Check,
-    MoreVertical
+    MoreVertical,
+    MoreHorizontal
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { MaracanauStats } from '@/types/maracanau'
@@ -26,6 +27,7 @@ import './styles.css'
 import Link from 'next/link'
 import { toast } from "sonner"
 import { WorkflowProgress } from "@/components/workflow-progress"
+import { Progress } from "@/components/ui/progress"
 
 const CACHE_KEY = 'maracanauData'
 const CACHE_DURATION = 24 * 60 * 60 * 1000 // 24 hours in milliseconds
@@ -229,48 +231,70 @@ export default function Maracanau() {
                 </div>
             )}
 
-            <div className="grid grid-cols-3 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-3 md:grid-cols-3 gap-2">
                 <Card className="stats-card">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total em Estoque</CardTitle>
-                        <Package className="h-7 w-7 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-3xl font-bold">{safeData.totalEstoque.toLocaleString('pt-BR')}</p>
-                    </CardContent>
+                    <div className="relative">
+                        <div className="absolute top-2 right-2">
+                            <Package className="h-5 w-5 md:h-7 md:w-7 text-muted-foreground" />
+                        </div>
+                        <CardHeader className="flex flex-row items-center space-y-0 pb-2 pr-6">
+                            <CardTitle className="text-sm font-medium leading-tight">Total em Estoque</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p className="text-3xl font-bold">{safeData.totalEstoque.toLocaleString('pt-BR')}</p>
+                        </CardContent>
+                    </div>
                 </Card>
                 <Card className="stats-card">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Etiquetas em uso</CardTitle>
-                        <Tag className="h-7 w-7 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-3xl font-bold">{safeData.produtosEtiquetados.toLocaleString('pt-BR')}</p>
-                        <p className="text-xs md:text-sm text-muted-foreground">
-                            {calculatePercentage(safeData.produtosEtiquetados, safeData.totalEstoque)}% do total
-                        </p>
-                    </CardContent>
+                    <div className="relative">
+                        <div className="absolute top-2 right-2">
+                            <Tag className="h-5 w-5 md:h-7 md:w-7 text-muted-foreground" />
+                        </div>
+                        <CardHeader className="flex flex-row items-center space-y-0 pb-2 pr-12">
+                            <CardTitle className="text-sm font-medium">Etiquetas em uso</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p className="text-3xl font-bold">{safeData.produtosEtiquetados.toLocaleString('pt-BR')}</p>
+                            <div className="space-y-2">
+                                <p className="text-xs md:text-sm text-muted-foreground">
+                                    {calculatePercentage(safeData.produtosEtiquetados, safeData.totalEstoque)}% do total
+                                </p>
+                                <Progress 
+                                    value={Number(calculatePercentage(safeData.produtosEtiquetados, safeData.totalEstoque))} 
+                                    className="h-2"
+                                />
+                            </div>
+                        </CardContent>
+                    </div>
                 </Card>
                 <Card className="stats-card group">
                     <div className="relative">
-                        <div className="absolute top-2 right-2 md:hidden">
-                            <MoreVertical className="h-7 w-7 text-muted-foreground" />
+                        <div className="absolute top-2 right-2">
+                            <AlertTriangle className="h-5 w-5 md:h-7 md:w-7 text-muted-foreground" />
                         </div>
                         <Link href="/sem-etiqueta-maracanau">
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Em Stk sem Etiqueta</CardTitle>
-                                <AlertTriangle className="h-7 w-7 text-muted-foreground" />
+                            <CardHeader className="flex flex-row items-center space-y-0 pb-2 pr-12">
+                                <CardTitle className="text-sm font-medium">Stk sem Etiqueta</CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <p className="text-3xl font-bold">{safeData.emStkSemEtiq.toLocaleString('pt-BR')}</p>
-                                <p className="text-xs md:text-sm text-muted-foreground">
-                                    {calculatePercentage(safeData.emStkSemEtiq, safeData.totalEstoque)}% do total
-                                </p>
+                                <div className="space-y-2">
+                                    <p className="text-xs md:text-sm text-muted-foreground">
+                                        {calculatePercentage(safeData.emStkSemEtiq, safeData.totalEstoque)}% do total
+                                    </p>
+                                    <Progress 
+                                        value={Number(calculatePercentage(safeData.emStkSemEtiq, safeData.totalEstoque))} 
+                                        className="h-2"
+                                    />
+                                </div>
                                 <p className="text-xs md:text-sm text-muted-foreground mt-2 items-center gap-1 group-hover:text-primary transition-colors hidden md:flex">
                                     Ver detalhes <ArrowRight className="h-4 w-4" />
                                 </p>
                             </CardContent>
                         </Link>
+                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 md:hidden">
+                            <MoreHorizontal className="h-5 w-5 text-muted-foreground" />
+                        </div>
                     </div>
                 </Card>
             </div>
