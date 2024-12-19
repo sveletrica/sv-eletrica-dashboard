@@ -15,7 +15,7 @@ export async function GET(
 
         // Fetch product details
         const { data: productData, error: productError } = await supabase
-            .from('vw_mssql_bivendas_aux_geral')
+            .from('mvw_mssql_bivendas_aux_geral')
             .select('*')
             .eq('cdproduto', cdproduto)
 

@@ -20,7 +20,7 @@ export async function GET(
             throw new Error('nrdocumento and dtemissao are required')
         }
 
-        const baseUrl = `${SUPABASE_URL}/rest/v1/vw_mssql_bivendas_aux_geral`
+        const baseUrl = `${SUPABASE_URL}/rest/v1/mvw_mssql_bivendas_aux_geral`
         const queryUrl = `${baseUrl}?cdpedido=eq.${cdpedido}&nrdocumento=eq.${nrdocumento}&dtemissao=eq.${dtemissao}`
         
         const response = await fetch(queryUrl, {

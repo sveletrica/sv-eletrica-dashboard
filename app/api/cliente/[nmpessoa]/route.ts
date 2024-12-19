@@ -15,7 +15,7 @@ export async function GET(
         console.log('API Request - Client:', nmpessoa)
 
         const { data, error } = await supabase
-            .from('vw_mssql_bivendas_aux_geral')
+            .from('mvw_mssql_bivendas_aux_geral')
             .select(`
                 cdpedido,
                 nrdocumento,
@@ -38,7 +38,7 @@ export async function GET(
             .order('dtemissao', { ascending: false })
 
         console.log('Supabase Query:', {
-            table: 'vw_mssql_bivendas_aux_geral',
+            table: 'mvw_mssql_bivendas_aux_geral',
             filter: { nmpessoa },
             resultCount: data?.length || 0
         })
