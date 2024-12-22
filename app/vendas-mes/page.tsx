@@ -77,9 +77,6 @@ export default function MonthlySales() {
         return initialDate
     })
     const [selectedFilials, setSelectedFilials] = useState<string[]>(() => {
-        if (data.length && data[0].Detalhes.length) {
-            return data[0].Detalhes.map(detail => detail.NmEmpresaCurtoVenda);
-        }
         return [];
     });
     const [error, setError] = useState<string | null>(null)
@@ -126,8 +123,16 @@ export default function MonthlySales() {
     }, [date])
 
     useEffect(() => {
-        if (data.length && data[0].Detalhes.length) {
-            setSelectedFilials(data[0].Detalhes.map(detail => detail.NmEmpresaCurtoVenda));
+        if (data.length) {
+            const allFilials = new Set<string>();
+            data.forEach(day => {
+                day.Detalhes.forEach(detail => {
+                    if (detail.NmEmpresaCurtoVenda) {
+                        allFilials.add(detail.NmEmpresaCurtoVenda);
+                    }
+                });
+            });
+            setSelectedFilials(Array.from(allFilials));
         }
     }, [data]);
 
@@ -137,8 +142,17 @@ export default function MonthlySales() {
             return [];
         }
 
+        // First, get all unique filial names across all days
+        const allFilials = new Set<string>();
+        data.forEach(day => {
+            day.Detalhes.forEach(detail => {
+                if (detail.NmEmpresaCurtoVenda) {
+                    allFilials.add(detail.NmEmpresaCurtoVenda);
+                }
+            });
+        });
+
         const dailyTotals = data.reduce((acc, day) => {
-            // Skip if DataVenda is undefined or invalid
             if (!day.DataVenda) {
                 return acc;
             }
@@ -147,12 +161,17 @@ export default function MonthlySales() {
             date.setDate(date.getDate() + 1)
             const formattedDate = format(date, 'dd/MM')
             
+            // Initialize dayData with all filials set to 0
             const dayData = {
                 date: formattedDate,
+                ...Array.from(allFilials).reduce((obj, filial) => ({
+                    ...obj,
+                    [filial]: 0
+                }), {})
             }
 
+            // Update values for filials that have data for this day
             day.Detalhes.forEach(detail => {
-                // Skip if required properties are missing
                 if (!detail.TotalVendasDia || !detail.NmEmpresaCurtoVenda) {
                     return;
                 }
@@ -177,6 +196,16 @@ export default function MonthlySales() {
             return [];
         }
 
+        // Get all unique filial names
+        const allFilials = new Set<string>();
+        data.forEach(day => {
+            day.Detalhes.forEach(detail => {
+                if (detail.NmEmpresaCurtoVenda) {
+                    allFilials.add(detail.NmEmpresaCurtoVenda);
+                }
+            });
+        });
+
         const dailyOrders = data.reduce((acc, day) => {
             if (!day.DataVenda) {
                 return acc;
@@ -186,8 +215,13 @@ export default function MonthlySales() {
             date.setDate(date.getDate() + 1)
             const formattedDate = format(date, 'dd/MM')
             
+            // Initialize dayData with all filials set to 0
             const dayData = {
                 date: formattedDate,
+                ...Array.from(allFilials).reduce((obj, filial) => ({
+                    ...obj,
+                    [filial]: 0
+                }), {})
             }
 
             // Calculate total for this day while adding individual filial data
