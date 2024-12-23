@@ -17,7 +17,8 @@ import {
     RefreshCw,
     ArrowRight,
     Check,
-    MoreHorizontal
+    MoreHorizontal,
+    Flashlight
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { MaracanauStats } from '@/types/maracanau'
@@ -27,6 +28,13 @@ import Link from 'next/link'
 import { toast } from "sonner"
 import { WorkflowProgress } from "@/components/workflow-progress"
 import { Progress } from "@/components/ui/progress"
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 
 const CACHE_KEY = 'maracanauData'
 const CACHE_DURATION = 24 * 60 * 60 * 1000 // 24 hours in milliseconds
@@ -44,6 +52,9 @@ export default function Maracanau() {
     const [error, setError] = useState<string | null>(null)
     const [isUpdatingESL, setIsUpdatingESL] = useState(false)
     const [showWorkflow, setShowWorkflow] = useState(false)
+    const [showFlashModal, setShowFlashModal] = useState(false)
+    const [productCode, setProductCode] = useState('')
+    const [isFlashing, setIsFlashing] = useState(false)
 
     const loadFromCache = () => {
         if (typeof window !== 'undefined') {
@@ -143,6 +154,49 @@ export default function Maracanau() {
         }
     }
 
+    const handleFlashLight = async () => {
+        if (!productCode.trim()) {
+            toast.error('Digite um código de produto')
+            return
+        }
+
+        setIsFlashing(true)
+        try {
+            const response = await fetch('https://n8n.sveletrica.com/webhook/led', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    codproduto: productCode.trim(),
+                    storeId: "1726689909591"
+                })
+            })
+
+            const responseText = await response.text()
+            let data
+
+            try {
+                data = JSON.parse(responseText)
+            } catch {
+                throw new Error('Erro ao processar resposta do servidor')
+            }
+
+            if (data.success) {
+                toast.success(`O Led da ETIQUETA com o Produto "${productCode}" irá piscar durante 1 minuto.`)
+                setShowFlashModal(false)
+                setProductCode('')
+            } else {
+                toast.error('Não foi encontrada uma etiqueta para este Produto, tem certeza que estás operando na Loja correta?')
+            }
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : 'Erro ao enviar comando')
+            console.error('Error flashing light:', error)
+        } finally {
+            setIsFlashing(false)
+        }
+    }
+
     useEffect(() => {
         const handleWorkflowComplete = () => {
             setIsUpdatingESL(false)
@@ -195,6 +249,13 @@ export default function Maracanau() {
                             </span>
                         </div>
                     )}
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowFlashModal(true)}
+                    >
+                        <Flashlight className="h-4 w-4" />
+                    </Button>
                     <Button
                         variant="outline"
                         size="sm"
@@ -365,6 +426,38 @@ export default function Maracanau() {
                     </div>
                 </div>
             )}
+
+            <Dialog open={showFlashModal} onOpenChange={setShowFlashModal}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Digite o código do produto para piscar a etiqueta</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 pt-4">
+                        <Input
+                            placeholder="Código do produto"
+                            value={productCode}
+                            onChange={(e) => setProductCode(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    handleFlashLight()
+                                }
+                            }}
+                        />
+                        <Button 
+                            onClick={handleFlashLight} 
+                            className="w-full"
+                            disabled={isFlashing}
+                        >
+                            {isFlashing ? (
+                                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                                <Flashlight className="h-4 w-4 mr-2" />
+                            )}
+                            Piscar Etiqueta
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }
