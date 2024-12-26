@@ -1,17 +1,23 @@
 import { createClient } from '@supabase/supabase-js'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 
 const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL as string,
     process.env.SUPABASE_SERVICE_ROLE_KEY as string
 )
 
+type Props = {
+    params: {
+        nmpessoa: string
+    }
+}
+
 export async function GET(
-    request: Request,
-    context: { params: { nmpessoa: string } }
+    request: NextRequest,
+    props: Props
 ) {
     try {
-        const nmpessoa = decodeURIComponent(context.params.nmpessoa)
+        const nmpessoa = decodeURIComponent(props.params.nmpessoa)
         console.log('API Request - Client:', nmpessoa)
 
         const { data, error } = await supabase

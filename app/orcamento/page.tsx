@@ -689,7 +689,7 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                             <div className="text-sm text-muted-foreground mt-4">
                                 <p className="font-medium">Como usar:</p>
                                 <p>1. Digite o código do orçamento no campo acima</p>
-                                <p>2. Clique em "Buscar" ou pressione Enter</p>
+                                <p>2. Clique em Buscar ou pressione Enter</p>
                                 <p>3. Analise os dados e utilize o simulador de descontos se necessário</p>
                             </div>
                         </div>
