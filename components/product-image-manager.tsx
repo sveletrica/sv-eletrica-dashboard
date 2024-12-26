@@ -536,29 +536,33 @@ export function ProductImageManager({ productCode, productName, onImageUpdate }:
                             </Button>
                         </div>
                         
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-h-[60vh] overflow-y-auto">
+                        <div className="grid grid-cols-3 md:grid-cols-3 gap-4 max-h-[60vh] overflow-y-auto">
                             {searchResults.length > 0 ? (
                                 searchResults.map((result, index) => (
                                     <div
                                         key={index}
                                         className={cn(
-                                            "relative group aspect-square cursor-pointer bg-muted rounded-md overflow-hidden",
+                                            "relative group cursor-pointer bg-muted rounded-md overflow-hidden",
+                                            "w-full pb-[100%]",
                                             selectedImages.has(result.url) && "ring-2 ring-primary"
                                         )}
                                         onClick={() => handleImageSelect(result.url)}
                                     >
-                                        <Image
-                                            src={result.thumbnail || result.url}
-                                            alt={result.alt}
-                                            fill
-                                            className="object-contain hover:scale-105 transition-transform duration-200"
-                                            unoptimized
-                                        />
-                                        {selectedImages.has(result.url) && (
-                                            <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
-                                                <Check className="h-6 w-6 text-primary" />
-                                            </div>
-                                        )}
+                                        <div className="absolute inset-0">
+                                            <Image
+                                                src={result.thumbnail || result.url}
+                                                alt={result.alt}
+                                                fill
+                                                className="object-cover w-full h-full"
+                                                unoptimized
+                                                sizes="(max-width: 768px) 50vw, 33vw"
+                                            />
+                                            {selectedImages.has(result.url) && (
+                                                <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
+                                                    <Check className="h-6 w-6 text-primary" />
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 ))
                             ) : (
