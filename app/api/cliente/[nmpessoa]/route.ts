@@ -14,10 +14,10 @@ type Props = {
 
 export async function GET(
     request: NextRequest,
-    props: Props
+    { params }: Props
 ) {
     try {
-        const nmpessoa = decodeURIComponent(props.params.nmpessoa)
+        const nmpessoa = decodeURIComponent(params.nmpessoa)
         console.log('API Request - Client:', nmpessoa)
 
         const { data, error } = await supabase
@@ -43,19 +43,8 @@ export async function GET(
             .eq('nmpessoa', nmpessoa)
             .order('dtemissao', { ascending: false })
 
-        console.log('Supabase Query:', {
-            table: 'mvw_mssql_bivendas_aux_geral',
-            filter: { nmpessoa },
-            resultCount: data?.length || 0
-        })
-
         if (error) {
-            console.error('Supabase Error:', {
-                error,
-                message: error.message,
-                details: error.details,
-                hint: error.hint
-            })
+            console.error('Supabase Error:', error)
             throw error
         }
 
@@ -63,12 +52,6 @@ export async function GET(
             console.log('No data found for client:', nmpessoa)
             return NextResponse.json([])
         }
-
-        console.log('Data found:', {
-            count: data.length,
-            firstRecord: data[0],
-            lastRecord: data[data.length - 1]
-        })
 
         return NextResponse.json(data)
     } catch (error: any) {
