@@ -39,6 +39,30 @@ import Fuse from 'fuse.js';
 import { Roboto } from 'next/font/google'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { Check, ChevronsUpDown } from "lucide-react"
+import Image from 'next/image'
+import { ImagePreviewModal } from "@/components/image-preview-modal"
+import { ManageProductImagesModal } from "@/components/manage-product-images-modal"
 
 const roboto = Roboto({
     weight: ['400', '500'],
@@ -57,6 +81,10 @@ interface CachedData {
 interface SearchIndex {
     fuse: Fuse<InventoryItem>;
     lastData: InventoryItem[];
+}
+
+interface ProductImage {
+    imagem_url: string | null;
 }
 
 function getDefaultVisibleColumns(): Set<ColumnId> {
@@ -88,6 +116,21 @@ const loadSavedColumnOrder = (): string[] => {
     }
 };
 
+// Add this constant at the top of the file with other constants
+const ALL_GROUPS = '__all__';
+
+function getProductImage(cdChamada: string): Promise<string | null> {
+    return fetch(`/api/produto/image?cdChamada=${encodeURIComponent(cdChamada)}`)
+        .then(response => {
+            if (!response.ok) return null;
+            return response.json().then(data => data.imageUrl || null);
+        })
+        .catch(error => {
+            console.error('Error fetching product image:', error);
+            return null;
+        });
+}
+
 export default function Inventory() {
     const router = useRouter()
     const searchParams = useSearchParams()
@@ -108,6 +151,27 @@ export default function Inventory() {
     const [searchTerms, setSearchTerms] = useState<string[]>([])
     const [filteredData, setFilteredData] = useState<InventoryItem[]>([])
     const searchIndexRef = useRef<SearchIndex | null>(null);
+    const [selectedGroups, setSelectedGroups] = useState<string[]>(() => {
+        const groups = searchParams.get('groups');
+        if (!groups) return [ALL_GROUPS];
+        try {
+            const parsed = JSON.parse(decodeURIComponent(groups));
+            return Array.isArray(parsed) && parsed.length > 0 ? parsed : [ALL_GROUPS];
+        } catch {
+            return [ALL_GROUPS];
+        }
+    });
+    const [isMobile, setIsMobile] = useState(false);
+    const [imageCache, setImageCache] = useState<Record<string, string | null>>({});
+    const [selectedImage, setSelectedImage] = useState<string | null>(null);
+    const [selectedProduct, setSelectedProduct] = useState<{ code: string; name: string } | null>(null);
+    const [showOnlyInStock, setShowOnlyInStock] = useState(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('showOnlyInStock');
+            return saved ? JSON.parse(saved) : false;
+        }
+        return false;
+    });
 
     // Initialize visible columns and column order from localStorage
     useEffect(() => {
@@ -274,7 +338,52 @@ export default function Inventory() {
         await fetchInventoryData(true)
     }
 
-    // Initialize search index when data changes
+    // Modifique a função getUniqueGroups
+    const getUniqueGroups = useCallback((items: InventoryItem[]): string[] => {
+        // Primeiro filtra os itens com estoque
+        const itemsWithStock = items.filter(item => item.StkTotal > 0);
+        
+        // Depois pega os grupos únicos dos itens com estoque
+        const groups = new Set(itemsWithStock.map(item => item.NmGrupoProduto));
+        
+        return Array.from(groups).sort();
+    }, []);
+
+    // Modifique também a lógica de seleção de grupos para lidar com grupos que podem não existir mais
+    useEffect(() => {
+        if (data.length > 0 && !selectedGroups.includes(ALL_GROUPS)) {
+            const availableGroups = getUniqueGroups(data);
+            
+            // Filtra os grupos selecionados para manter apenas os que ainda existem
+            const validGroups = selectedGroups.filter(group => availableGroups.includes(group));
+            
+            // Se não sobrar nenhum grupo válido, volta para "Todos os grupos"
+            if (validGroups.length === 0) {
+                setSelectedGroups([ALL_GROUPS]);
+                
+                // Atualiza a URL
+                const params = new URLSearchParams(searchParams);
+                params.delete('groups');
+                if (searchTerm) {
+                    params.set('q', searchTerm);
+                }
+                router.replace(`/inventory?${params.toString()}`);
+            } else if (validGroups.length !== selectedGroups.length) {
+                // Se alguns grupos foram removidos, atualiza a seleção
+                setSelectedGroups(validGroups);
+                
+                // Atualiza a URL
+                const params = new URLSearchParams(searchParams);
+                params.set('groups', encodeURIComponent(JSON.stringify(validGroups)));
+                if (searchTerm) {
+                    params.set('q', searchTerm);
+                }
+                router.replace(`/inventory?${params.toString()}`);
+            }
+        }
+    }, [data, selectedGroups, getUniqueGroups, searchParams, searchTerm, router]);
+
+    // Modify the useEffect that handles search/filtering to include group filtering
     useEffect(() => {
         if (data.length > 0) {
             const options = {
@@ -292,15 +401,39 @@ export default function Inventory() {
                 lastData: data
             };
             
-            // Initialize filtered data
-            if (searchTerm) {
-                // Trigger initial search if there's a search term
-                debouncedSearch(searchTerm);
-            } else {
-                setFilteredData(data);
+            // Aplique todos os filtros em sequência
+            let filtered = data;
+            
+            // 1. Filtro de grupo
+            if (!selectedGroups.includes(ALL_GROUPS)) {
+                filtered = filtered.filter(item => selectedGroups.includes(item.NmGrupoProduto));
             }
+            
+            // 2. Filtro de estoque
+            if (showOnlyInStock) {
+                filtered = filtered.filter(item => item.StkTotal > 0);
+            }
+            
+            // 3. Filtro de busca
+            if (searchTerm) {
+                const searchTerms = searchTerm.trim().toLowerCase().split(/\s+/);
+                filtered = filtered.filter(item => {
+                    const itemString = Array.from(visibleColumns)
+                        .map(columnId => {
+                            const value = item[columnId];
+                            if (value === null || value === undefined) return '';
+                            return String(value);
+                        })
+                        .join(' ')
+                        .toLowerCase();
+
+                    return searchTerms.every(term => itemString.includes(term));
+                });
+            }
+            
+            setFilteredData(filtered);
         }
-    }, [data, visibleColumns, searchTerm]); // Add searchTerm as dependency
+    }, [data, visibleColumns, searchTerm, selectedGroups, showOnlyInStock]); // Adicione showOnlyInStock às dependências
 
     // Update the debouncedSearch to be memoized with useCallback
     const debouncedSearch = useCallback(
@@ -350,22 +483,24 @@ export default function Inventory() {
 
     // Update search term and trigger search
     const handleSearch = (value: string) => {
-        // Update local state
-        setSearchTerm(value)
+        setSearchTerm(value);
         
-        // Update URL with search parameter
-        const params = new URLSearchParams(searchParams)
+        const params = new URLSearchParams(searchParams);
         if (value) {
-            params.set('q', value)
+            params.set('q', value);
         } else {
-            params.delete('q')
+            params.delete('q');
         }
         
-        // Replace current URL with new search params
-        router.replace(`/inventory?${params.toString()}`)
+        // Mantém os grupos selecionados na URL
+        if (selectedGroups.length === 1 && selectedGroups[0] === ALL_GROUPS) {
+            params.delete('groups');
+        } else {
+            params.set('groups', encodeURIComponent(JSON.stringify(selectedGroups)));
+        }
         
-        // Trigger search
-        debouncedSearch(value)
+        router.replace(`/inventory?${params.toString()}`);
+        debouncedSearch(value);
     };
 
     // Format cell value for display (move outside component for better performance)
@@ -400,136 +535,213 @@ export default function Inventory() {
         return String(value);
     }, []);
 
-    // Memoize table configuration
+    // Adicione este useEffect para detectar a largura da tela
+    useEffect(() => {
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth < 640);
+        };
+        
+        // Checa inicialmente
+        checkMobile();
+        
+        // Adiciona listener para mudanças de tamanho
+        window.addEventListener('resize', checkMobile);
+        
+        // Cleanup
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
+
+    // Modifique a função que define os tamanhos das colunas no tableConfig
+    const getColumnSize = (columnId: string): number => {
+        if (columnId === 'imagem') return 60;
+        if (columnSizing[columnId]) {
+            return columnSizing[columnId];
+        }
+        
+        switch (columnId) {
+            case 'CdChamada':
+                return 70;
+            case 'NmProduto':
+                return isMobile ? 150 : 400;
+            case 'NmGrupoProduto':
+                return isMobile ? 100 : 120;
+            case 'NmFamiliaProduto':
+                return isMobile ? 150 : 180;
+            case 'NmFornecedorPrincipal':
+                return isMobile ? 120 : 150;
+            case 'Atualizacao':
+            case 'DataInicio':
+            case 'DataFim':
+                return isMobile ? 140 : 160;
+            case 'VlPreco_Empresa59':
+            case 'PrecoPromo':
+            case 'PrecoDe':
+                return 120;
+            case 'QtEstoque_Empresa1':
+            case 'QtEstoque_Empresa4':
+            case 'QtEstoque_Empresa12':
+            case 'QtEstoque_Empresa59':
+            case 'QtEstoque_Empresa13':
+            case 'QtEstoque_Empresa15':
+            case 'QtEstoque_Empresa17':
+            case 'CdSigla':
+                return 40;
+            case 'StkTotal':
+                return 100;
+            default:
+                return isMobile ? 100 : 120;
+        }
+    };
+
+    // First, define loadProductImage
+    const loadProductImage = useCallback(async (cdChamada: string) => {
+        if (!cdChamada) return;
+        
+        // Check cache inside the function instead of using it as a dependency
+        if (imageCache[cdChamada] !== undefined) return;
+        
+        const imageUrl = await getProductImage(cdChamada);
+        setImageCache(prev => ({
+            ...prev,
+            [cdChamada]: imageUrl
+        }));
+    }, [imageCache]);
+
+    // Then define tableConfig
     const tableConfig = useMemo(() => ({
         data: filteredData,
-        columns: Array.from(visibleColumns).map(columnId => ({
-            id: columnId,
-            accessorKey: columnId,
-            header: ({ column }: { column: any }) => {
-                // Add defensive check for columnDefinitions
-                const columnDef = columnDefinitions[columnId];
-                const label = columnDef?.label || columnId; // Fallback to columnId if label not found
-                
-                return (
-                    <div className="flex items-center gap-2">
-                        <span>{label}</span>
-                        <button
-                            onClick={() => column.toggleSorting()}
-                            className="ml-auto"
-                        >
-                            {column.getIsSorted() === 'asc' ? (
-                                <ArrowUp className="h-4 w-4" />
-                            ) : column.getIsSorted() === 'desc' ? (
-                                <ArrowDown className="h-4 w-4" />
-                            ) : (
-                                <ArrowUpDown className="h-4 w-4 opacity-50" />
-                            )}
-                        </button>
-                    </div>
-                )
-            },
-            cell: ({ getValue, row }: { getValue: () => any, row: any }) => {
-                const value = getValue()
-                const formattedValue = formatCellValue(value, columnId)
-                
-                // Add special handling for CdChamada column
-                if (columnId === 'CdChamada') {
-                    // Preserve current search query in the product link
-                    const currentParams = new URLSearchParams(searchParams)
-                    const returnUrl = `/inventory?${currentParams.toString()}`
+        columns: [
+            {
+                id: 'imagem',
+                header: 'Imagem',
+                cell: ({ row }) => {
+                    const cdChamada = row.getValue('CdChamada') as string;
+                    const productName = row.getValue('NmProduto') as string;
+                    const imageUrl = imageCache[cdChamada];
+                    
+                    const handleClick = () => {
+                        if (imageUrl) {
+                            // If there's an image, show preview
+                            setSelectedImage(imageUrl);
+                        } else {
+                            // If no image, open image manager
+                            setSelectedProduct({ code: cdChamada, name: productName });
+                        }
+                    };
                     
                     return (
-                        <Link
-                            href={`/produto/${value.trim()}?returnUrl=${encodeURIComponent(returnUrl)}`}
-                            className="text-blue-500 hover:text-blue-700 underline"
-                        >
-                            {formattedValue}
-                        </Link>
-                    )
-                }
-                
-                if (searchTerm && typeof formattedValue === 'string') {
+                        <>
+                            <div 
+                                className="w-12 h-12 relative cursor-pointer"
+                                onClick={handleClick}
+                            >
+                                {imageUrl ? (
+                                    <Image
+                                        src={imageUrl}
+                                        alt="Produto"
+                                        fill
+                                        className="object-contain hover:scale-105 transition-transform duration-200"
+                                        sizes="48px"
+                                    />
+                                ) : (
+                                    <div className="w-full h-full bg-gray-100 hover:bg-gray-200 transition-colors flex items-center justify-center">
+                                        <span className="text-xs text-gray-400">Sem imagem</span>
+                                    </div>
+                                )}
+                            </div>
+                        </>
+                    );
+                },
+                size: 60,
+                minSize: 60,
+                maxSize: 60,
+            }
+        ].concat(
+            Array.from(visibleColumns).map(columnId => ({
+                id: columnId,
+                accessorKey: columnId,
+                header: ({ column }: { column: any }) => {
+                    const columnDef = columnDefinitions[columnId];
+                    const label = columnDef?.label || columnId;
+                    
                     return (
-                        <HighlightedText 
-                            text={formattedValue}
-                            searchTerms={searchTerm.trim().toLowerCase().split(/\s+/)}
-                        />
+                        <div className="flex items-center gap-2">
+                            <span>{label}</span>
+                            <button
+                                onClick={() => column.toggleSorting()}
+                                className="ml-auto"
+                            >
+                                {column.getIsSorted() === 'asc' ? (
+                                    <ArrowUp className="h-4 w-4" />
+                                ) : column.getIsSorted() === 'desc' ? (
+                                    <ArrowDown className="h-4 w-4" />
+                                ) : (
+                                    <ArrowUpDown className="h-4 w-4 opacity-50" />
+                                )}
+                            </button>
+                        </div>
                     )
-                }
-                
-                return formattedValue
-            },
-            sortingFn: (rowA: any, rowB: any, columnId: string) => {
-                const a = rowA.getValue(columnId)
-                const b = rowB.getValue(columnId)
+                },
+                cell: ({ getValue, row }: { getValue: () => any, row: any }) => {
+                    const value = getValue()
+                    const formattedValue = formatCellValue(value, columnId)
+                    
+                    if (columnId === 'CdChamada') {
+                        const currentParams = new URLSearchParams(searchParams)
+                        const returnUrl = `/inventory?${currentParams.toString()}`
+                        
+                        return (
+                            <Link
+                                href={`/produto/${value.trim()}?returnUrl=${encodeURIComponent(returnUrl)}`}
+                                className="text-blue-500 hover:text-blue-700 underline"
+                            >
+                                {formattedValue}
+                            </Link>
+                        )
+                    }
+                    
+                    if (searchTerm && typeof formattedValue === 'string') {
+                        return (
+                            <HighlightedText 
+                                text={formattedValue}
+                                searchTerms={searchTerm.trim().toLowerCase().split(/\s+/)}
+                            />
+                        )
+                    }
+                    
+                    return formattedValue
+                },
+                sortingFn: (rowA: any, rowB: any, columnId: string) => {
+                    const a = rowA.getValue(columnId)
+                    const b = rowB.getValue(columnId)
 
-                // Handle numeric columns
-                if (
-                    columnId.startsWith('QtEstoque_') || 
-                    columnId === 'StkTotal' ||
-                    columnId.startsWith('VlPreco') ||
-                    columnId === 'PrecoPromo' ||
-                    columnId === 'PrecoDe'
-                ) {
-                    return (a as number) > (b as number) ? 1 : -1
-                }
+                    if (
+                        columnId.startsWith('QtEstoque_') || 
+                        columnId === 'StkTotal' ||
+                        columnId.startsWith('VlPreco') ||
+                        columnId === 'PrecoPromo' ||
+                        columnId === 'PrecoDe'
+                    ) {
+                        return (a as number) > (b as number) ? 1 : -1
+                    }
 
-                // Handle date columns
-                if (
-                    columnId === 'Atualizacao' ||
-                    columnId === 'DataInicio' ||
-                    columnId === 'DataFim'
-                ) {
-                    const dateA = a ? new Date(a as string) : new Date(0)
-                    const dateB = b ? new Date(b as string) : new Date(0)
-                    return dateA.getTime() - dateB.getTime()
-                }
+                    if (
+                        columnId === 'Atualizacao' ||
+                        columnId === 'DataInicio' ||
+                        columnId === 'DataFim'
+                    ) {
+                        const dateA = a ? new Date(a as string) : new Date(0)
+                        const dateB = b ? new Date(b as string) : new Date(0)
+                        return dateA.getTime() - dateB.getTime()
+                    }
 
-                return (a as string).localeCompare(b as string, 'pt-BR')
-            },
-            size: (() => {
-                if (columnSizing[columnId]) {
-                    return columnSizing[columnId];
-                }
-                
-                switch (columnId) {
-                    case 'CdChamada':
-                        return 70;
-                    case 'NmProduto':
-                        return window.innerWidth < 640 ? 150 : 400;
-                    case 'NmGrupoProduto':
-                        return window.innerWidth < 640 ? 100 : 120;
-                    case 'NmFamiliaProduto':
-                        return window.innerWidth < 640 ? 150 : 180;
-                    case 'NmFornecedorPrincipal':
-                        return window.innerWidth < 640 ? 120 : 150; // Add size for supplier column
-                    case 'Atualizacao':
-                    case 'DataInicio':
-                    case 'DataFim':
-                        return window.innerWidth < 640 ? 140 : 160;
-                    case 'VlPreco_Empresa59':
-                    case 'PrecoPromo':
-                    case 'PrecoDe':
-                        return 120;
-                    case 'QtEstoque_Empresa1':
-                    case 'QtEstoque_Empresa4':
-                    case 'QtEstoque_Empresa12':
-                    case 'QtEstoque_Empresa59':
-                    case 'QtEstoque_Empresa13':
-                    case 'QtEstoque_Empresa15':
-                    case 'QtEstoque_Empresa17':
-                    case 'CdSigla':
-                        return 40;
-                    case 'StkTotal':
-                        return 100;
-                    default:
-                        return window.innerWidth < 640 ? 100 : 120;
-                }
-            })(),
-            minSize: columnId === 'NmProduto' ? 150 : 80, // Set minimum size for produto column
-            maxSize: columnId === 'NmProduto' ? 600 : 400, // Set maximum size for produto column
-        })),
+                    return (a as string).localeCompare(b as string, 'pt-BR')
+                },
+                size: getColumnSize(columnId),
+                minSize: columnId === 'NmProduto' ? 150 : 80,
+                maxSize: columnId === 'NmProduto' ? 600 : 400,
+            }))
+        ),
         state: {
             pagination: {
                 pageIndex,
@@ -571,9 +783,43 @@ export default function Inventory() {
             minSize: 80,
             maxSize: 600,
         },
-    }), [filteredData, visibleColumns, searchTerm, formatCellValue, columnOrder, columnSizing, sorting, pageIndex, pageSize]);
+    }), [
+        filteredData,
+        visibleColumns,
+        searchTerm,
+        formatCellValue,
+        columnOrder,
+        columnSizing,
+        sorting,
+        pageIndex,
+        pageSize,
+        isMobile,
+        imageCache,
+        searchParams
+    ]);
 
+    // Initialize the table
     const table = useReactTable(tableConfig);
+
+    // Now we can add the effect that uses the table
+    useEffect(() => {
+        const loadVisibleImages = async () => {
+            const visibleRows = table.getRowModel().rows;
+            const cdChamadas = visibleRows.map(row => row.getValue('CdChamada') as string);
+            
+            // Filter out products that are already in cache
+            const unloadedCdChamadas = cdChamadas.filter(
+                cdChamada => cdChamada && imageCache[cdChamada] === undefined
+            );
+            
+            // Load images in parallel
+            await Promise.all(
+                unloadedCdChamadas.map(cdChamada => loadProductImage(cdChamada))
+            );
+        };
+        
+        loadVisibleImages();
+    }, [pageIndex, sorting, filteredData]); // Remove table from dependencies, use pageIndex and sorting instead
 
     // Add this function to handle column reordering
     const handleColumnReorder = useCallback((draggedColumnId: string, targetColumnId: string) => {
@@ -627,248 +873,394 @@ export default function Inventory() {
         });
     };
 
+    // Modifique a função toggleGroup
+    const toggleGroup = (group: string) => {
+        let newSelection: string[];
+        
+        setSelectedGroups(current => {
+            // Se selecionando "Todos os grupos"
+            if (group === ALL_GROUPS) {
+                newSelection = [ALL_GROUPS];
+            }
+            // Se já está selecionado, remove
+            else if (current.includes(group)) {
+                newSelection = current.filter(g => g !== group);
+                // Se ficou vazio, seleciona "Todos os grupos"
+                newSelection = newSelection.length === 0 ? [ALL_GROUPS] : newSelection;
+            }
+            // Se adicionando novo grupo
+            else {
+                newSelection = current.filter(g => g !== ALL_GROUPS);
+                newSelection = [...newSelection, group];
+            }
+            
+            return newSelection;
+        });
+
+        // Move a atualização da URL para fora do setSelectedGroups
+        const params = new URLSearchParams(searchParams);
+        if (newSelection.length === 1 && newSelection[0] === ALL_GROUPS) {
+            params.delete('groups');
+        } else {
+            params.set('groups', encodeURIComponent(JSON.stringify(newSelection)));
+        }
+        
+        // Mantém o parâmetro de busca se existir
+        if (searchTerm) {
+            params.set('q', searchTerm);
+        }
+        
+        // Usa setTimeout para evitar a atualização durante a renderização
+        setTimeout(() => {
+            router.replace(`/inventory?${params.toString()}`);
+        }, 0);
+    };
+
+    // Adicione esta função para atualizar o cache de uma imagem específica
+    const updateProductImage = useCallback(async (cdChamada: string) => {
+        try {
+            const imageUrl = await getProductImage(cdChamada);
+            setImageCache(prev => ({
+                ...prev,
+                [cdChamada]: imageUrl
+            }));
+        } catch (error) {
+            console.error('Error updating product image:', error);
+        }
+    }, []);
+
+    // Adicione esta função para lidar com a mudança do filtro de estoque
+    const handleStockFilterChange = () => {
+        const newValue = !showOnlyInStock;
+        setShowOnlyInStock(newValue);
+        localStorage.setItem('showOnlyInStock', JSON.stringify(newValue));
+    };
+
     if (isLoading) {
         return <InventoryLoading />
     }
 
     return (
         <PermissionGuard permission="inventory">
-        <div className="space-y-6">
-            <div className="flex flex-col gap-2">
-                <div className="flex justify-between items-center flex-col">
-                    <h1 className="text-3xl font-bold">Consulta Estoque</h1>
-                    <div className="flex items-center gap-4 py-4">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleRefresh}
-                            disabled={isRefreshing}
-                        >
-                            <RefreshCw className={cn(
-                                "h-4 w-4 mr-2",
-                                isRefreshing && "animate-spin"
-                            )} />
-                            Atualizar
-                        </Button>
-                        <ColumnSelector 
-                            visibleColumns={visibleColumns}
-                            onColumnChange={handleColumnToggle}
-                        />
-                    </div>
-                </div>
-                {error && (
-                    <div className="bg-destructive/15 text-destructive px-4 py-3 rounded-lg">
-                        {error}
-                    </div>
-                )}
-            </div>
-
-            <Card>
-                <CardHeader>
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                        <CardTitle>Lista de Produtos</CardTitle>
-                        <div className="w-full sm:w-auto sm:flex-1 sm:max-w-sm sm:ml-4">
-                            <Input
-                                placeholder="Buscar em todos os campos..."
-                                value={searchTerm}
-                                onChange={(e) => handleSearch(e.target.value)}
-                                className="w-full text-xs"
+            <div className="space-y-6">
+                <div className="flex flex-col gap-2">
+                    <div className="flex justify-between items-center flex-col">
+                        <h1 className="text-3xl font-bold">Consulta Estoque</h1>
+                        <div className="flex items-center gap-4 py-4">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleRefresh}
+                                disabled={isRefreshing}
+                            >
+                                <RefreshCw className={cn(
+                                    "h-4 w-4 mr-2",
+                                    isRefreshing && "animate-spin"
+                                )} />
+                                Atualizar
+                            </Button>
+                            <ColumnSelector 
+                                visibleColumns={visibleColumns}
+                                onColumnChange={handleColumnToggle}
                             />
                         </div>
                     </div>
-                </CardHeader>
-                <CardContent>
-                    <div className="relative overflow-x-auto">
-                        <Table style={TABLE_STYLES}>
-                            <TableHeader>
-                                <TableRow>
-                                    {table.getFlatHeaders().map((header) => (
-                                        <TableHead 
-                                            key={header.id}
-                                            className={cn(
-                                                "whitespace-nowrap px-2 first:pl-4 last:pr-4 relative select-none group",
-                                                header.column.getCanResize() && "resize-handle"
-                                            )}
-                                            style={{
-                                                width: header.getSize(),
-                                                position: 'relative'
-                                            }}
-                                        >
-                                            <ContextMenu>
-                                                <ContextMenuTrigger>
-                                                    <div
-                                                        draggable
-                                                        onDragStart={(e) => {
-                                                            e.dataTransfer.setData('text/plain', header.column.id)
-                                                            e.currentTarget.classList.add('dragging')
-                                                        }}
-                                                        onDragEnd={(e) => {
-                                                            e.currentTarget.classList.remove('dragging')
-                                                        }}
-                                                        onDragOver={(e) => {
-                                                            e.preventDefault()
-                                                            e.currentTarget.classList.add('drop-target')
-                                                        }}
-                                                        onDragLeave={(e) => {
-                                                            e.currentTarget.classList.remove('drop-target')
-                                                        }}
-                                                        onDrop={(e) => {
-                                                            e.preventDefault()
-                                                            e.currentTarget.classList.remove('drop-target')
-                                                            const draggedColumnId = e.dataTransfer.getData('text/plain')
-                                                            handleColumnReorder(draggedColumnId, header.column.id)
-                                                        }}
-                                                        className="cursor-move py-2 flex items-center gap-2"
-                                                    >
-                                                        {flexRender(
-                                                            header.column.columnDef.header,
-                                                            header.getContext()
-                                                        )}
-                                                    </div>
-                                                </ContextMenuTrigger>
-                                                <ContextMenuContent>
-                                                    <ContextMenuItem
-                                                        onClick={() => header.column.toggleSorting(false)}
-                                                    >
-                                                        <ArrowUp className="mr-2 h-4 w-4" />
-                                                        Ordenar Crescente
-                                                    </ContextMenuItem>
-                                                    <ContextMenuItem
-                                                        onClick={() => header.column.toggleSorting(true)}
-                                                    >
-                                                        <ArrowDown className="mr-2 h-4 w-4" />
-                                                        Ordenar Decrescente
-                                                    </ContextMenuItem>
-                                                    <ContextMenuItem
-                                                        onClick={() => header.column.clearSorting()}
-                                                    >
-                                                        <ArrowUpDown className="mr-2 h-4 w-4" />
-                                                        Remover Ordenação
-                                                    </ContextMenuItem>
-                                                    <ContextMenuSeparator />
-                                                    <ContextMenuItem
-                                                        onClick={() => handleHideColumn(header.column.id)}
-                                                        disabled={visibleColumns.size <= 1}
-                                                    >
-                                                        Ocultar coluna
-                                                    </ContextMenuItem>
-                                                </ContextMenuContent>
-                                            </ContextMenu>
-                                            {header.column.getCanResize() && (
-                                                <div
-                                                    onMouseDown={header.getResizeHandler()}
-                                                    onTouchStart={header.getResizeHandler()}
-                                                    className={cn(
-                                                        "absolute right-0 top-0 h-full w-1 cursor-col-resize select-none touch-none",
-                                                        "opacity-0 group-hover:opacity-100 bg-gray-200 hover:bg-gray-400"
-                                                    )}
-                                                />
-                                            )}
-                                        </TableHead>
-                                    ))}
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {table.getRowModel().rows.map((row) => (
-                                    <TableRow key={row.id}>
-                                        {row.getVisibleCells().map((cell) => (
-                                            <TableCell 
-                                                key={cell.id}
+                    {error && (
+                        <div className="bg-destructive/15 text-destructive px-4 py-3 rounded-lg">
+                            {error}
+                        </div>
+                    )}
+                </div>
+
+                <Card>
+                    <CardHeader>
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                            <CardTitle>Lista de Produtos</CardTitle>
+                            <div className="w-full sm:w-auto sm:flex-1 sm:max-w-sm sm:ml-4">
+                                <div className="flex gap-2 mb-2 sm:mb-0">
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button
+                                                variant="outline"
+                                                role="combobox"
+                                                className="w-[250px] justify-between"
+                                            >
+                                                {selectedGroups.includes(ALL_GROUPS) 
+                                                    ? "Todos os grupos" 
+                                                    : `${selectedGroups.length} grupo(s)`}
+                                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-[250px] p-0" align="start">
+                                            <Command>
+                                                <CommandInput placeholder="Buscar grupo..." className="h-9" />
+                                                <CommandList className="max-h-[300px] overflow-auto">
+                                                    <CommandEmpty>Nenhum grupo encontrado.</CommandEmpty>
+                                                    <CommandGroup>
+                                                        <CommandItem
+                                                            value={ALL_GROUPS}
+                                                            onSelect={() => toggleGroup(ALL_GROUPS)}
+                                                        >
+                                                            <Check
+                                                                className={cn(
+                                                                    "mr-2 h-4 w-4",
+                                                                    selectedGroups.includes(ALL_GROUPS) 
+                                                                        ? "opacity-100" 
+                                                                        : "opacity-0"
+                                                                )}
+                                                            />
+                                                            Todos os grupos
+                                                        </CommandItem>
+                                                        {getUniqueGroups(data).map((group) => (
+                                                            <CommandItem
+                                                                key={group}
+                                                                value={group}
+                                                                onSelect={() => toggleGroup(group)}
+                                                            >
+                                                                <Check
+                                                                    className={cn(
+                                                                        "mr-2 h-4 w-4",
+                                                                        selectedGroups.includes(group) 
+                                                                            ? "opacity-100" 
+                                                                            : "opacity-0"
+                                                                    )}
+                                                                />
+                                                                {group}
+                                                            </CommandItem>
+                                                        ))}
+                                                    </CommandGroup>
+                                                </CommandList>
+                                            </Command>
+                                        </PopoverContent>
+                                    </Popover>
+                                    <Button
+                                        variant={showOnlyInStock ? "default" : "outline"}
+                                        size="sm"
+                                        onClick={handleStockFilterChange}
+                                        className="whitespace-nowrap"
+                                    >
+                                        {showOnlyInStock ? "Com Estoque" : "Todos"}
+                                    </Button>
+                                    <Input
+                                        placeholder="Buscar em todos os campos..."
+                                        value={searchTerm}
+                                        onChange={(e) => handleSearch(e.target.value)}
+                                        className="w-full text-xs"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="relative overflow-x-auto">
+                            <Table style={TABLE_STYLES}>
+                                <TableHeader>
+                                    <TableRow>
+                                        {table.getFlatHeaders().map((header) => (
+                                            <TableHead 
+                                                key={header.id}
                                                 className={cn(
-                                                    "px-2 first:pl-4 last:pr-4",
-                                                    roboto.className,
-                                                    "text-xs sm:text-sm",
-                                                    cell.column.id === 'NmGrupoProduto' && "max-w-[100px] sm:max-w-[120px] truncate",
-                                                    cell.column.id === 'NmProduto' && "max-w-[200px] sm:max-w-[600px]",
-                                                    cell.column.id === 'NmFornecedorPrincipal' && "max-w-[120px] sm:max-w-[150px] truncate" // Add truncate for supplier
+                                                    "whitespace-nowrap px-2 first:pl-4 last:pr-4 relative select-none group",
+                                                    header.column.getCanResize() && "resize-handle"
                                                 )}
                                                 style={{
-                                                    width: cell.column.getSize(),
-                                                    maxWidth: cell.column.getSize(),
-                                                    whiteSpace: cell.column.id === 'NmGrupoProduto' ? 'nowrap' : 'normal',
-                                                    wordBreak: cell.column.id === 'NmGrupoProduto' ? 'normal' : 'break-word'
+                                                    width: header.getSize(),
+                                                    position: 'relative'
                                                 }}
                                             >
-                                                {flexRender(
-                                                    cell.column.columnDef.cell,
-                                                    cell.getContext()
+                                                <ContextMenu>
+                                                    <ContextMenuTrigger>
+                                                        <div
+                                                            draggable
+                                                            onDragStart={(e) => {
+                                                                e.dataTransfer.setData('text/plain', header.column.id)
+                                                                e.currentTarget.classList.add('dragging')
+                                                            }}
+                                                            onDragEnd={(e) => {
+                                                                e.currentTarget.classList.remove('dragging')
+                                                            }}
+                                                            onDragOver={(e) => {
+                                                                e.preventDefault()
+                                                                e.currentTarget.classList.add('drop-target')
+                                                            }}
+                                                            onDragLeave={(e) => {
+                                                                e.currentTarget.classList.remove('drop-target')
+                                                            }}
+                                                            onDrop={(e) => {
+                                                                e.preventDefault()
+                                                                e.currentTarget.classList.remove('drop-target')
+                                                                const draggedColumnId = e.dataTransfer.getData('text/plain')
+                                                                handleColumnReorder(draggedColumnId, header.column.id)
+                                                            }}
+                                                            className="cursor-move py-2 flex items-center gap-2"
+                                                        >
+                                                            {flexRender(
+                                                                header.column.columnDef.header,
+                                                                header.getContext()
+                                                            )}
+                                                        </div>
+                                                    </ContextMenuTrigger>
+                                                    <ContextMenuContent>
+                                                        <ContextMenuItem
+                                                            onClick={() => header.column.toggleSorting(false)}
+                                                        >
+                                                            <ArrowUp className="mr-2 h-4 w-4" />
+                                                            Ordenar Crescente
+                                                        </ContextMenuItem>
+                                                        <ContextMenuItem
+                                                            onClick={() => header.column.toggleSorting(true)}
+                                                        >
+                                                            <ArrowDown className="mr-2 h-4 w-4" />
+                                                            Ordenar Decrescente
+                                                        </ContextMenuItem>
+                                                        <ContextMenuItem
+                                                            onClick={() => header.column.clearSorting()}
+                                                        >
+                                                            <ArrowUpDown className="mr-2 h-4 w-4" />
+                                                            Remover Ordenação
+                                                        </ContextMenuItem>
+                                                        <ContextMenuSeparator />
+                                                        <ContextMenuItem
+                                                            onClick={() => handleHideColumn(header.column.id)}
+                                                            disabled={visibleColumns.size <= 1}
+                                                        >
+                                                            Ocultar coluna
+                                                        </ContextMenuItem>
+                                                    </ContextMenuContent>
+                                                </ContextMenu>
+                                                {header.column.getCanResize() && (
+                                                    <div
+                                                        onMouseDown={header.getResizeHandler()}
+                                                        onTouchStart={header.getResizeHandler()}
+                                                        className={cn(
+                                                            "absolute right-0 top-0 h-full w-1 cursor-col-resize select-none touch-none",
+                                                            "opacity-0 group-hover:opacity-100 bg-gray-200 hover:bg-gray-400"
+                                                        )}
+                                                    />
                                                 )}
-                                            </TableCell>
+                                            </TableHead>
                                         ))}
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </div>
+                                </TableHeader>
+                                <TableBody>
+                                    {table.getRowModel().rows.map((row) => (
+                                        <TableRow key={row.id}>
+                                            {row.getVisibleCells().map((cell) => (
+                                                <TableCell 
+                                                    key={cell.id}
+                                                    className={cn(
+                                                        "px-2 first:pl-4 last:pr-4",
+                                                        roboto.className,
+                                                        "text-xs sm:text-sm",
+                                                        cell.column.id === 'NmGrupoProduto' && "max-w-[100px] sm:max-w-[120px] truncate",
+                                                        cell.column.id === 'NmProduto' && "max-w-[200px] sm:max-w-[600px]",
+                                                        cell.column.id === 'NmFornecedorPrincipal' && "max-w-[120px] sm:max-w-[150px] truncate" // Add truncate for supplier
+                                                    )}
+                                                    style={{
+                                                        width: cell.column.getSize(),
+                                                        maxWidth: cell.column.getSize(),
+                                                        whiteSpace: cell.column.id === 'NmGrupoProduto' ? 'nowrap' : 'normal',
+                                                        wordBreak: cell.column.id === 'NmGrupoProduto' ? 'normal' : 'break-word'
+                                                    }}
+                                                >
+                                                    {flexRender(
+                                                        cell.column.columnDef.cell,
+                                                        cell.getContext()
+                                                    )}
+                                                </TableCell>
+                                            ))}
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
 
-                    {/* Pagination Controls */}
-                    <div className="flex items-center justify-between px-4 py-3 border-t">
-                        <div className="flex items-center gap-2">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setPageIndex(0)}
-                                disabled={!table.getCanPreviousPage()}
-                            >
-                                {'<<'}
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setPageIndex(prev => prev - 1)}
-                                disabled={!table.getCanPreviousPage()}
-                            >
-                                {'<'}
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setPageIndex(prev => prev + 1)}
-                                disabled={!table.getCanNextPage()}
-                            >
-                                {'>'}
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setPageIndex(table.getPageCount() - 1)}
-                                disabled={!table.getCanNextPage()}
-                            >
-                                {'>>'}
-                            </Button>
+                        {/* Pagination Controls */}
+                        <div className="flex items-center justify-between px-4 py-3 border-t">
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setPageIndex(0)}
+                                    disabled={!table.getCanPreviousPage()}
+                                >
+                                    {'<<'}
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setPageIndex(prev => prev - 1)}
+                                    disabled={!table.getCanPreviousPage()}
+                                >
+                                    {'<'}
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setPageIndex(prev => prev + 1)}
+                                    disabled={!table.getCanNextPage()}
+                                >
+                                    {'>'}
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setPageIndex(table.getPageCount() - 1)}
+                                    disabled={!table.getCanNextPage()}
+                                >
+                                    {'>>'}
+                                </Button>
+                            </div>
+                            <div className="flex-1 text-sm text-muted-foreground text-center">
+                                Página{' '}
+                                <strong>
+                                    {pageIndex + 1} de{' '}
+                                    {table.getPageCount()}
+                                </strong>
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                                Total: {filteredData.length} items
+                            </div>
                         </div>
-                        <div className="flex-1 text-sm text-muted-foreground text-center">
-                            Página{' '}
-                            <strong>
-                                {pageIndex + 1} de{' '}
-                                {table.getPageCount()}
-                            </strong>
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                            Total: {filteredData.length} items
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
+                    </CardContent>
+                </Card>
 
-            {lastUpdate && (
-                <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 bg-black text-white px-6 py-3 rounded-full shadow-lg flex flex-col items-center">
-                    <span className="text-xs opacity-80">
-                        Última atualização do banco de dados
-                    </span>
-                    <span className="text-sm font-medium">
-                        {new Date(lastUpdate).toLocaleString('pt-BR', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            timeZone: 'UTC'
-                        })}
-                    </span>
-                </div>
-            )}
-        </div>
+                {lastUpdate && (
+                    <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 bg-black text-white px-6 py-3 rounded-full shadow-lg flex flex-col items-center">
+                        <span className="text-xs opacity-80">
+                            Última atualização do banco de dados
+                        </span>
+                        <span className="text-sm font-medium">
+                            {new Date(lastUpdate).toLocaleString('pt-BR', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                timeZone: 'UTC'
+                            })}
+                        </span>
+                    </div>
+                )}
+
+                {selectedImage && (
+                    <ImagePreviewModal
+                        isOpen={!!selectedImage}
+                        onClose={() => setSelectedImage(null)}
+                        imageUrl={selectedImage}
+                    />
+                )}
+                
+                {selectedProduct && (
+                    <ManageProductImagesModal
+                        isOpen={!!selectedProduct}
+                        onClose={() => setSelectedProduct(null)}
+                        productCode={selectedProduct.code}
+                        productName={selectedProduct.name}
+                        onImageUpdate={() => updateProductImage(selectedProduct.code)}
+                    />
+                )}
+            </div>
         </PermissionGuard>
     )
 }

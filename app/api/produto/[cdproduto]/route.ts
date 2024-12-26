@@ -1,17 +1,19 @@
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from '@/lib/supabase-client'
 import { NextResponse } from 'next/server'
-
-const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL as string,
-    process.env.SUPABASE_SERVICE_ROLE_KEY as string
-)
 
 export async function GET(
     request: Request,
     context: { params: { cdproduto: string } }
 ) {
     try {
-        const cdproduto = await Promise.resolve(context.params.cdproduto)
+        const cdproduto = context.params.cdproduto
+
+        if (!cdproduto) {
+            return NextResponse.json(
+                { error: 'Product code is required' },
+                { status: 400 }
+            )
+        }
 
         // Fetch product details
         const { data: productData, error: productError } = await supabase
@@ -19,7 +21,20 @@ export async function GET(
             .select('*')
             .eq('cdproduto', cdproduto)
 
-        if (productError) throw productError
+        if (productError) {
+            console.error('Product fetch error:', productError)
+            return NextResponse.json(
+                { error: `Failed to fetch product data: ${productError.message}` },
+                { status: 500 }
+            )
+        }
+
+        if (!productData || productData.length === 0) {
+            return NextResponse.json(
+                { error: 'Product not found' },
+                { status: 404 }
+            )
+        }
 
         // Fetch stock information
         const { data: stockData, error: stockError } = await supabase
@@ -27,14 +42,28 @@ export async function GET(
             .select('*')
             .eq('CdChamada', cdproduto)
 
-        if (stockError) throw stockError
+        if (stockError) {
+            console.error('Stock fetch error:', stockError)
+            return NextResponse.json(
+                { error: `Failed to fetch stock data: ${stockError.message}` },
+                { status: 500 }
+            )
+        }
 
+        // Return the combined data
         return NextResponse.json({
             product: productData,
-            stock: stockData
+            stock: stockData || []
         })
+
     } catch (error) {
-        console.error('Error:', error)
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
+        console.error('API Route Error:', error)
+        return NextResponse.json(
+            { 
+                error: 'Internal Server Error',
+                details: error instanceof Error ? error.message : 'Unknown error'
+            },
+            { status: 500 }
+        )
     }
 } 

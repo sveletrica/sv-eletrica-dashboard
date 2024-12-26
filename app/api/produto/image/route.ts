@@ -1,42 +1,35 @@
-import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js'
+import { NextResponse } from 'next/server'
 
-const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
-const GOOGLE_CX = process.env.GOOGLE_CX;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+
+const supabase = createClient(supabaseUrl, supabaseKey)
 
 export async function GET(request: Request) {
-    const { searchParams } = new URL(request.url);
-    const query = searchParams.get('query');
-
-    if (!query) {
-        return NextResponse.json({ error: 'Query parameter is required' }, { status: 400 });
-    }
-
-    if (!GOOGLE_API_KEY || !GOOGLE_CX) {
-        return NextResponse.json({ error: 'Google API configuration missing' }, { status: 500 });
-    }
-
     try {
-        const response = await fetch(
-            `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=${GOOGLE_CX}&q=${encodeURIComponent(query)}&searchType=image&num=1`
-        );
+        const { searchParams } = new URL(request.url)
+        const cdChamada = searchParams.get('cdChamada')
 
-        if (!response.ok) {
-            throw new Error('Failed to fetch from Google API');
+        if (!cdChamada) {
+            return NextResponse.json({ error: 'Missing cdChamada parameter' }, { status: 400 })
         }
 
-        const data = await response.json();
-        const firstImage = data.items?.[0];
+        const { data, error } = await supabase
+            .from('produtos_imagem')
+            .select('imagem_url')
+            .eq('cd_chamada', cdChamada)
+            .limit(1)
+            .single()
 
-        if (!firstImage) {
-            return NextResponse.json(null);
+        if (error) {
+            console.error('Supabase error:', error)
+            return NextResponse.json({ error: 'Failed to fetch image' }, { status: 500 })
         }
 
-        return NextResponse.json({
-            url: firstImage.link,
-            alt: firstImage.title
-        });
+        return NextResponse.json({ imageUrl: data?.imagem_url || null })
     } catch (error) {
-        console.error('Error fetching image:', error);
-        return NextResponse.json({ error: 'Failed to fetch image' }, { status: 500 });
+        console.error('Error:', error)
+        return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
 } 
