@@ -353,10 +353,29 @@ export default function Inventory() {
         // Primeiro filtra os itens com estoque
         const itemsWithStock = items.filter(item => item.StkTotal > 0);
         
-        // Depois pega os grupos únicos dos itens com estoque
-        const groups = new Set(itemsWithStock.map(item => item.NmGrupoProduto));
+        // Cria um Map para contar SKUs únicos por grupo
+        const groupCountMap = new Map<string, Set<string>>();
         
-        return Array.from(groups).sort();
+        // Conta SKUs únicos por grupo
+        itemsWithStock.forEach(item => {
+            const group = item.NmGrupoProduto;
+            const cdChamada = item.CdChamada;
+            
+            if (!groupCountMap.has(group)) {
+                groupCountMap.set(group, new Set());
+            }
+            groupCountMap.get(group)?.add(cdChamada);
+        });
+        
+        // Converte para array com formato "(count) GroupName" e ordena
+        return Array.from(groupCountMap.entries())
+            .map(([group, skus]) => `(${skus.size}) ${group}`)
+            .sort((a, b) => {
+                // Extrai o número entre parênteses para ordenar por quantidade
+                const countA = parseInt(a.match(/\((\d+)\)/)?.[1] || '0');
+                const countB = parseInt(b.match(/\((\d+)\)/)?.[1] || '0');
+                return countB - countA; // Ordena do maior para o menor
+            });
     }, []);
 
     // Modifique também a lógica de seleção de grupos para lidar com grupos que podem não existir mais
@@ -416,7 +435,13 @@ export default function Inventory() {
             
             // 1. Filtro de grupo
             if (!selectedGroups.includes(ALL_GROUPS)) {
-                filtered = filtered.filter(item => selectedGroups.includes(item.NmGrupoProduto));
+                filtered = filtered.filter(item => 
+                    selectedGroups.some(group => {
+                        // Remove a contagem do nome do grupo para comparação
+                        const cleanGroup = group.replace(/^\(\d+\)\s*/, '');
+                        return item.NmGrupoProduto === cleanGroup;
+                    })
+                );
             }
             
             // 2. Filtro de estoque
@@ -443,7 +468,7 @@ export default function Inventory() {
             
             setFilteredData(filtered);
         }
-    }, [data, visibleColumns, searchTerm, selectedGroups, showOnlyInStock]); // Adicione showOnlyInStock às dependências
+    }, [data, visibleColumns, searchTerm, selectedGroups, showOnlyInStock]);
 
     // Update the debouncedSearch to be memoized with useCallback
     const debouncedSearch = useCallback(
@@ -912,7 +937,9 @@ export default function Inventory() {
         if (newSelection.length === 1 && newSelection[0] === ALL_GROUPS) {
             params.delete('groups');
         } else {
-            params.set('groups', encodeURIComponent(JSON.stringify(newSelection)));
+            // Remove a contagem do nome do grupo antes de salvar na URL
+            const cleanGroups = newSelection.map(g => g === ALL_GROUPS ? g : g.replace(/^\(\d+\)\s*/, ''));
+            params.set('groups', encodeURIComponent(JSON.stringify(cleanGroups)));
         }
         
         // Mantém o parâmetro de busca se existir
