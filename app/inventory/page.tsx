@@ -38,7 +38,7 @@ import { useDebouncedCallback } from 'use-debounce';
 import Fuse from 'fuse.js';
 import { Roboto } from 'next/font/google'
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import {
     Select,
     SelectContent,
@@ -91,6 +91,17 @@ interface ProductImage {
 
 type ViewMode = 'table' | 'grid';
 
+interface PageState {
+  sorting: SortingState;
+  columnOrder: string[];
+  columnSizing: Record<string, number>;
+  searchTerm: string;
+  selectedGroups: string[];
+  showOnlyInStock: boolean;
+  viewMode: ViewMode;
+  pageIndex: number;
+}
+
 function getDefaultVisibleColumns(): Set<ColumnId> {
     return new Set(
         Object.entries(columnDefinitions)
@@ -135,9 +146,52 @@ function getProductImage(cdChamada: string): Promise<string | null> {
         });
 }
 
+function safeEncode(data: any): string {
+  try {
+    const jsonString = JSON.stringify(data);
+    return btoa(encodeURIComponent(jsonString));
+  } catch (error) {
+    console.error('Error encoding state:', error);
+    return '';
+  }
+}
+
+function safeDecode(encoded: string): any {
+  try {
+    const jsonString = decodeURIComponent(atob(encoded));
+    return JSON.parse(jsonString);
+  } catch (error) {
+    console.error('Error decoding state:', error);
+    return null;
+  }
+}
+
+function savePageState(state: PageState) {
+  if (typeof window === 'undefined') return;
+  try {
+    const encoded = safeEncode(state);
+    sessionStorage.setItem('inventoryPageState', encoded);
+  } catch (error) {
+    console.error('Error saving page state:', error);
+  }
+}
+
+function loadPageState(): PageState | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const encoded = sessionStorage.getItem('inventoryPageState');
+    if (!encoded) return null;
+    return safeDecode(encoded);
+  } catch (error) {
+    console.error('Error loading page state:', error);
+    return null;
+  }
+}
+
 export default function Inventory() {
     const router = useRouter()
     const searchParams = useSearchParams()
+    const pathname = usePathname()
     
     const [isLoading, setIsLoading] = useState(true)
     const [isRefreshing, setIsRefreshing] = useState(false)
@@ -182,6 +236,83 @@ export default function Inventory() {
         }
         return 'table'
     });
+
+    // Load saved state on component mount
+    const [initialStateLoaded, setInitialStateLoaded] = useState(false);
+
+    useEffect(() => {
+        if (!initialStateLoaded) {
+            const savedState = loadPageState();
+            if (savedState) {
+                setSorting(savedState.sorting);
+                setColumnOrder(savedState.columnOrder);
+                setColumnSizing(savedState.columnSizing);
+                setSearchTerm(savedState.searchTerm);
+                setSelectedGroups(savedState.selectedGroups);
+                setShowOnlyInStock(savedState.showOnlyInStock);
+                setViewMode(savedState.viewMode);
+                setPageIndex(savedState.pageIndex);
+            }
+            setInitialStateLoaded(true);
+        }
+    }, [initialStateLoaded]);
+
+    // Add effect to save state when relevant values change
+    useEffect(() => {
+        if (!initialStateLoaded) return;
+
+        const currentState: PageState = {
+            sorting,
+            columnOrder,
+            columnSizing,
+            searchTerm,
+            selectedGroups,
+            showOnlyInStock,
+            viewMode,
+            pageIndex,
+        };
+
+        savePageState(currentState);
+    }, [
+        sorting,
+        columnOrder,
+        columnSizing,
+        searchTerm,
+        selectedGroups,
+        showOnlyInStock,
+        viewMode,
+        pageIndex,
+        initialStateLoaded
+    ]);
+
+    // Add this effect to handle returning to the page
+    useEffect(() => {
+        if (searchParams.has('inventoryPageState')) {
+            try {
+                const stateParam = searchParams.get('inventoryPageState');
+                if (stateParam) {
+                    const decompressedState = safeDecode(stateParam);
+                    if (decompressedState) {
+                        setSorting(decompressedState.sorting);
+                        setColumnOrder(decompressedState.columnOrder);
+                        setColumnSizing(decompressedState.columnSizing);
+                        setSearchTerm(decompressedState.searchTerm);
+                        setSelectedGroups(decompressedState.selectedGroups);
+                        setShowOnlyInStock(decompressedState.showOnlyInStock);
+                        setViewMode(decompressedState.viewMode);
+                        setPageIndex(decompressedState.pageIndex);
+                    }
+                }
+                
+                // Remove the state parameter from URL without triggering a reload
+                const newParams = new URLSearchParams(searchParams);
+                newParams.delete('inventoryPageState');
+                router.replace(`${pathname}?${newParams.toString()}`, { scroll: false });
+            } catch (error) {
+                console.error('Error restoring page state:', error);
+            }
+        }
+    }, [searchParams, router, pathname]);
 
     // Initialize visible columns and column order from localStorage
     useEffect(() => {
@@ -722,17 +853,26 @@ export default function Inventory() {
                     const formattedValue = formatCellValue(value, columnId)
                     
                     if (columnId === 'CdChamada') {
-                        const currentParams = new URLSearchParams(searchParams)
-                        const returnUrl = `/inventory?${currentParams.toString()}`
-                        
-                        return (
-                            <Link
-                                href={`/produto/${value.trim()}?returnUrl=${encodeURIComponent(returnUrl)}`}
-                                className="text-blue-500 hover:text-blue-700 underline"
-                            >
-                                {formattedValue}
-                            </Link>
-                        )
+                        try {
+                            // Create URL with current state
+                            const currentParams = new URLSearchParams(searchParams);
+                            const savedState = sessionStorage.getItem('inventoryPageState') || '';
+                            // Create a minimal state object if needed
+                            const stateParam = savedState ? `&inventoryPageState=${encodeURIComponent(savedState)}` : '';
+                            const returnUrl = `/inventory?${currentParams.toString()}${stateParam}`;
+                            
+                            return (
+                                <Link
+                                    href={`/produto/${value.trim()}?returnUrl=${encodeURIComponent(returnUrl)}`}
+                                    className="text-blue-500 hover:text-blue-700 underline"
+                                >
+                                    {formattedValue}
+                                </Link>
+                            );
+                        } catch (error) {
+                            console.error('Error creating product link:', error);
+                            return formattedValue;
+                        }
                     }
                     
                     if (searchTerm && typeof formattedValue === 'string') {
@@ -908,50 +1048,56 @@ export default function Inventory() {
         });
     };
 
-    // Modifique a função toggleGroup
+    // Update the toggleGroup function to only handle state
     const toggleGroup = (group: string) => {
-        let newSelection: string[];
-        
         setSelectedGroups(current => {
-            // Se selecionando "Todos os grupos"
+            // Calculate new selection
+            let newSelection: string[];
+            
+            // If selecting "All groups"
             if (group === ALL_GROUPS) {
                 newSelection = [ALL_GROUPS];
             }
-            // Se já está selecionado, remove
+            // If already selected, remove
             else if (current.includes(group)) {
                 newSelection = current.filter(g => g !== group);
-                // Se ficou vazio, seleciona "Todos os grupos"
-                newSelection = newSelection.length === 0 ? [ALL_GROUPS] : newSelection;
+                // If empty, select "All groups"
+                if (newSelection.length === 0) {
+                    newSelection = [ALL_GROUPS];
+                }
             }
-            // Se adicionando novo grupo
+            // If adding new group
             else {
                 newSelection = current.filter(g => g !== ALL_GROUPS);
                 newSelection = [...newSelection, group];
             }
-            
+
             return newSelection;
         });
+    };
 
-        // Move a atualização da URL para fora do setSelectedGroups
+    // Add this effect to handle URL updates when selectedGroups changes
+    useEffect(() => {
         const params = new URLSearchParams(searchParams);
-        if (newSelection.length === 1 && newSelection[0] === ALL_GROUPS) {
+        
+        if (selectedGroups.length === 1 && selectedGroups[0] === ALL_GROUPS) {
             params.delete('groups');
         } else {
-            // Remove a contagem do nome do grupo antes de salvar na URL
-            const cleanGroups = newSelection.map(g => g === ALL_GROUPS ? g : g.replace(/^\(\d+\)\s*/, ''));
+            // Remove the count from group names before saving to URL
+            const cleanGroups = selectedGroups.map(g => 
+                g === ALL_GROUPS ? g : g.replace(/^\(\d+\)\s*/, '')
+            );
             params.set('groups', encodeURIComponent(JSON.stringify(cleanGroups)));
         }
         
-        // Mantém o parâmetro de busca se existir
+        // Keep search parameter if it exists
         if (searchTerm) {
             params.set('q', searchTerm);
         }
         
-        // Usa setTimeout para evitar a atualização durante a renderização
-        setTimeout(() => {
-            router.replace(`/inventory?${params.toString()}`);
-        }, 0);
-    };
+        // Update URL
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    }, [selectedGroups, searchTerm, searchParams, router, pathname]);
 
     // Adicione esta função para atualizar o cache de uma imagem específica
     const updateProductImage = useCallback(async (cdChamada: string) => {
