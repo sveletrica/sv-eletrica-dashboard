@@ -839,6 +839,11 @@ function ProductSalesDetailsContent() {
         return ((faturamento - (faturamento * 0.268 + custo)) / faturamento) * 100
     }
 
+    // Adicione esta verificação de dados de vendas
+    const hasSalesData = useMemo(() => {
+        return data.product.some(item => item.vlfaturamento > 0 || item.qtbrutaproduto > 0);
+    }, [data.product]);
+
     // Then handle conditional returns
     if (!data.product.length && !isLoading) {
         return (
@@ -1138,111 +1143,200 @@ function ProductSalesDetailsContent() {
                         )}
                     </div>
 
-                    <div className={cn(
-                        "grid gap-2",
-                        isMobile ? "grid-cols-1" : "grid-cols-2"
-                    )}>
-                        <Card className={cn(
-                            isMobile && "col-span-1"
-                        )}>
-                            <CardHeader>
-                                <div className="h-8 flex justify-between items-center">
-                                    <CardTitle className="text-sm font-medium">
-                                        Vendas por Filial
-                                    </CardTitle>
-                                    {selectedFilial ? (
-                                        <Button 
-                                            variant="ghost" 
-                                            size="sm"
-                                            onClick={() => setSelectedFilial(null)}
-                                        >
-                                            Limpar Filtro
-                                        </Button>
-                                    ) : (
-                                        <div className="invisible">
-                                            <Button 
-                                                variant="ghost" 
-                                                size="sm"
-                                                className="opacity-0"
-                                            >
-                                                Placeholder
-                                            </Button>
-                                        </div>
-                                    )}
+                    {/* Card de sem dados de vendas */}
+                    {!hasSalesData && (
+                        <Card className="mt-4">
+                            <CardContent className="p-6">
+                                <div className="flex flex-col items-center justify-center text-center space-y-4">
+                                    <Package className="h-12 w-12 text-muted-foreground" />
+                                    <div className="space-y-2">
+                                        <h3 className="text-lg font-medium">
+                                            Sem dados de vendas
+                                        </h3>
+                                        <p className="text-sm text-muted-foreground">
+                                            Este produto ainda não possui histórico de vendas.
+                                        </p>
+                                    </div>
                                 </div>
-                            </CardHeader>
-                            <CardContent>
-                                <div className={cn(
-                                    "overflow-x-auto",
-                                    isMobile && "max-h-[300px]"
-                                )}>
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Filial</TableHead>
-                                                <TableHead className="text-right">Quantidade</TableHead>
-                                                <TableHead className="text-right">Faturamento</TableHead>
-                                                <TableHead className="text-right">Margem</TableHead>
-                                                <TableHead className="text-right">% do Total</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {sortedFilials.map(([filial, values]) => {
-                                                const percentage = (values.quantidade / totals.quantidade) * 100
-                                                const margin = calculateMargin(values.faturamento, values.custo)
-                                                return (
-                                                    <TableRow 
-                                                        key={filial}
-                                                        className={cn(
-                                                            "relative cursor-pointer hover:bg-accent/100 transition-colors duration-200",
-                                                            selectedFilial === filial && [
-                                                                "bg-primary/10 dark:bg-primary/20",
-                                                                "shadow-sm"
-                                                            ],
-                                                            roboto.className,
-                                                            "text-xs sm:text-sm"
-                                                        )}
-                                                        onClick={() => setSelectedFilial(filial === selectedFilial ? null : filial)}
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* Cards de vendas - só aparecem se houver dados */}
+                    {hasSalesData && (
+                        <>
+                            <div className={cn(
+                                "grid gap-2",
+                                isMobile ? "grid-cols-1" : "grid-cols-2"
+                            )}>
+                                <Card className={cn(isMobile && "col-span-1")}>
+                                    <CardHeader>
+                                        <div className="h-8 flex justify-between items-center">
+                                            <CardTitle className="text-sm font-medium">
+                                                Vendas por Filial
+                                            </CardTitle>
+                                            {selectedFilial ? (
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="sm"
+                                                    onClick={() => setSelectedFilial(null)}
+                                                >
+                                                    Limpar Filtro
+                                                </Button>
+                                            ) : (
+                                                <div className="invisible">
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="sm"
+                                                        className="opacity-0"
                                                     >
-                                                        <TableCell className="font-medium py-2">{filial}</TableCell>
-                                                        <TableCell className="text-right py-2">
-                                                            <AnimatedValue value={values.quantidade} suffix=" un" />
+                                                        Placeholder
+                                                    </Button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className={cn(
+                                            "overflow-x-auto",
+                                            isMobile && "max-h-[300px]"
+                                        )}>
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>Filial</TableHead>
+                                                        <TableHead className="text-right">Quantidade</TableHead>
+                                                        <TableHead className="text-right">Faturamento</TableHead>
+                                                        <TableHead className="text-right">Margem</TableHead>
+                                                        <TableHead className="text-right">% do Total</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {sortedFilials.map(([filial, values]) => {
+                                                        const percentage = (values.quantidade / totals.quantidade) * 100
+                                                        const margin = calculateMargin(values.faturamento, values.custo)
+                                                        return (
+                                                            <TableRow 
+                                                                key={filial}
+                                                                className={cn(
+                                                                    "relative cursor-pointer hover:bg-accent/100 transition-colors duration-200",
+                                                                    selectedFilial === filial && [
+                                                                        "bg-primary/10 dark:bg-primary/20",
+                                                                        "shadow-sm"
+                                                                    ],
+                                                                    roboto.className,
+                                                                    "text-xs sm:text-sm"
+                                                                )}
+                                                                onClick={() => setSelectedFilial(filial === selectedFilial ? null : filial)}
+                                                            >
+                                                                <TableCell className="font-medium py-2">{filial}</TableCell>
+                                                                <TableCell className="text-right py-2">
+                                                                    <AnimatedValue value={values.quantidade} suffix=" un" />
+                                                                </TableCell>
+                                                                <TableCell className="text-right py-2">
+                                                                    <AnimatedValue 
+                                                                        value={values.faturamento}
+                                                                        formatter={(value) => value.toLocaleString('pt-BR', {
+                                                                            style: 'currency',
+                                                                            currency: 'BRL'
+                                                                        })}
+                                                                    />
+                                                                </TableCell>
+                                                                <TableCell className="text-right py-2">
+                                                                    {margin >= 0 ? (
+                                                                        <div className="flex justify-end">
+                                                                            <div className={cn(
+                                                                                "inline-flex items-center gap-1 rounded-full px-2 py-1",
+                                                                                getMarginStyle(margin).background,
+                                                                                getMarginStyle(margin).text
+                                                                            )}>
+                                                                                <AnimatedValue 
+                                                                                    value={margin}
+                                                                                    formatter={(value) => value.toFixed(2)}
+                                                                                    suffix="%"
+                                                                                />
+                                                                                {getMarginStyle(margin).icon}
+                                                                            </div>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className="flex justify-end">
+                                                                            <div className={cn(
+                                                                                "inline-flex items-center gap-1 rounded-full px-2 py-1",
+                                                                                getMarginStyle(margin).background,
+                                                                                getMarginStyle(margin).text
+                                                                            )}>
+                                                                                {getMarginStyle(margin).icon}
+                                                                                <AnimatedValue 
+                                                                                    value={margin}
+                                                                                    formatter={(value) => value.toFixed(2)}
+                                                                                    suffix="%"
+                                                                                />
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                </TableCell>
+                                                                <TableCell className="text-right py-2">
+                                                                    <div className="relative">
+                                                                        <div 
+                                                                            className="absolute inset-0 bg-blue-200 rounded-full animate-expand"
+                                                                            style={{
+                                                                                width: `${(values.quantidade / maxQuantity) * 100}%`,
+                                                                                opacity: 0.5,
+                                                                                transformOrigin: 'left',
+                                                                            }}
+                                                                        />
+                                                                        <span className="relative z-10">
+                                                                            <AnimatedValue 
+                                                                                value={(values.quantidade / totals.quantidade) * 100}
+                                                                                formatter={(value) => value.toFixed(1)}
+                                                                                suffix="%"
+                                                                            />
+                                                                        </span>
+                                                                    </div>
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        )
+                                                    })}
+                                                    <TableRow className={cn("font-bold", roboto.className, "text-xs sm:text-sm")}>
+                                                        <TableCell>Total</TableCell>
+                                                        <TableCell className="text-right">
+                                                            <AnimatedValue value={totals.quantidade} suffix=" un" />
                                                         </TableCell>
-                                                        <TableCell className="text-right py-2">
+                                                        <TableCell className="text-right">
                                                             <AnimatedValue 
-                                                                value={values.faturamento}
+                                                                value={totals.faturamento}
                                                                 formatter={(value) => value.toLocaleString('pt-BR', {
                                                                     style: 'currency',
                                                                     currency: 'BRL'
                                                                 })}
                                                             />
                                                         </TableCell>
-                                                        <TableCell className="text-right py-2">
-                                                            {margin >= 0 ? (
+                                                        <TableCell className="text-right">
+                                                            {calculateMargin(totals.faturamento, filteredData.reduce((acc, item) => acc + item.vltotalcustoproduto, 0)) >= 0 ? (
                                                                 <div className="flex justify-end">
                                                                     <div className={cn(
                                                                         "inline-flex items-center gap-1 rounded-full px-2 py-1",
-                                                                        getMarginStyle(margin).background,
-                                                                        getMarginStyle(margin).text
+                                                                        getMarginStyle(calculateMargin(totals.faturamento, filteredData.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).background,
+                                                                        getMarginStyle(calculateMargin(totals.faturamento, filteredData.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).text
                                                                     )}>
                                                                         <AnimatedValue 
-                                                                            value={margin}
+                                                                            value={calculateMargin(totals.faturamento, filteredData.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))}
                                                                             formatter={(value) => value.toFixed(2)}
                                                                             suffix="%"
                                                                         />
-                                                                        {getMarginStyle(margin).icon}
+                                                                        {getMarginStyle(calculateMargin(totals.faturamento, filteredData.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).icon}
                                                                     </div>
                                                                 </div>
                                                             ) : (
                                                                 <div className="flex justify-end">
                                                                     <div className={cn(
                                                                         "inline-flex items-center gap-1 rounded-full px-2 py-1",
-                                                                        getMarginStyle(margin).background,
-                                                                        getMarginStyle(margin).text
+                                                                        getMarginStyle(calculateMargin(totals.faturamento, filteredData.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).background,
+                                                                        getMarginStyle(calculateMargin(totals.faturamento, filteredData.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).text
                                                                     )}>
-                                                                        {getMarginStyle(margin).icon}
+                                                                        {getMarginStyle(calculateMargin(totals.faturamento, filteredData.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).icon}
                                                                         <AnimatedValue 
-                                                                            value={margin}
+                                                                            value={calculateMargin(totals.faturamento, filteredData.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))}
                                                                             formatter={(value) => value.toFixed(2)}
                                                                             suffix="%"
                                                                         />
@@ -1250,462 +1344,393 @@ function ProductSalesDetailsContent() {
                                                                 </div>
                                                             )}
                                                         </TableCell>
-                                                        <TableCell className="text-right py-2">
-                                                            <div className="relative">
-                                                                <div 
-                                                                    className="absolute inset-0 bg-blue-200 rounded-full animate-expand"
-                                                                    style={{
-                                                                        width: `${(values.quantidade / maxQuantity) * 100}%`,
-                                                                        opacity: 0.5,
-                                                                        transformOrigin: 'left',
-                                                                    }}
-                                                                />
-                                                                <span className="relative z-10">
-                                                                    <AnimatedValue 
-                                                                        value={(values.quantidade / totals.quantidade) * 100}
-                                                                        formatter={(value) => value.toFixed(1)}
-                                                                        suffix="%"
-                                                                    />
-                                                                </span>
-                                                            </div>
-                                                        </TableCell>
+                                                        <TableCell className="text-right">100%</TableCell>
                                                     </TableRow>
-                                                )
-                                            })}
-                                            <TableRow className={cn("font-bold", roboto.className, "text-xs sm:text-sm")}>
-                                                <TableCell>Total</TableCell>
-                                                <TableCell className="text-right">
-                                                    <AnimatedValue value={totals.quantidade} suffix=" un" />
-                                                </TableCell>
-                                                <TableCell className="text-right">
-                                                    <AnimatedValue 
-                                                        value={totals.faturamento}
-                                                        formatter={(value) => value.toLocaleString('pt-BR', {
-                                                            style: 'currency',
-                                                            currency: 'BRL'
-                                                        })}
-                                                    />
-                                                </TableCell>
-                                                <TableCell className="text-right">
-                                                    {calculateMargin(totals.faturamento, filteredData.reduce((acc, item) => acc + item.vltotalcustoproduto, 0)) >= 0 ? (
-                                                        <div className="flex justify-end">
-                                                            <div className={cn(
-                                                                "inline-flex items-center gap-1 rounded-full px-2 py-1",
-                                                                getMarginStyle(calculateMargin(totals.faturamento, filteredData.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).background,
-                                                                getMarginStyle(calculateMargin(totals.faturamento, filteredData.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).text
-                                                            )}>
-                                                                <AnimatedValue 
-                                                                    value={calculateMargin(totals.faturamento, filteredData.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))}
-                                                                    formatter={(value) => value.toFixed(2)}
-                                                                    suffix="%"
-                                                                />
-                                                                {getMarginStyle(calculateMargin(totals.faturamento, filteredData.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).icon}
-                                                            </div>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="flex justify-end">
-                                                            <div className={cn(
-                                                                "inline-flex items-center gap-1 rounded-full px-2 py-1",
-                                                                getMarginStyle(calculateMargin(totals.faturamento, filteredData.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).background,
-                                                                getMarginStyle(calculateMargin(totals.faturamento, filteredData.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).text
-                                                            )}>
-                                                                {getMarginStyle(calculateMargin(totals.faturamento, filteredData.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).icon}
-                                                                <AnimatedValue 
-                                                                    value={calculateMargin(totals.faturamento, filteredData.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))}
-                                                                    formatter={(value) => value.toFixed(2)}
-                                                                    suffix="%"
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </TableCell>
-                                                <TableCell className="text-right">100%</TableCell>
-                                            </TableRow>
-                                        </TableBody>
-                                    </Table>
-                                </div>
-                            </CardContent>
-                        </Card>
+                                                </TableBody>
+                                            </Table>
+                                        </div>
+                                    </CardContent>
+                                </Card>
 
-                        <Card className={cn(
-                            isMobile && "col-span-1"
-                        )}>
-                            <CardHeader>
-                                <div className="h-8 flex justify-between items-center">
-                                    <CardTitle className="text-sm font-medium">
-                                        Tendência de Vendas
-                                    </CardTitle>
-                                    {selectedMonth ? (
-                                        <Button 
-                                            variant="ghost" 
-                                            size="sm"
-                                            onClick={() => setSelectedMonth(null)}
-                                            className="text-muted-foreground"
-                                        >
-                                            <X className="h-4 w-4 mr-2" />
-                                            Limpar filtro: {selectedMonth}
-                                        </Button>
-                                    ) : (
-                                        <div className="invisible">
-                                            <Button 
-                                                variant="ghost" 
+                                <Card className={cn(isMobile && "col-span-1")}>
+                                    <CardHeader>
+                                        <div className="h-8 flex justify-between items-center">
+                                            <CardTitle className="text-sm font-medium">
+                                                Tendência de Vendas
+                                            </CardTitle>
+                                            {selectedMonth ? (
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="sm"
+                                                    onClick={() => setSelectedMonth(null)}
+                                                    className="text-muted-foreground"
+                                                >
+                                                    <X className="h-4 w-4 mr-2" />
+                                                    Limpar filtro: {selectedMonth}
+                                                </Button>
+                                            ) : (
+                                                <div className="invisible">
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="sm"
+                                                        className="opacity-0"
+                                                    >
+                                                        <X className="h-4 w-4 mr-2" />
+                                                        Placeholder
+                                                    </Button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className={cn(
+                                            "w-full",
+                                            isMobile ? "h-[150px]" : "h-[300px]"
+                                        )}>
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <AreaChart
+                                                    data={monthlyData}
+                                                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                                                    onClick={handleMonthClick}
+                                                    onMouseDown={(e) => {
+                                                        if (e && e.activeLabel) {
+                                                            setSelecting(true)
+                                                            setDateRange({ start: e.activeLabel, end: null })
+                                                        }
+                                                    }}
+                                                    onMouseMove={(e) => {
+                                                        if (selecting && e && e.activeLabel) {
+                                                            setDateRange(prev => ({ 
+                                                                ...prev, 
+                                                                end: e.activeLabel as string 
+                                                            }))
+                                                        }
+                                                    }}
+                                                    onMouseUp={() => {
+                                                        setSelecting(false)
+                                                        if (dateRange.start && dateRange.end) {
+                                                            const [start, end] = [dateRange.start, dateRange.end].sort((a, b) => {
+                                                                const [monthA, yearA] = a.split('/')
+                                                                const [monthB, yearB] = b.split('/')
+                                                                return new Date(Number(yearA), Number(monthA) - 1).getTime() -
+                                                                       new Date(Number(yearB), Number(monthB) - 1).getTime()
+                                                            })
+                                                            setSelectedMonth(`${start} - ${end}`)
+                                                        }
+                                                    }}
+                                                    ref={chartRef}
+                                                >
+                                                    <defs>
+                                                        <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                                                            <stop offset="5%" stopColor="#2563eb" stopOpacity={0.3}/>
+                                                            <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
+                                                        </linearGradient>
+                                                    </defs>
+                                                    <CartesianGrid strokeDasharray="3 3" />
+                                                    <XAxis 
+                                                        dataKey="month" 
+                                                        fontSize={12}
+                                                        tickMargin={5}
+                                                    />
+                                                    <YAxis 
+                                                        fontSize={12}
+                                                        tickFormatter={(value) => 
+                                                            new Intl.NumberFormat('pt-BR', {
+                                                                notation: 'compact',
+                                                                compactDisplay: 'short',
+                                                            }).format(value)
+                                                        }
+                                                    />
+                                                    
+                                                    <Area
+                                                        key="quantity-area"
+                                                        type="monotone"
+                                                        dataKey="quantity"
+                                                        stroke="#2563eb"
+                                                        strokeWidth={2}
+                                                        fill="url(#colorValue)"
+                                                        isAnimationActive={isFirstRender.current}
+                                                        onAnimationEnd={() => {
+                                                            isFirstRender.current = false
+                                                        }}
+                                                        dot={(props: any) => {
+                                                            const isInRange = selectedMonth?.includes(' - ') 
+                                                                ? isDateInRange(props.payload.month, selectedMonth)
+                                                                : selectedMonth === props.payload.month
+                                                            return (
+                                                                <circle
+                                                                    key={`dot-${props.payload.month}`}
+                                                                    cx={props.cx}
+                                                                    cy={props.cy}
+                                                                    r={isInRange ? 6 : 4}
+                                                                    fill={isInRange ? "#2563eb" : "#fff"}
+                                                                    stroke="#2563eb"
+                                                                    strokeWidth={isInRange ? 3 : 2}
+                                                                    className={cn(
+                                                                        "transition-all duration-200",
+                                                                        isInRange && "drop-shadow-md"
+                                                                    )}
+                                                                />
+                                                            )
+                                                        }}
+                                                        activeDot={{
+                                                            key: "active-dot",
+                                                            r: 6,
+                                                            stroke: "#2563eb",
+                                                            strokeWidth: 2,
+                                                            fill: "#fff",
+                                                            className: "drop-shadow-md"
+                                                        }}
+                                                    />
+
+                                                    {/* Reference lines for selected range */}
+                                                    {selectedMonth?.includes(' - ') && !selecting && (
+                                                        <>
+                                                            <ReferenceLine
+                                                                x={selectedMonth.split(' - ')[0]}
+                                                                stroke="#2563eb"
+                                                                strokeDasharray="3 3"
+                                                                strokeWidth={2}
+                                                                isFront={true}
+                                                                label={{
+                                                                    value: '',
+                                                                    position: 'top',
+                                                                    fill: '#2563eb',
+                                                                    fontSize: 12
+                                                                }}
+                                                            />
+                                                            <ReferenceLine
+                                                                x={selectedMonth.split(' - ')[1]}
+                                                                stroke="#2563eb"
+                                                                strokeDasharray="3 3"
+                                                                strokeWidth={2}
+                                                                isFront={true}
+                                                                label={{
+                                                                    value: '',
+                                                                    position: 'top',
+                                                                    fill: '#2563eb',
+                                                                    fontSize: 12
+                                                                }}
+                                                            />
+                                                        </>
+                                                    )}
+
+                                                    {/* Reference lines while selecting */}
+                                                    {selecting && dateRange.start && dateRange.end && (
+                                                        <>
+                                                            <ReferenceLine
+                                                                x={dateRange.start}
+                                                                stroke="#2563eb"
+                                                                strokeDasharray="3 3"
+                                                                strokeWidth={2}
+                                                                isFront={true}
+                                                                label={{
+                                                                    value: '',
+                                                                    position: 'top',
+                                                                    fill: '#2563eb',
+                                                                    fontSize: 12
+                                                                }}
+                                                            />
+                                                            <ReferenceLine
+                                                                x={dateRange.end}
+                                                                stroke="#2563eb"
+                                                                strokeDasharray="3 3"
+                                                                strokeWidth={2}
+                                                                isFront={true}
+                                                                label={{
+                                                                    value: '',
+                                                                    position: 'top',
+                                                                    fill: '#2563eb',
+                                                                    fontSize: 12
+                                                                }}
+                                                            />
+                                                        </>
+                                                    )}
+
+                                                    {/* Selection overlay */}
+                                                    {selecting && dateRange.start && dateRange.end && (
+                                                        <ReferenceArea
+                                                            x1={dateRange.start}
+                                                            x2={dateRange.end}
+                                                            fill="#2563eb"
+                                                            fillOpacity={0.1}
+                                                            strokeOpacity={0}
+                                                        />
+                                                    )}
+
+                                                    <Tooltip content={<CustomTooltip selectedMonth={selectedMonth} />} />
+                                                </AreaChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </div>
+
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                                        <div>
+                                            Histórico de Vendas
+                                            {selectedMonth && (
+                                                <span className="ml-2 text-sm font-normal text-muted-foreground">
+                                                    Filtrado por: {selectedMonth}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Button
+                                                variant="outline"
                                                 size="sm"
-                                                className="opacity-0"
+                                                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                                disabled={currentPage === 1}
                                             >
-                                                <X className="h-4 w-4 mr-2" />
-                                                Placeholder
+                                                <ChevronLeft className="h-4 w-4" />
+                                            </Button>
+                                            <span className="text-sm">
+                                                Página {currentPage} de {totalPages}
+                                            </span>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                                disabled={currentPage === totalPages}
+                                            >
+                                                <ChevronRight className="h-4 w-4" />
                                             </Button>
                                         </div>
-                                    )}
-                                </div>
-                            </CardHeader>
-                            <CardContent>
-                                <div className={cn(
-                                    "w-full",
-                                    isMobile ? "h-[150px]" : "h-[300px]"
-                                )}>
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <AreaChart
-                                            data={monthlyData}
-                                            margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                                            onClick={handleMonthClick}
-                                            onMouseDown={(e) => {
-                                                if (e && e.activeLabel) {
-                                                    setSelecting(true)
-                                                    setDateRange({ start: e.activeLabel, end: null })
-                                                }
-                                            }}
-                                            onMouseMove={(e) => {
-                                                if (selecting && e && e.activeLabel) {
-                                                    setDateRange(prev => ({ 
-                                                        ...prev, 
-                                                        end: e.activeLabel as string 
-                                                    }))
-                                                }
-                                            }}
-                                            onMouseUp={() => {
-                                                setSelecting(false)
-                                                if (dateRange.start && dateRange.end) {
-                                                    const [start, end] = [dateRange.start, dateRange.end].sort((a, b) => {
-                                                        const [monthA, yearA] = a.split('/')
-                                                        const [monthB, yearB] = b.split('/')
-                                                        return new Date(Number(yearA), Number(monthA) - 1).getTime() -
-                                                               new Date(Number(yearB), Number(monthB) - 1).getTime()
-                                                    })
-                                                    setSelectedMonth(`${start} - ${end}`)
-                                                }
-                                            }}
-                                            ref={chartRef}
-                                        >
-                                            <defs>
-                                                <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                                                    <stop offset="5%" stopColor="#2563eb" stopOpacity={0.3}/>
-                                                    <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
-                                                </linearGradient>
-                                            </defs>
-                                            <CartesianGrid strokeDasharray="3 3" />
-                                            <XAxis 
-                                                dataKey="month" 
-                                                fontSize={12}
-                                                tickMargin={5}
-                                            />
-                                            <YAxis 
-                                                fontSize={12}
-                                                tickFormatter={(value) => 
-                                                    new Intl.NumberFormat('pt-BR', {
-                                                        notation: 'compact',
-                                                        compactDisplay: 'short',
-                                                    }).format(value)
-                                                }
-                                            />
-                                            
-                                            <Area
-                                                key="quantity-area"
-                                                type="monotone"
-                                                dataKey="quantity"
-                                                stroke="#2563eb"
-                                                strokeWidth={2}
-                                                fill="url(#colorValue)"
-                                                isAnimationActive={isFirstRender.current}
-                                                onAnimationEnd={() => {
-                                                    isFirstRender.current = false
-                                                }}
-                                                dot={(props: any) => {
-                                                    const isInRange = selectedMonth?.includes(' - ') 
-                                                        ? isDateInRange(props.payload.month, selectedMonth)
-                                                        : selectedMonth === props.payload.month
-                                                    return (
-                                                        <circle
-                                                            key={`dot-${props.payload.month}`}
-                                                            cx={props.cx}
-                                                            cy={props.cy}
-                                                            r={isInRange ? 6 : 4}
-                                                            fill={isInRange ? "#2563eb" : "#fff"}
-                                                            stroke="#2563eb"
-                                                            strokeWidth={isInRange ? 3 : 2}
-                                                            className={cn(
-                                                                "transition-all duration-200",
-                                                                isInRange && "drop-shadow-md"
-                                                            )}
-                                                        />
-                                                    )
-                                                }}
-                                                activeDot={{
-                                                    key: "active-dot",
-                                                    r: 6,
-                                                    stroke: "#2563eb",
-                                                    strokeWidth: 2,
-                                                    fill: "#fff",
-                                                    className: "drop-shadow-md"
-                                                }}
-                                            />
-
-                                            {/* Reference lines for selected range */}
-                                            {selectedMonth?.includes(' - ') && !selecting && (
-                                                <>
-                                                    <ReferenceLine
-                                                        x={selectedMonth.split(' - ')[0]}
-                                                        stroke="#2563eb"
-                                                        strokeDasharray="3 3"
-                                                        strokeWidth={2}
-                                                        isFront={true}
-                                                        label={{
-                                                            value: '',
-                                                            position: 'top',
-                                                            fill: '#2563eb',
-                                                            fontSize: 12
-                                                        }}
-                                                    />
-                                                    <ReferenceLine
-                                                        x={selectedMonth.split(' - ')[1]}
-                                                        stroke="#2563eb"
-                                                        strokeDasharray="3 3"
-                                                        strokeWidth={2}
-                                                        isFront={true}
-                                                        label={{
-                                                            value: '',
-                                                            position: 'top',
-                                                            fill: '#2563eb',
-                                                            fontSize: 12
-                                                        }}
-                                                    />
-                                                </>
-                                            )}
-
-                                            {/* Reference lines while selecting */}
-                                            {selecting && dateRange.start && dateRange.end && (
-                                                <>
-                                                    <ReferenceLine
-                                                        x={dateRange.start}
-                                                        stroke="#2563eb"
-                                                        strokeDasharray="3 3"
-                                                        strokeWidth={2}
-                                                        isFront={true}
-                                                        label={{
-                                                            value: '',
-                                                            position: 'top',
-                                                            fill: '#2563eb',
-                                                            fontSize: 12
-                                                        }}
-                                                    />
-                                                    <ReferenceLine
-                                                        x={dateRange.end}
-                                                        stroke="#2563eb"
-                                                        strokeDasharray="3 3"
-                                                        strokeWidth={2}
-                                                        isFront={true}
-                                                        label={{
-                                                            value: '',
-                                                            position: 'top',
-                                                            fill: '#2563eb',
-                                                            fontSize: 12
-                                                        }}
-                                                    />
-                                                </>
-                                            )}
-
-                                            {/* Selection overlay */}
-                                            {selecting && dateRange.start && dateRange.end && (
-                                                <ReferenceArea
-                                                    x1={dateRange.start}
-                                                    x2={dateRange.end}
-                                                    fill="#2563eb"
-                                                    fillOpacity={0.1}
-                                                    strokeOpacity={0}
-                                                />
-                                            )}
-
-                                            <Tooltip content={<CustomTooltip selectedMonth={selectedMonth} />} />
-                                        </AreaChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
-
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-                                <div>
-                                    Histórico de Vendas
-                                    {selectedMonth && (
-                                        <span className="ml-2 text-sm font-normal text-muted-foreground">
-                                            Filtrado por: {selectedMonth}
-                                        </span>
-                                    )}
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                                        disabled={currentPage === 1}
-                                    >
-                                        <ChevronLeft className="h-4 w-4" />
-                                    </Button>
-                                    <span className="text-sm">
-                                        Página {currentPage} de {totalPages}
-                                    </span>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                                        disabled={currentPage === totalPages}
-                                    >
-                                        <ChevronRight className="h-4 w-4" />
-                                    </Button>
-                                </div>
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="overflow-x-auto -mx-6 px-6">
-                                <div className="min-w-[900px]">
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead 
-                                                    sortable 
-                                                    sortDirection={sortConfig.column === 'dtemissao' ? sortConfig.direction : null}
-                                                    onSort={() => handleSort('dtemissao')}
-                                                >
-                                                    Data
-                                                </TableHead>
-                                                <TableHead 
-                                                    sortable 
-                                                    sortDirection={sortConfig.column === 'cdpedido' ? sortConfig.direction : null}
-                                                    onSort={() => handleSort('cdpedido')}
-                                                >
-                                                    Pedido
-                                                </TableHead>
-                                                <TableHead 
-                                                    sortable 
-                                                    sortDirection={sortConfig.column === 'nrdocumento' ? sortConfig.direction : null}
-                                                    onSort={() => handleSort('nrdocumento')}
-                                                >
-                                                    Documento
-                                                </TableHead>
-                                                <TableHead 
-                                                    sortable 
-                                                    sortDirection={sortConfig.column === 'nmpessoa' ? sortConfig.direction : null}
-                                                    onSort={() => handleSort('nmpessoa')}
-                                                >
-                                                    Cliente
-                                                </TableHead>
-                                                <TableHead 
-                                                    sortable 
-                                                    sortDirection={sortConfig.column === 'tppessoa' ? sortConfig.direction : null}
-                                                    onSort={() => handleSort('tppessoa')}
-                                                >
-                                                    Tipo
-                                                </TableHead>
-                                                <TableHead 
-                                                    sortable 
-                                                    sortDirection={sortConfig.column === 'nmempresacurtovenda' ? sortConfig.direction : null}
-                                                    onSort={() => handleSort('nmempresacurtovenda')}
-                                                >
-                                                    Filial
-                                                </TableHead>
-                                                <TableHead 
-                                                    sortable 
-                                                    sortDirection={sortConfig.column === 'qtbrutaproduto' ? sortConfig.direction : null}
-                                                    onSort={() => handleSort('qtbrutaproduto')}
-                                                    className="text-right"
-                                                >
-                                                    Qtd
-                                                </TableHead>
-                                                <TableHead 
-                                                    sortable 
-                                                    sortDirection={sortConfig.column === 'vlfaturamento' ? sortConfig.direction : null}
-                                                    onSort={() => handleSort('vlfaturamento')}
-                                                    className="text-right"
-                                                >
-                                                    Faturamento
-                                                </TableHead>
-                                                <TableHead 
-                                                    sortable 
-                                                    sortDirection={sortConfig.column === 'vltotalcustoproduto' ? sortConfig.direction : null}
-                                                    onSort={() => handleSort('vltotalcustoproduto')}
-                                                    className="text-right"
-                                                >
-                                                    Custo
-                                                </TableHead>
-                                                <TableHead 
-                                                    sortable 
-                                                    sortDirection={sortConfig.column === 'margem' ? sortConfig.direction : null}
-                                                    onSort={() => handleSort('margem')}
-                                                    className="text-right"
-                                                >
-                                                    Margem
-                                                </TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody className={cn(roboto.className, "text-xs sm:text-sm")}>
-                                            {filteredData
-                                                .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
-                                                .map((item, index) => (
-                                                    <TableRow key={index}>
-                                                        <TableCell>{item.dtemissao}</TableCell>
-                                                        <TableCell>
-                                                            <Link
-                                                                href={`/vendas-dia/${item.cdpedido}?nrdocumento=${item.nrdocumento}&dtemissao=${item.dtemissao}&fromProduct=${item.cdproduto}`}
-                                                                className="text-blue-500 hover:text-blue-700 underline"
-                                                            >
-                                                                {item.cdpedido}
-                                                            </Link>
-                                                        </TableCell>
-                                                        <TableCell>{item.nrdocumento}</TableCell>
-                                                        <TableCell>
-                                                            <Link
-                                                                href={`/cliente/${encodeURIComponent(item.nmpessoa)}?returnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`}
-                                                                className="text-blue-500 hover:text-blue-700 underline"
-                                                            >
-                                                                {item.nmpessoa}
-                                                            </Link>
-                                                        </TableCell>
-                                                        <TableCell>{item.tppessoa}</TableCell>
-                                                        <TableCell>{item.nmempresacurtovenda}</TableCell>
-                                                        <TableCell className="text-right">{item.qtbrutaproduto}</TableCell>
-                                                        <TableCell className="text-right">
-                                                            {item.vlfaturamento.toLocaleString('pt-BR', {
-                                                                style: 'currency',
-                                                                currency: 'BRL'
-                                                            })}
-                                                        </TableCell>
-                                                        <TableCell className="text-right">
-                                                            {item.vltotalcustoproduto.toLocaleString('pt-BR', {
-                                                                style: 'currency',
-                                                                currency: 'BRL'
-                                                            })}
-                                                        </TableCell>
-                                                        <TableCell className="text-right">{item.margem}</TableCell>
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="overflow-x-auto -mx-6 px-6">
+                                        <div className="min-w-[900px]">
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead 
+                                                            sortable 
+                                                            sortDirection={sortConfig.column === 'dtemissao' ? sortConfig.direction : null}
+                                                            onSort={() => handleSort('dtemissao')}
+                                                        >
+                                                            Data
+                                                        </TableHead>
+                                                        <TableHead 
+                                                            sortable 
+                                                            sortDirection={sortConfig.column === 'cdpedido' ? sortConfig.direction : null}
+                                                            onSort={() => handleSort('cdpedido')}
+                                                        >
+                                                            Pedido
+                                                        </TableHead>
+                                                        <TableHead 
+                                                            sortable 
+                                                            sortDirection={sortConfig.column === 'nrdocumento' ? sortConfig.direction : null}
+                                                            onSort={() => handleSort('nrdocumento')}
+                                                        >
+                                                            Documento
+                                                        </TableHead>
+                                                        <TableHead 
+                                                            sortable 
+                                                            sortDirection={sortConfig.column === 'nmpessoa' ? sortConfig.direction : null}
+                                                            onSort={() => handleSort('nmpessoa')}
+                                                        >
+                                                            Cliente
+                                                        </TableHead>
+                                                        <TableHead 
+                                                            sortable 
+                                                            sortDirection={sortConfig.column === 'tppessoa' ? sortConfig.direction : null}
+                                                            onSort={() => handleSort('tppessoa')}
+                                                        >
+                                                            Tipo
+                                                        </TableHead>
+                                                        <TableHead 
+                                                            sortable 
+                                                            sortDirection={sortConfig.column === 'nmempresacurtovenda' ? sortConfig.direction : null}
+                                                            onSort={() => handleSort('nmempresacurtovenda')}
+                                                        >
+                                                            Filial
+                                                        </TableHead>
+                                                        <TableHead 
+                                                            sortable 
+                                                            sortDirection={sortConfig.column === 'qtbrutaproduto' ? sortConfig.direction : null}
+                                                            onSort={() => handleSort('qtbrutaproduto')}
+                                                            className="text-right"
+                                                        >
+                                                            Qtd
+                                                        </TableHead>
+                                                        <TableHead 
+                                                            sortable 
+                                                            sortDirection={sortConfig.column === 'vlfaturamento' ? sortConfig.direction : null}
+                                                            onSort={() => handleSort('vlfaturamento')}
+                                                            className="text-right"
+                                                        >
+                                                            Faturamento
+                                                        </TableHead>
+                                                        <TableHead 
+                                                            sortable 
+                                                            sortDirection={sortConfig.column === 'vltotalcustoproduto' ? sortConfig.direction : null}
+                                                            onSort={() => handleSort('vltotalcustoproduto')}
+                                                            className="text-right"
+                                                        >
+                                                            Custo
+                                                        </TableHead>
+                                                        <TableHead 
+                                                            sortable 
+                                                            sortDirection={sortConfig.column === 'margem' ? sortConfig.direction : null}
+                                                            onSort={() => handleSort('margem')}
+                                                            className="text-right"
+                                                        >
+                                                            Margem
+                                                        </TableHead>
                                                     </TableRow>
-                                                ))}
-                                        </TableBody>
-                                    </Table>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+                                                </TableHeader>
+                                                <TableBody className={cn(roboto.className, "text-xs sm:text-sm")}>
+                                                    {filteredData
+                                                        .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                                                        .map((item, index) => (
+                                                            <TableRow key={index}>
+                                                                <TableCell>{item.dtemissao}</TableCell>
+                                                                <TableCell>
+                                                                    <Link
+                                                                        href={`/vendas-dia/${item.cdpedido}?nrdocumento=${item.nrdocumento}&dtemissao=${item.dtemissao}&fromProduct=${item.cdproduto}`}
+                                                                        className="text-blue-500 hover:text-blue-700 underline"
+                                                                    >
+                                                                        {item.cdpedido}
+                                                                    </Link>
+                                                                </TableCell>
+                                                                <TableCell>{item.nrdocumento}</TableCell>
+                                                                <TableCell>
+                                                                    <Link
+                                                                        href={`/cliente/${encodeURIComponent(item.nmpessoa)}?returnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`}
+                                                                        className="text-blue-500 hover:text-blue-700 underline"
+                                                                    >
+                                                                        {item.nmpessoa}
+                                                                    </Link>
+                                                                </TableCell>
+                                                                <TableCell>{item.tppessoa}</TableCell>
+                                                                <TableCell>{item.nmempresacurtovenda}</TableCell>
+                                                                <TableCell className="text-right">{item.qtbrutaproduto}</TableCell>
+                                                                <TableCell className="text-right">
+                                                                    {item.vlfaturamento.toLocaleString('pt-BR', {
+                                                                        style: 'currency',
+                                                                        currency: 'BRL'
+                                                                    })}
+                                                                </TableCell>
+                                                                <TableCell className="text-right">
+                                                                    {item.vltotalcustoproduto.toLocaleString('pt-BR', {
+                                                                        style: 'currency',
+                                                                        currency: 'BRL'
+                                                                    })}
+                                                                </TableCell>
+                                                                <TableCell className="text-right">{item.margem}</TableCell>
+                                                            </TableRow>
+                                                        ))}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </>
+                    )}
 
                     {data.stock && data.stock[0] && (
                         <ProductStockCard stockData={data.stock[0]} />
