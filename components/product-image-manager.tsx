@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils"
 import Image from 'next/image'
 import { supabase } from '@/lib/supabase-client'
 import { toast } from 'sonner'
+import { Input } from "./ui/input"
 
 interface ProductImage {
     id: string
@@ -44,6 +45,7 @@ export function ProductImageManager({ productCode, productName, onImageUpdate }:
     const [isUploading, setIsUploading] = useState(false)
     const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null)
     const [isGalleryOpen, setIsGalleryOpen] = useState(false)
+    const [searchQuery, setSearchQuery] = useState(productName)
 
     useEffect(() => {
         fetchProductImages()
@@ -55,6 +57,7 @@ export function ProductImageManager({ productCode, productName, onImageUpdate }:
         } else {
             setSearchResults([]);
             setSelectedImages(new Set());
+            setSearchQuery(productName);
         }
     }, [isSearchOpen]);
 
@@ -183,7 +186,7 @@ export function ProductImageManager({ productCode, productName, onImageUpdate }:
     const handleGoogleSearch = async () => {
         try {
             setSearchResults([]); // Clear previous results
-            const response = await fetch(`/api/produto/google-image?query=${encodeURIComponent(productName)}`);
+            const response = await fetch(`/api/produto/google-image?query=${encodeURIComponent(searchQuery)}`);
             
             if (!response.ok) {
                 const error = await response.json();
@@ -526,6 +529,22 @@ export function ProductImageManager({ productCode, productName, onImageUpdate }:
                         <DialogTitle>Buscar Imagens</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4">
+                        <div className="flex gap-2">
+                            <Input 
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder="Digite sua busca..."
+                                className="flex-1"
+                            />
+                            <Button 
+                                onClick={handleGoogleSearch}
+                                variant="secondary"
+                            >
+                                <Search className="h-4 w-4 mr-2" />
+                                Buscar
+                            </Button>
+                        </div>
+                        
                         <div className="flex gap-2">
                             <Button
                                 onClick={saveSelectedImages}

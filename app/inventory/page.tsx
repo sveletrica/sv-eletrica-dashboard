@@ -991,95 +991,99 @@ export default function Inventory() {
                     <CardHeader>
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                             <CardTitle>Lista de Produtos</CardTitle>
-                            <div className="w-full sm:w-auto sm:flex-1 sm:max-w-sm sm:ml-4">
-                                <div className="flex gap-2 mb-2 sm:mb-0">
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <Button
-                                                variant="outline"
-                                                role="combobox"
-                                                className="w-[250px] justify-between"
-                                            >
-                                                {selectedGroups.includes(ALL_GROUPS) 
-                                                    ? "Todos os grupos" 
-                                                    : `${selectedGroups.length} grupo(s)`}
-                                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-[250px] p-0" align="start">
-                                            <Command>
-                                                <CommandInput placeholder="Buscar grupo..." className="h-9" />
-                                                <CommandList className="max-h-[300px] overflow-auto">
-                                                    <CommandEmpty>Nenhum grupo encontrado.</CommandEmpty>
-                                                    <CommandGroup>
-                                                        <CommandItem
-                                                            value={ALL_GROUPS}
-                                                            onSelect={() => toggleGroup(ALL_GROUPS)}
-                                                        >
-                                                            <Check
-                                                                className={cn(
-                                                                    "mr-2 h-4 w-4",
-                                                                    selectedGroups.includes(ALL_GROUPS) 
-                                                                        ? "opacity-100" 
-                                                                        : "opacity-0"
-                                                                )}
-                                                            />
-                                                            Todos os grupos
-                                                        </CommandItem>
-                                                        {getUniqueGroups(data).map((group) => (
+                            <div className="w-full sm:w-auto sm:flex-1">
+                                <div className="flex flex-col sm:flex-row gap-2 justify-end">
+                                    {/* First row/group with buttons */}
+                                    <div className="flex gap-2">
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    variant="outline"
+                                                    role="combobox"
+                                                    className="w-[250px] justify-between"
+                                                >
+                                                    {selectedGroups.includes(ALL_GROUPS) 
+                                                        ? "Todos os grupos" 
+                                                        : `${selectedGroups.length} grupo(s)`}
+                                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-[250px] p-0" align="start">
+                                                <Command>
+                                                    <CommandInput placeholder="Buscar grupo..." className="h-9" />
+                                                    <CommandList className="max-h-[300px] overflow-auto">
+                                                        <CommandEmpty>Nenhum grupo encontrado.</CommandEmpty>
+                                                        <CommandGroup>
                                                             <CommandItem
-                                                                key={group}
-                                                                value={group}
-                                                                onSelect={() => toggleGroup(group)}
+                                                                value={ALL_GROUPS}
+                                                                onSelect={() => toggleGroup(ALL_GROUPS)}
                                                             >
                                                                 <Check
                                                                     className={cn(
                                                                         "mr-2 h-4 w-4",
-                                                                        selectedGroups.includes(group) 
+                                                                        selectedGroups.includes(ALL_GROUPS) 
                                                                             ? "opacity-100" 
                                                                             : "opacity-0"
                                                                     )}
                                                                 />
-                                                                {group}
+                                                                Todos os grupos
                                                             </CommandItem>
-                                                        ))}
-                                                    </CommandGroup>
-                                                </CommandList>
-                                            </Command>
-                                        </PopoverContent>
-                                    </Popover>
-                                    <Button
-                                        variant={showOnlyInStock ? "default" : "outline"}
-                                        size="sm"
-                                        onClick={handleStockFilterChange}
-                                        className="whitespace-nowrap"
-                                    >
-                                        {showOnlyInStock ? "Com Estoque" : "Todos"}
-                                    </Button>
+                                                            {getUniqueGroups(data).map((group) => (
+                                                                <CommandItem
+                                                                    key={group}
+                                                                    value={group}
+                                                                    onSelect={() => toggleGroup(group)}
+                                                                >
+                                                                    <Check
+                                                                        className={cn(
+                                                                            "mr-2 h-4 w-4",
+                                                                            selectedGroups.includes(group) 
+                                                                                ? "opacity-100" 
+                                                                                : "opacity-0"
+                                                                        )}
+                                                                    />
+                                                                    {group}
+                                                                </CommandItem>
+                                                            ))}
+                                                        </CommandGroup>
+                                                    </CommandList>
+                                                </Command>
+                                            </PopoverContent>
+                                        </Popover>
+                                        <Button
+                                            variant={showOnlyInStock ? "default" : "outline"}
+                                            size="sm"
+                                            onClick={handleStockFilterChange}
+                                            className="whitespace-nowrap"
+                                        >
+                                            {showOnlyInStock ? "Com Estoque" : "Todos"}
+                                        </Button>
+                                        <div className="flex items-center border rounded-md">
+                                            <Button
+                                                variant={viewMode === 'table' ? "default" : "ghost"}
+                                                size="sm"
+                                                onClick={() => handleViewModeChange('table')}
+                                                className="rounded-r-none"
+                                            >
+                                                <TableIcon className="h-4 w-4" />
+                                            </Button>
+                                            <Button
+                                                variant={viewMode === 'grid' ? "default" : "ghost"}
+                                                size="sm"
+                                                onClick={() => handleViewModeChange('grid')}
+                                                className="rounded-l-none"
+                                            >
+                                                <LayoutGrid className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                    {/* Second row/group with search input */}
                                     <Input
                                         placeholder="Buscar em todos os campos..."
                                         value={searchTerm}
                                         onChange={(e) => handleSearch(e.target.value)}
-                                        className="w-full text-xs"
+                                        className="w-96 text-xs sm:text-sm sm:min-w-[100px]"
                                     />
-                                    <div className="flex items-center border rounded-md">
-                                        <Button
-                                            variant={viewMode === 'table' ? "default" : "ghost"}
-                                            size="sm"
-                                            onClick={() => handleViewModeChange('table')}
-                                            className="rounded-r-none"
-                                        >
-                                            <TableIcon className="h-4 w-4" />
-                                        </Button>
-                                        <Button
-                                            variant={viewMode === 'grid' ? "default" : "ghost"}
-                                            size="sm"
-                                            onClick={() => handleViewModeChange('grid')}
-                                            className="rounded-l-none"
-                                        >
-                                            <LayoutGrid className="h-4 w-4" />
-                                        </Button>
-                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1323,9 +1327,7 @@ export default function Inventory() {
 
                 {lastUpdate && (
                     <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 bg-black text-white px-6 py-3 rounded-full shadow-lg flex flex-col items-center">
-                        <span className="text-xs opacity-80">
-                            Última atualização do banco de dados
-                        </span>
+                        
                         <span className="text-sm font-medium">
                             {new Date(lastUpdate).toLocaleString('pt-BR', {
                                 day: '2-digit',
