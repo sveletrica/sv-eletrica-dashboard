@@ -536,7 +536,7 @@ export function ProductImageManager({ productCode, productName, onImageUpdate }:
                             </Button>
                         </div>
                         
-                        <div className="grid grid-cols-3 md:grid-cols-3 gap-4 max-h-[60vh] overflow-y-auto">
+                        <div className="grid grid-cols-3 md:grid-cols-4 gap-4 max-h-[60vh] overflow-y-auto">
                             {searchResults.length > 0 ? (
                                 searchResults.map((result, index) => (
                                     <div

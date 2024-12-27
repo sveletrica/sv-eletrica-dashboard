@@ -63,6 +63,8 @@ import { Check, ChevronsUpDown } from "lucide-react"
 import Image from 'next/image'
 import { ImagePreviewModal } from "@/components/image-preview-modal"
 import { ManageProductImagesModal } from "@/components/manage-product-images-modal"
+import { LayoutGrid, Table as TableIcon } from "lucide-react"
+import { Toggle } from "@/components/ui/toggle"
 
 const roboto = Roboto({
     weight: ['400', '500'],
@@ -86,6 +88,8 @@ interface SearchIndex {
 interface ProductImage {
     imagem_url: string | null;
 }
+
+type ViewMode = 'table' | 'grid';
 
 function getDefaultVisibleColumns(): Set<ColumnId> {
     return new Set(
@@ -171,6 +175,12 @@ export default function Inventory() {
             return saved ? JSON.parse(saved) : false;
         }
         return false;
+    });
+    const [viewMode, setViewMode] = useState<ViewMode>(() => {
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem('inventoryViewMode') as ViewMode || 'table'
+        }
+        return 'table'
     });
 
     // Initialize visible columns and column order from localStorage
@@ -936,6 +946,11 @@ export default function Inventory() {
         localStorage.setItem('showOnlyInStock', JSON.stringify(newValue));
     };
 
+    const handleViewModeChange = (mode: ViewMode) => {
+        setViewMode(mode);
+        localStorage.setItem('inventoryViewMode', mode);
+    };
+
     if (isLoading) {
         return <InventoryLoading />
     }
@@ -1047,133 +1062,214 @@ export default function Inventory() {
                                         onChange={(e) => handleSearch(e.target.value)}
                                         className="w-full text-xs"
                                     />
+                                    <div className="flex items-center border rounded-md">
+                                        <Button
+                                            variant={viewMode === 'table' ? "default" : "ghost"}
+                                            size="sm"
+                                            onClick={() => handleViewModeChange('table')}
+                                            className="rounded-r-none"
+                                        >
+                                            <TableIcon className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                            variant={viewMode === 'grid' ? "default" : "ghost"}
+                                            size="sm"
+                                            onClick={() => handleViewModeChange('grid')}
+                                            className="rounded-l-none"
+                                        >
+                                            <LayoutGrid className="h-4 w-4" />
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="relative overflow-x-auto">
-                            <Table style={TABLE_STYLES}>
-                                <TableHeader>
-                                    <TableRow>
-                                        {table.getFlatHeaders().map((header) => (
-                                            <TableHead 
-                                                key={header.id}
-                                                className={cn(
-                                                    "whitespace-nowrap px-2 first:pl-4 last:pr-4 relative select-none group",
-                                                    header.column.getCanResize() && "resize-handle"
-                                                )}
-                                                style={{
-                                                    width: header.getSize(),
-                                                    position: 'relative'
-                                                }}
-                                            >
-                                                <ContextMenu>
-                                                    <ContextMenuTrigger>
-                                                        <div
-                                                            draggable
-                                                            onDragStart={(e) => {
-                                                                e.dataTransfer.setData('text/plain', header.column.id)
-                                                                e.currentTarget.classList.add('dragging')
-                                                            }}
-                                                            onDragEnd={(e) => {
-                                                                e.currentTarget.classList.remove('dragging')
-                                                            }}
-                                                            onDragOver={(e) => {
-                                                                e.preventDefault()
-                                                                e.currentTarget.classList.add('drop-target')
-                                                            }}
-                                                            onDragLeave={(e) => {
-                                                                e.currentTarget.classList.remove('drop-target')
-                                                            }}
-                                                            onDrop={(e) => {
-                                                                e.preventDefault()
-                                                                e.currentTarget.classList.remove('drop-target')
-                                                                const draggedColumnId = e.dataTransfer.getData('text/plain')
-                                                                handleColumnReorder(draggedColumnId, header.column.id)
-                                                            }}
-                                                            className="cursor-move py-2 flex items-center gap-2"
-                                                        >
-                                                            {flexRender(
-                                                                header.column.columnDef.header,
-                                                                header.getContext()
-                                                            )}
-                                                        </div>
-                                                    </ContextMenuTrigger>
-                                                    <ContextMenuContent>
-                                                        <ContextMenuItem
-                                                            onClick={() => header.column.toggleSorting(false)}
-                                                        >
-                                                            <ArrowUp className="mr-2 h-4 w-4" />
-                                                            Ordenar Crescente
-                                                        </ContextMenuItem>
-                                                        <ContextMenuItem
-                                                            onClick={() => header.column.toggleSorting(true)}
-                                                        >
-                                                            <ArrowDown className="mr-2 h-4 w-4" />
-                                                            Ordenar Decrescente
-                                                        </ContextMenuItem>
-                                                        <ContextMenuItem
-                                                            onClick={() => header.column.clearSorting()}
-                                                        >
-                                                            <ArrowUpDown className="mr-2 h-4 w-4" />
-                                                            Remover Ordenação
-                                                        </ContextMenuItem>
-                                                        <ContextMenuSeparator />
-                                                        <ContextMenuItem
-                                                            onClick={() => handleHideColumn(header.column.id)}
-                                                            disabled={visibleColumns.size <= 1}
-                                                        >
-                                                            Ocultar coluna
-                                                        </ContextMenuItem>
-                                                    </ContextMenuContent>
-                                                </ContextMenu>
-                                                {header.column.getCanResize() && (
-                                                    <div
-                                                        onMouseDown={header.getResizeHandler()}
-                                                        onTouchStart={header.getResizeHandler()}
-                                                        className={cn(
-                                                            "absolute right-0 top-0 h-full w-1 cursor-col-resize select-none touch-none",
-                                                            "opacity-0 group-hover:opacity-100 bg-gray-200 hover:bg-gray-400"
-                                                        )}
-                                                    />
-                                                )}
-                                            </TableHead>
-                                        ))}
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {table.getRowModel().rows.map((row) => (
-                                        <TableRow key={row.id}>
-                                            {row.getVisibleCells().map((cell) => (
-                                                <TableCell 
-                                                    key={cell.id}
+                        {viewMode === 'table' ? (
+                            <div className="relative overflow-x-auto">
+                                <Table style={TABLE_STYLES}>
+                                    <TableHeader>
+                                        <TableRow>
+                                            {table.getFlatHeaders().map((header) => (
+                                                <TableHead 
+                                                    key={header.id}
                                                     className={cn(
-                                                        "px-2 first:pl-4 last:pr-4",
-                                                        roboto.className,
-                                                        "text-xs sm:text-sm",
-                                                        cell.column.id === 'NmGrupoProduto' && "max-w-[100px] sm:max-w-[120px] truncate",
-                                                        cell.column.id === 'NmProduto' && "max-w-[200px] sm:max-w-[600px]",
-                                                        cell.column.id === 'NmFornecedorPrincipal' && "max-w-[120px] sm:max-w-[150px] truncate" // Add truncate for supplier
+                                                        "whitespace-nowrap px-2 first:pl-4 last:pr-4 relative select-none group",
+                                                        header.column.getCanResize() && "resize-handle"
                                                     )}
                                                     style={{
-                                                        width: cell.column.getSize(),
-                                                        maxWidth: cell.column.getSize(),
-                                                        whiteSpace: cell.column.id === 'NmGrupoProduto' ? 'nowrap' : 'normal',
-                                                        wordBreak: cell.column.id === 'NmGrupoProduto' ? 'normal' : 'break-word'
+                                                        width: header.getSize(),
+                                                        position: 'relative'
                                                     }}
                                                 >
-                                                    {flexRender(
-                                                        cell.column.columnDef.cell,
-                                                        cell.getContext()
+                                                    <ContextMenu>
+                                                        <ContextMenuTrigger>
+                                                            <div
+                                                                draggable
+                                                                onDragStart={(e) => {
+                                                                    e.dataTransfer.setData('text/plain', header.column.id)
+                                                                    e.currentTarget.classList.add('dragging')
+                                                                }}
+                                                                onDragEnd={(e) => {
+                                                                    e.currentTarget.classList.remove('dragging')
+                                                                }}
+                                                                onDragOver={(e) => {
+                                                                    e.preventDefault()
+                                                                    e.currentTarget.classList.add('drop-target')
+                                                                }}
+                                                                onDragLeave={(e) => {
+                                                                    e.currentTarget.classList.remove('drop-target')
+                                                                }}
+                                                                onDrop={(e) => {
+                                                                    e.preventDefault()
+                                                                    e.currentTarget.classList.remove('drop-target')
+                                                                    const draggedColumnId = e.dataTransfer.getData('text/plain')
+                                                                    handleColumnReorder(draggedColumnId, header.column.id)
+                                                                }}
+                                                                className="cursor-move py-2 flex items-center gap-2"
+                                                            >
+                                                                {flexRender(
+                                                                    header.column.columnDef.header,
+                                                                    header.getContext()
+                                                                )}
+                                                            </div>
+                                                        </ContextMenuTrigger>
+                                                        <ContextMenuContent>
+                                                            <ContextMenuItem
+                                                                onClick={() => header.column.toggleSorting(false)}
+                                                            >
+                                                                <ArrowUp className="mr-2 h-4 w-4" />
+                                                                Ordenar Crescente
+                                                            </ContextMenuItem>
+                                                            <ContextMenuItem
+                                                                onClick={() => header.column.toggleSorting(true)}
+                                                            >
+                                                                <ArrowDown className="mr-2 h-4 w-4" />
+                                                                Ordenar Decrescente
+                                                            </ContextMenuItem>
+                                                            <ContextMenuItem
+                                                                onClick={() => header.column.clearSorting()}
+                                                            >
+                                                                <ArrowUpDown className="mr-2 h-4 w-4" />
+                                                                Remover Ordenação
+                                                            </ContextMenuItem>
+                                                            <ContextMenuSeparator />
+                                                            <ContextMenuItem
+                                                                onClick={() => handleHideColumn(header.column.id)}
+                                                                disabled={visibleColumns.size <= 1}
+                                                            >
+                                                                Ocultar coluna
+                                                            </ContextMenuItem>
+                                                        </ContextMenuContent>
+                                                    </ContextMenu>
+                                                    {header.column.getCanResize() && (
+                                                        <div
+                                                            onMouseDown={header.getResizeHandler()}
+                                                            onTouchStart={header.getResizeHandler()}
+                                                            className={cn(
+                                                                "absolute right-0 top-0 h-full w-1 cursor-col-resize select-none touch-none",
+                                                                "opacity-0 group-hover:opacity-100 bg-gray-200 hover:bg-gray-400"
+                                                            )}
+                                                        />
                                                     )}
-                                                </TableCell>
+                                                </TableHead>
                                             ))}
                                         </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </div>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {table.getRowModel().rows.map((row) => (
+                                            <TableRow key={row.id}>
+                                                {row.getVisibleCells().map((cell) => (
+                                                    <TableCell 
+                                                        key={cell.id}
+                                                        className={cn(
+                                                            "px-2 first:pl-4 last:pr-4",
+                                                            roboto.className,
+                                                            "text-xs sm:text-sm",
+                                                            cell.column.id === 'NmGrupoProduto' && "max-w-[100px] sm:max-w-[120px] truncate",
+                                                            cell.column.id === 'NmProduto' && "max-w-[200px] sm:max-w-[600px]",
+                                                            cell.column.id === 'NmFornecedorPrincipal' && "max-w-[120px] sm:max-w-[150px] truncate" // Add truncate for supplier
+                                                        )}
+                                                        style={{
+                                                            width: cell.column.getSize(),
+                                                            maxWidth: cell.column.getSize(),
+                                                            whiteSpace: cell.column.id === 'NmGrupoProduto' ? 'nowrap' : 'normal',
+                                                            wordBreak: cell.column.id === 'NmGrupoProduto' ? 'normal' : 'break-word'
+                                                        }}
+                                                    >
+                                                        {flexRender(
+                                                            cell.column.columnDef.cell,
+                                                            cell.getContext()
+                                                        )}
+                                                    </TableCell>
+                                                ))}
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                                {table.getRowModel().rows.map((row) => {
+                                    const cdChamada = row.getValue('CdChamada') as string;
+                                    const productName = row.getValue('NmProduto') as string;
+                                    const imageUrl = imageCache[cdChamada];
+                                    const stock = row.getValue('StkTotal') as number;
+                                    const price = row.getValue('VlPreco_Empresa59') as number;
+                                    
+                                    return (
+                                        <div 
+                                            key={row.id}
+                                            className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
+                                        >
+                                            <div 
+                                                className="relative aspect-square cursor-pointer"
+                                                onClick={() => {
+                                                    if (imageUrl) {
+                                                        setSelectedImage(imageUrl);
+                                                    } else {
+                                                        setSelectedProduct({ code: cdChamada, name: productName });
+                                                    }
+                                                }}
+                                            >
+                                                {imageUrl ? (
+                                                    <Image
+                                                        src={imageUrl}
+                                                        alt={productName}
+                                                        fill
+                                                        className="object-contain p-2"
+                                                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                                                    />
+                                                ) : (
+                                                    <div className="w-full h-full bg-gray-50 flex items-center justify-center">
+                                                        <span className="text-sm text-gray-400">Sem imagem</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="p-3 space-y-2">
+                                                <Link
+                                                    href={`/produto/${cdChamada.trim()}`}
+                                                    className="text-sm font-medium text-blue-600 hover:text-blue-800 line-clamp-2"
+                                                >
+                                                    {productName}
+                                                </Link>
+                                                <div className="flex justify-between items-center text-sm">
+                                                    <span className="text-gray-600">
+                                                        Estoque: {stock}
+                                                    </span>
+                                                    <span className="font-medium">
+                                                        {price?.toLocaleString('pt-BR', { 
+                                                            style: 'currency', 
+                                                            currency: 'BRL' 
+                                                        })}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
 
                         {/* Pagination Controls */}
                         <div className="flex items-center justify-between px-4 py-3 border-t">
