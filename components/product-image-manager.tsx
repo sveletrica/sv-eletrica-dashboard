@@ -35,6 +35,46 @@ interface ProductImageManagerProps {
     onImageUpdate?: () => void
 }
 
+async function convertWebPToJPEG(webpBlob: Blob): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        img.onload = () => {
+            canvas.width = img.width;
+            canvas.height = img.height;
+            
+            if (!ctx) {
+                reject(new Error('Failed to get canvas context'));
+                return;
+            }
+            
+            // Draw white background first (in case of transparency)
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw the image
+            ctx.drawImage(img, 0, 0);
+            
+            canvas.toBlob(
+                (blob) => {
+                    if (blob) {
+                        resolve(blob);
+                    } else {
+                        reject(new Error('Failed to convert to JPEG'));
+                    }
+                },
+                'image/jpeg',
+                0.9
+            );
+        };
+        
+        img.onerror = () => reject(new Error('Failed to load image'));
+        img.src = URL.createObjectURL(webpBlob);
+    });
+}
+
 export function ProductImageManager({ productCode, productName, onImageUpdate }: ProductImageManagerProps) {
     const [images, setImages] = useState<ProductImage[]>([])
     const [isLoading, setIsLoading] = useState(true)
@@ -46,6 +86,7 @@ export function ProductImageManager({ productCode, productName, onImageUpdate }:
     const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null)
     const [isGalleryOpen, setIsGalleryOpen] = useState(false)
     const [searchQuery, setSearchQuery] = useState(productName)
+    const [isSearching, setIsSearching] = useState(false)
 
     useEffect(() => {
         fetchProductImages()
@@ -185,7 +226,9 @@ export function ProductImageManager({ productCode, productName, onImageUpdate }:
 
     const handleGoogleSearch = async () => {
         try {
-            setSearchResults([]); // Clear previous results
+            setIsSearching(true)
+            setSearchResults([]);
+            
             const response = await fetch(`/api/produto/google-image?query=${encodeURIComponent(searchQuery)}`);
             
             if (!response.ok) {
@@ -194,7 +237,7 @@ export function ProductImageManager({ productCode, productName, onImageUpdate }:
             }
             
             const data = await response.json();
-            console.log('Search results:', data); // Debug log
+            console.log('Search results:', data);
             
             if (!Array.isArray(data) || data.length === 0) {
                 toast.info("Nenhuma imagem encontrada para este produto");
@@ -205,6 +248,8 @@ export function ProductImageManager({ productCode, productName, onImageUpdate }:
         } catch (error) {
             console.error('Error searching images:', error);
             toast.error("Não foi possível buscar imagens do Google");
+        } finally {
+            setIsSearching(false)
         }
     }
 
@@ -219,7 +264,7 @@ export function ProductImageManager({ productCode, productName, onImageUpdate }:
     }
 
     const saveSelectedImages = async () => {
-        setIsUploading(true)
+        setIsUploading(true);
         let successCount = 0;
         let failureCount = 0;
 
@@ -227,90 +272,55 @@ export function ProductImageManager({ productCode, productName, onImageUpdate }:
             for (const url of selectedImages) {
                 try {
                     // Add proxy to handle CORS
-                    const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(url)}`
-                    const response = await fetch(proxyUrl)
+                    const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(url)}`;
+                    const response = await fetch(proxyUrl);
                     
                     if (!response.ok) {
-                        const errorData = await response.json()
-                        throw new Error(errorData.error || errorData.details || response.statusText)
+                        throw new Error(response.statusText);
                     }
 
-                    const contentType = response.headers.get('Content-Type')
-                    if (!contentType?.startsWith('image/')) {
-                        throw new Error('Invalid content type received')
-                    }
-
-                    const blob = await response.blob()
-                    if (blob.size === 0) {
-                        throw new Error('Empty image received')
-                    }
-
-                    // Convert WebP to JPEG if necessary
-                    let finalBlob = blob;
-                    let finalContentType = contentType;
+                    const contentType = response.headers.get('Content-Type') || '';
+                    const blob = await response.blob();
                     
-                    if (contentType === 'image/webp') {
-                        try {
-                            // Create an image element
-                            const img = new Image()
-                            const blobUrl = URL.createObjectURL(blob)
-                            
-                            // Wait for image to load
-                            await new Promise((resolve, reject) => {
-                                img.onload = resolve
-                                img.onerror = reject
-                                img.src = blobUrl
-                            })
-                            
-                            // Create canvas and convert to JPEG
-                            const canvas = document.createElement('canvas')
-                            canvas.width = img.width
-                            canvas.height = img.height
-                            const ctx = canvas.getContext('2d')
-                            if (!ctx) throw new Error('Failed to get canvas context')
-                            
-                            ctx.drawImage(img, 0, 0)
-                            
-                            // Convert to blob
-                            const jpegBlob = await new Promise<Blob>((resolve, reject) => {
-                                canvas.toBlob(
-                                    (blob) => {
-                                        if (blob) resolve(blob)
-                                        else reject(new Error('Failed to convert to JPEG'))
-                                    },
-                                    'image/jpeg',
-                                    0.9
-                                )
-                            })
-                            
-                            // Cleanup
-                            URL.revokeObjectURL(blobUrl)
-                            
-                            finalBlob = jpegBlob
-                            finalContentType = 'image/jpeg'
-                        } catch (conversionError) {
-                            console.warn('WebP conversion failed:', conversionError)
-                            // Fallback to original WebP if conversion fails
-                        }
+                    if (blob.size === 0) {
+                        throw new Error('Empty image received');
                     }
 
-                    // Get extension from final content type
-                    const extension = finalContentType.split('/')[1] || 'jpg'
-                    const fileName = `${productCode}-${Date.now()}.${extension}`
+                    // Process the image based on its type
+                    let finalBlob: Blob;
+                    let extension: string;
 
-                    // Upload to Storage
+                    if (contentType.includes('image/webp')) {
+                        try {
+                            finalBlob = await convertWebPToJPEG(blob);
+                            extension = 'jpg';
+                        } catch (conversionError) {
+                            console.warn('WebP conversion failed, using original:', conversionError);
+                            finalBlob = blob;
+                            extension = 'webp';
+                        }
+                    } else {
+                        finalBlob = blob;
+                        extension = contentType.split('/')[1] || 'jpg';
+                    }
+
+                    // Generate unique filename
+                    const fileName = `${productCode}-${Date.now()}-${successCount}.${extension}`;
+
+                    // Upload to Supabase Storage
                     const { error: uploadError } = await supabase.storage
                         .from('produtos')
                         .upload(fileName, finalBlob, {
-                            contentType: finalContentType
-                        })
+                            contentType: `image/${extension}`,
+                            cacheControl: '3600'
+                        });
 
-                    if (uploadError) throw uploadError
+                    if (uploadError) throw uploadError;
 
                     // Get public URL
                     const { data: { publicUrl } } = supabase.storage
                         .from('produtos')
-                        .getPublicUrl(fileName)
+                        .getPublicUrl(fileName);
 
                     // Save to Database
                     const { error: dbError } = await supabase
@@ -320,37 +330,38 @@ export function ProductImageManager({ productCode, productName, onImageUpdate }:
                             imagem_url: publicUrl,
                             descricao: `Google Image - ${productName}`,
                             ordem: images.length + successCount + 1
-                        })
+                        });
 
-                    if (dbError) throw dbError
+                    if (dbError) throw dbError;
                     successCount++;
 
-                } catch (imageError: any) {
-                    console.error(`Failed to process image ${url}:`, imageError)
-                    toast.error(`Falha ao processar imagem: ${imageError?.message || 'Erro desconhecido'}`)
+                } catch (imageError) {
+                    console.error(`Failed to process image ${url}:`, imageError);
                     failureCount++;
-                    continue
+                    continue;
                 }
             }
 
-            await fetchProductImages()
-            setIsSearchOpen(false)
-            setSelectedImages(new Set())
-            
             if (successCount > 0) {
-                toast.success(`${successCount} imagem(ns) salva(s) com sucesso`)
-                onImageUpdate?.()
+                await fetchProductImages();
+                toast.success(`${successCount} imagem(ns) salva(s) com sucesso`);
+                onImageUpdate?.();
             }
+            
             if (failureCount > 0) {
-                toast.error(`${failureCount} imagem(ns) falharam ao ser processadas`)
+                toast.error(`${failureCount} imagem(ns) falharam ao ser processadas`);
             }
+
+            setIsSearchOpen(false);
+            setSelectedImages(new Set());
+
         } catch (error) {
-            console.error('Error saving images:', error)
-            toast.error("Erro ao salvar imagens")
+            console.error('Error saving images:', error);
+            toast.error("Erro ao salvar imagens");
         } finally {
-            setIsUploading(false)
+            setIsUploading(false);
         }
-    }
+    };
 
     const deleteImage = async (imageId: string, imageUrl: string | null) => {
         try {
@@ -556,7 +567,14 @@ export function ProductImageManager({ productCode, productName, onImageUpdate }:
                         </div>
                         
                         <div className="grid grid-cols-3 md:grid-cols-4 gap-4 max-h-[60vh] overflow-y-auto">
-                            {searchResults.length > 0 ? (
+                            {isSearching ? (
+                                Array.from({ length: 12 }).map((_, index) => (
+                                    <div
+                                        key={index}
+                                        className="relative bg-muted rounded-md overflow-hidden w-full pb-[100%] animate-pulse"
+                                    />
+                                ))
+                            ) : searchResults.length > 0 ? (
                                 searchResults.map((result, index) => (
                                     <div
                                         key={index}
