@@ -117,10 +117,10 @@ function useCountUp(end: number, duration: number = 500) {
 }
 
 // Componente para número animado
-function AnimatedValue({ value, suffix = '', formatter }: { 
-    value: number, 
+function AnimatedValue({ value, suffix = '', formatter }: {
+    value: number,
     suffix?: string,
-    formatter?: (value: number) => string 
+    formatter?: (value: number) => string
 }) {
     const count = useCountUp(value)
     return (
@@ -156,7 +156,7 @@ const getMarginStyle = (margin: number) => {
 // Update the normalizeStr function
 const normalizeStr = (str: string | null | undefined) => {
     if (!str) return '';
-    
+
     return str
         .toLowerCase()
         .normalize('NFD')
@@ -303,12 +303,12 @@ const searchProducts = (products: Product[], query: string) => {
         .slice(0, 50)
 }
 
-const SearchContent = ({ 
-    searchQuery, 
-    setSearchQuery, 
-    filteredProducts, 
-    handleProductSelect 
-}: { 
+const SearchContent = ({
+    searchQuery,
+    setSearchQuery,
+    filteredProducts,
+    handleProductSelect
+}: {
     searchQuery: string
     setSearchQuery: (value: string) => void
     filteredProducts: Product[]
@@ -331,21 +331,21 @@ const SearchContent = ({
                     const searchTerms = searchQuery
                         .split(' ')
                         .filter(term => term.length > 0);
-                    
+
                     const highlightedName = highlightMatches(product.nmproduto, searchTerms);
                     const highlightedCode = highlightMatches(product.cdproduto, searchTerms);
-                    
+
                     return (
                         <div
                             key={product.cdproduto}
                             className="flex flex-col px-2 py-1.5 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground rounded-sm"
                             onClick={() => handleProductSelect(product)}
                         >
-                            <span 
+                            <span
                                 className="font-medium"
                                 dangerouslySetInnerHTML={{ __html: highlightedName }}
                             />
-                            <span 
+                            <span
                                 className="text-xs text-muted-foreground"
                                 dangerouslySetInnerHTML={{ __html: `Código: ${highlightedCode}` }}
                             />
@@ -370,7 +370,7 @@ const SORT_STORAGE_KEY = 'product_table_sort'
 // Add these helper functions
 const getStoredSortConfig = (): SortableColumnProps | null => {
     if (typeof window === 'undefined') return null
-    
+
     const stored = localStorage.getItem(SORT_STORAGE_KEY)
     if (!stored) return null
 
@@ -391,14 +391,14 @@ const prepareMonthlyData = (salesData: ProductSale[]): MonthlyData[] => {
     const monthlyTotals = salesData.reduce((acc, sale) => {
         const [day, month, year] = sale.dtemissao.split('/');
         const monthKey = `${year}-${month.padStart(2, '0')}`;
-        
+
         if (!acc[monthKey]) {
             acc[monthKey] = {
                 quantity: 0,
                 monthStr: `${month}/${year}`
             };
         }
-        
+
         acc[monthKey].quantity += sale.qtbrutaproduto;
         return acc;
     }, {} as Record<string, { quantity: number, monthStr: string }>);
@@ -441,10 +441,10 @@ const isDateInRange = (date: string, range: string) => {
         const [month, year] = d.split('/')
         return new Date(Number(year), Number(month) - 1)
     })
-    
+
     const [month, year] = date.split('/')
     const checkDate = new Date(Number(year), Number(month) - 1)
-    
+
     return checkDate >= start && checkDate <= end
 }
 
@@ -454,9 +454,9 @@ async function getProductImage(productName: string): Promise<GoogleImageResult |
         const response = await fetch(`/api/produto/image?query=${encodeURIComponent(productName)}`, {
             next: { revalidate: 86400 } // Cache for 24 hours
         });
-        
+
         if (!response.ok) return null;
-        
+
         const data = await response.json();
         return data;
     } catch (error) {
@@ -497,12 +497,12 @@ const ProductImageCard = ({ productName }: { productName: string }) => {
     return (
         <>
             <Card className="p-0">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2">
-            <CardTitle className="text-xs sm:text-sm font-medium">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2">
+                    <CardTitle className="text-xs sm:text-sm font-medium">
                         Imagem
                     </CardTitle>
                 </CardHeader>
-                <CardContent 
+                <CardContent
                     className="flex items-center justify-center p-4"
                     onClick={() => imageData && !imgError && setShowModal(true)}
                 >
@@ -601,20 +601,20 @@ function ProductSalesDetailsContent() {
 
             setIsLoading(true)
             setError(null)
-            
+
             try {
                 const [productResponse, priceResponse] = await Promise.all([
                     fetch(`/api/produto/${cdproduto}`),
                     fetch(`/api/produto/${cdproduto}/preco`)
                 ])
-                
+
                 if (!productResponse.ok) {
                     const errorData = await productResponse.json()
                     throw new Error(errorData.error || errorData.details || `Failed to fetch product data: ${productResponse.statusText}`)
                 }
 
                 const productData = await productResponse.json()
-                
+
                 if (!productData?.product?.length) {
                     throw new Error('No product data found')
                 }
@@ -729,7 +729,7 @@ function ProductSalesDetailsContent() {
 
     const filteredData = useMemo(() => {
         let filtered = [...data.product]
-        
+
         // Apply sorting
         if (sortConfig.direction) {
             filtered.sort((a, b) => {
@@ -821,14 +821,14 @@ function ProductSalesDetailsContent() {
 
     const stockDisplay = useMemo(() => {
         if (!data?.stock?.length) return { total: 0, filialCount: 0 }
-        
+
         const stockData = data.stock[0]
         if (!stockData) return { total: 0, filialCount: 0 }
 
         const filialCount = Object.keys(stockData)
             .filter(key => key.startsWith('QtEstoque_') && stockData[key as keyof StockData] > 0)
             .length
-        
+
         return {
             total: stockData.StkTotal || 0,
             filialCount
@@ -838,11 +838,6 @@ function ProductSalesDetailsContent() {
     const calculateMargin = (faturamento: number, custo: number) => {
         return ((faturamento - (faturamento * 0.268 + custo)) / faturamento) * 100
     }
-
-    // Adicione esta verificação de dados de vendas
-    const hasSalesData = useMemo(() => {
-        return data.product.some(item => item.vlfaturamento > 0 || item.qtbrutaproduto > 0);
-    }, [data.product]);
 
     // Then handle conditional returns
     if (!data.product.length && !isLoading) {
@@ -869,10 +864,10 @@ function ProductSalesDetailsContent() {
                             <p className="text-sm text-muted-foreground mb-4">
                                 Digite o código ou nome do produto para começar
                             </p>
-                            
+
                             {isMobile ? (
                                 <>
-                                    <Button 
+                                    <Button
                                         className="w-full max-w-sm"
                                         onClick={() => setIsSearchOpen(true)}
                                     >
@@ -957,787 +952,767 @@ function ProductSalesDetailsContent() {
 
     return (
         <PermissionGuard permission="inventory">
-        <div className="space-y-2">
-            <Button
-                variant="ghost"
-                onClick={handleBack}
-                className="mb-0 w-full justify-end"
-            >
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Voltar
-            </Button>
+            <div className="space-y-2">
+                <Button
+                    variant="ghost"
+                    onClick={handleBack}
+                    className="mb-0 w-full justify-end"
+                >
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Voltar
+                </Button>
 
-            {error ? (
-                <Card>
-                    <CardContent className="p-6">
-                        <div className="flex flex-col items-center justify-center text-center space-y-4">
-                            <AlertTriangle className="h-12 w-12 text-destructive" />
-                            <p className="text-lg font-medium text-destructive">{error}</p>
-                            <Button
-                                variant="outline"
-                                onClick={() => fetchData()}
+                {error ? (
+                    <Card>
+                        <CardContent className="p-6">
+                            <div className="flex flex-col items-center justify-center text-center space-y-4">
+                                <AlertTriangle className="h-12 w-12 text-destructive" />
+                                <p className="text-lg font-medium text-destructive">{error}</p>
+                                <Button
+                                    variant="outline"
+                                    onClick={() => fetchData()}
+                                >
+                                    Tentar novamente
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                ) : (
+                    <>
+                        <h1 className="text-3xl font-bold tracking-tight flex justify-center">Detalhe do Produto</h1>
+
+                        <div className="grid gap-2 grid-cols-3 md:grid-cols-7">
+                            <Card
+                                className="h-full cursor-pointer hover:ring-2 hover:ring-primary/50"
+                                onClick={() => !isEditing && setIsEditing(true)}
                             >
-                                Tentar novamente
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
-            ) : (
-                <>
-                    <h1 className="text-3xl font-bold tracking-tight flex justify-center">Detalhe do Produto</h1>
-
-                    <div className="grid gap-2 grid-cols-3 md:grid-cols-7">
-                        <Card 
-                            className="h-full cursor-pointer hover:ring-2 hover:ring-primary/50"
-                            onClick={() => !isEditing && setIsEditing(true)}
-                        >
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2">
-                                <CardTitle className="text-xs sm:text-sm font-medium">
-                                    Código do Produto
-                                </CardTitle>
-                                <Package className="h-4 w-4 text-muted-foreground" />
-                            </CardHeader>
-                            <CardContent className="p-2 md:p-4">
-                                {isEditing ? (
-                                    <input
-                                        type="text"
-                                        value={inputProductCode}
-                                        onChange={(e) => setInputProductCode(e.target.value)}
-                                        onKeyDown={handleProductSearch}
-                                        onBlur={handleBlur}
-                                        className="w-full text-2xl font-bold bg-transparent border-none focus:outline-none focus:ring-0"
-                                        autoFocus
-                                    />
-                                ) : (
-                                    <div className="text-2xl font-bold truncate product-code">
-                                        {data.product[0]?.cdproduto}
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-
-                        <Card 
-                            className="h-full col-span-2 md:col-span-2 cursor-pointer hover:ring-2 hover:ring-primary/50"
-                            onClick={() => setIsSearchOpen(true)}
-                        >
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2">
-                                <CardTitle className="text-xs sm:text-sm font-medium">
-                                    Descrição
-                                </CardTitle>
-                                <Search className="h-4 w-4" />
-                            </CardHeader>
-                            <CardContent className="p-2 md:p-4">
-                                <div className="text-sm md:text-xl font-bold break-words">
-                                    {data.product[0].nmproduto}
-                                </div>
-                                <div className="text-xs text-muted-foreground mt-2">
-                                    Grupo: {data.product[0].nmgrupoproduto}
-                                    <br />
-                                    {data.product[0].nmfornecedorprincipal}
-                                </div>
-                            </CardContent>
-                            <Dialog open={isSearchOpen} onOpenChange={setIsSearchOpen}>
-                                <DialogContent className="sm:max-w-[425px] p-0">
-                                    <DialogTitle className="sr-only">
-                                        Buscar Produto
-                                    </DialogTitle>
-                                    <SearchContent
-                                        searchQuery={searchQuery}
-                                        setSearchQuery={setSearchQuery}
-                                        filteredProducts={filteredProducts}
-                                        handleProductSelect={handleProductSelect}
-                                    />
-                                </DialogContent>
-                            </Dialog>
-                        </Card>
-
-                        <div className="col-span-3 md:col-span-1">
-                            <ProductImageManager 
-                                productCode={data.product[0]?.cdproduto || ''} 
-                                productName={data.product[0]?.nmproduto || ''} 
-                            />
-                        </div>
-
-                        <Card className="h-full">
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2">
-                                <CardTitle className="text-xs sm:text-sm font-medium">
-                                    Total Vendido {selectedMonth && `(${selectedMonth})`}
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="p-2 md:p-4">
-                                <div className="text-sm md:text-xl font-bold">
-                                    <AnimatedValue value={totals.quantidade} suffix=" un" />
-                                </div>
-                                <p className="text-xs text-muted-foreground">
-                                    <AnimatedValue 
-                                        value={totals.faturamento} 
-                                        formatter={(value) => value.toLocaleString('pt-BR', {
-                                            style: 'currency',
-                                            currency: 'BRL'
-                                        })}
-                                    />
-                                </p>
-                            </CardContent>
-                        </Card>
-
-                        {data.stock && data.stock[0] && (
-                            <StockPopover stockData={data.stock[0]}>
-                                <Card className="h-full cursor-pointer hover:ring-2 hover:ring-primary/50">
-                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2">
-                                        <CardTitle className="text-xs sm:text-sm font-medium">
-                                            Estoque Total
-                                        </CardTitle>
-                                        <Package className="h-4 w-4 text-muted-foreground" />
-                                    </CardHeader>
-                                    <CardContent className="p-2 md:p-4">
-                                        <div className="text-sm md:text-xl font-bold">
-                                            <AnimatedValue value={stockDisplay.total} suffix=" un" />
-                                        </div>
-                                        <p className="text-xs text-muted-foreground">
-                                            Em {stockDisplay.filialCount} filiais
-                                        </p>
-                                    </CardContent>
-                                </Card>
-                            </StockPopover>
-                        )}
-
-                        {data.price && (
-                            <Card className="h-full">
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2">
                                     <CardTitle className="text-xs sm:text-sm font-medium">
-                                        Preços
+                                        Código do Produto
                                     </CardTitle>
                                     <Package className="h-4 w-4 text-muted-foreground" />
                                 </CardHeader>
                                 <CardContent className="p-2 md:p-4">
-                                    <div className="space-y-2">
-                                        <div>
-                                            <div className="text-xs md:text-sm text-muted-foreground">
-                                                Preço Sugerido
+                                    {isEditing ? (
+                                        <input
+                                            type="text"
+                                            value={inputProductCode}
+                                            onChange={(e) => setInputProductCode(e.target.value)}
+                                            onKeyDown={handleProductSearch}
+                                            onBlur={handleBlur}
+                                            className="w-full text-2xl font-bold bg-transparent border-none focus:outline-none focus:ring-0"
+                                            autoFocus
+                                        />
+                                    ) : (
+                                        <div className="text-2xl font-bold truncate product-code">
+                                            {data.product[0]?.cdproduto}
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+
+                            <Card
+                                className="h-full col-span-2 md:col-span-2 cursor-pointer hover:ring-2 hover:ring-primary/50"
+                                onClick={() => setIsSearchOpen(true)}
+                            >
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2">
+                                    <CardTitle className="text-xs sm:text-sm font-medium">
+                                        Descrição
+                                    </CardTitle>
+                                    <Search className="h-4 w-4" />
+                                </CardHeader>
+                                <CardContent className="p-2 md:p-4">
+                                    <div className="text-sm md:text-xl font-bold break-words">
+                                        {data.product[0].nmproduto}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground mt-2">
+                                        Grupo: {data.product[0].nmgrupoproduto}
+                                        <br />
+                                        {data.product[0].nmfornecedorprincipal}
+                                    </div>
+                                </CardContent>
+                                <Dialog open={isSearchOpen} onOpenChange={setIsSearchOpen}>
+                                    <DialogContent className="sm:max-w-[425px] p-0">
+                                        <DialogTitle className="sr-only">
+                                            Buscar Produto
+                                        </DialogTitle>
+                                        <SearchContent
+                                            searchQuery={searchQuery}
+                                            setSearchQuery={setSearchQuery}
+                                            filteredProducts={filteredProducts}
+                                            handleProductSelect={handleProductSelect}
+                                        />
+                                    </DialogContent>
+                                </Dialog>
+                            </Card>
+
+                            <div className="col-span-3 md:col-span-1">
+                                <ProductImageManager
+                                    productCode={data.product[0]?.cdproduto || ''}
+                                    productName={data.product[0]?.nmproduto || ''}
+                                />
+                            </div>
+
+                            <Card className="h-full">
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2">
+                                    <CardTitle className="text-xs sm:text-sm font-medium">
+                                        Total Vendido {selectedMonth && `(${selectedMonth})`}
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-2 md:p-4">
+                                    <div className="text-sm md:text-xl font-bold">
+                                        <AnimatedValue value={totals.quantidade} suffix=" un" />
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">
+                                        <AnimatedValue
+                                            value={totals.faturamento}
+                                            formatter={(value) => value.toLocaleString('pt-BR', {
+                                                style: 'currency',
+                                                currency: 'BRL'
+                                            })}
+                                        />
+                                    </p>
+                                </CardContent>
+                            </Card>
+
+                            {data.stock && data.stock[0] && (
+                                <StockPopover stockData={data.stock[0]}>
+                                    <Card className="h-full cursor-pointer hover:ring-2 hover:ring-primary/50">
+                                        <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2">
+                                            <CardTitle className="text-xs sm:text-sm font-medium">
+                                                Estoque Total
+                                            </CardTitle>
+                                            <Package className="h-4 w-4 text-muted-foreground" />
+                                        </CardHeader>
+                                        <CardContent className="p-2 md:p-4">
+                                            <div className="text-sm md:text-xl font-bold">
+                                                <AnimatedValue value={stockDisplay.total} suffix=" un" />
                                             </div>
-                                            <div className="text-xs md:text-xl font-bold">
-                                                {Number(data.price.vlprecosugerido || 0).toLocaleString('pt-BR', {
-                                                    style: 'currency',
-                                                    currency: 'BRL',
-                                                    minimumFractionDigits: 2,
-                                                    maximumFractionDigits: 2
-                                                })}
+                                            <p className="text-xs text-muted-foreground">
+                                                Em {stockDisplay.filialCount} filiais
+                                            </p>
+                                        </CardContent>
+                                    </Card>
+                                </StockPopover>
+                            )}
+
+                            {data.price && (
+                                <Card className="h-full">
+                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2">
+                                        <CardTitle className="text-xs sm:text-sm font-medium">
+                                            Preços
+                                        </CardTitle>
+                                        <Package className="h-4 w-4 text-muted-foreground" />
+                                    </CardHeader>
+                                    <CardContent className="p-2 md:p-4">
+                                        <div className="space-y-2">
+                                            <div>
+                                                <div className="text-xs md:text-sm text-muted-foreground">
+                                                    Preço Sugerido
+                                                </div>
+                                                <div className="text-xs md:text-xl font-bold">
+                                                    {Number(data.price.vlprecosugerido || 0).toLocaleString('pt-BR', {
+                                                        style: 'currency',
+                                                        currency: 'BRL',
+                                                        minimumFractionDigits: 2,
+                                                        maximumFractionDigits: 2
+                                                    })}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <div className="text-xs md:text-sm text-muted-foreground">
+                                                    Preço Reposição
+                                                </div>
+                                                <div className="text-xs md:text-xl font-bold">
+                                                    {Number(data.price.vlprecoreposicao || 0).toLocaleString('pt-BR', {
+                                                        style: 'currency',
+                                                        currency: 'BRL',
+                                                        minimumFractionDigits: 2,
+                                                        maximumFractionDigits: 2
+                                                    })}
+                                                </div>
                                             </div>
                                         </div>
-                                        <div>
-                                            <div className="text-xs md:text-sm text-muted-foreground">
-                                                Preço Reposição
+                                    </CardContent>
+                                </Card>
+                            )}
+                        </div>
+
+                        <div className={cn(
+                            "grid gap-2",
+                            isMobile ? "grid-cols-1" : "grid-cols-2"
+                        )}>
+                            <Card className={cn(
+                                isMobile && "col-span-1"
+                            )}>
+                                <CardHeader>
+                                    <div className="h-8 flex justify-between items-center">
+                                        <CardTitle className="text-sm font-medium">
+                                            Vendas por Filial
+                                        </CardTitle>
+                                        {selectedFilial ? (
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => setSelectedFilial(null)}
+                                            >
+                                                Limpar Filtro
+                                            </Button>
+                                        ) : (
+                                            <div className="invisible">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="opacity-0"
+                                                >
+                                                    Placeholder
+                                                </Button>
                                             </div>
-                                            <div className="text-xs md:text-xl font-bold">
-                                                {Number(data.price.vlprecoreposicao || 0).toLocaleString('pt-BR', {
-                                                    style: 'currency',
-                                                    currency: 'BRL',
-                                                    minimumFractionDigits: 2,
-                                                    maximumFractionDigits: 2
+                                        )}
+                                    </div>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className={cn(
+                                        "overflow-x-auto",
+                                        isMobile && "max-h-[300px]"
+                                    )}>
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Filial</TableHead>
+                                                    <TableHead className="text-right">Quantidade</TableHead>
+                                                    <TableHead className="text-right">Faturamento</TableHead>
+                                                    <TableHead className="text-right">Margem</TableHead>
+                                                    <TableHead className="text-right">% do Total</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {sortedFilials.map(([filial, values]) => {
+                                                    const percentage = (values.quantidade / totals.quantidade) * 100
+                                                    const margin = calculateMargin(values.faturamento, values.custo)
+                                                    return (
+                                                        <TableRow
+                                                            key={filial}
+                                                            className={cn(
+                                                                "relative cursor-pointer hover:bg-accent/100 transition-colors duration-200",
+                                                                selectedFilial === filial && [
+                                                                    "bg-primary/10 dark:bg-primary/20",
+                                                                    "shadow-sm"
+                                                                ],
+                                                                roboto.className,
+                                                                "text-xs sm:text-sm"
+                                                            )}
+                                                            onClick={() => setSelectedFilial(filial === selectedFilial ? null : filial)}
+                                                        >
+                                                            <TableCell className="font-medium py-2">{filial}</TableCell>
+                                                            <TableCell className="text-right py-2">
+                                                                <AnimatedValue value={values.quantidade} suffix=" un" />
+                                                            </TableCell>
+                                                            <TableCell className="text-right py-2">
+                                                                <AnimatedValue
+                                                                    value={values.faturamento}
+                                                                    formatter={(value) => value.toLocaleString('pt-BR', {
+                                                                        style: 'currency',
+                                                                        currency: 'BRL'
+                                                                    })}
+                                                                />
+                                                            </TableCell>
+                                                            <TableCell className="text-right py-2">
+                                                                {margin >= 0 ? (
+                                                                    <div className="flex justify-end">
+                                                                        <div className={cn(
+                                                                            "inline-flex items-center gap-1 rounded-full px-2 py-1",
+                                                                            getMarginStyle(margin).background,
+                                                                            getMarginStyle(margin).text
+                                                                        )}>
+                                                                            <AnimatedValue
+                                                                                value={margin}
+                                                                                formatter={(value) => value.toFixed(2)}
+                                                                                suffix="%"
+                                                                            />
+                                                                            {getMarginStyle(margin).icon}
+                                                                        </div>
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="flex justify-end">
+                                                                        <div className={cn(
+                                                                            "inline-flex items-center gap-1 rounded-full px-2 py-1",
+                                                                            getMarginStyle(margin).background,
+                                                                            getMarginStyle(margin).text
+                                                                        )}>
+                                                                            {getMarginStyle(margin).icon}
+                                                                            <AnimatedValue
+                                                                                value={margin}
+                                                                                formatter={(value) => value.toFixed(2)}
+                                                                                suffix="%"
+                                                                            />
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </TableCell>
+                                                            <TableCell className="text-right py-2">
+                                                                <div className="relative">
+                                                                    <div
+                                                                        className="absolute inset-0 bg-blue-200 rounded-full animate-expand"
+                                                                        style={{
+                                                                            width: `${(values.quantidade / maxQuantity) * 100}%`,
+                                                                            opacity: 0.5,
+                                                                            transformOrigin: 'left',
+                                                                        }}
+                                                                    />
+                                                                    <span className="relative z-10">
+                                                                        <AnimatedValue
+                                                                            value={(values.quantidade / totals.quantidade) * 100}
+                                                                            formatter={(value) => value.toFixed(1)}
+                                                                            suffix="%"
+                                                                        />
+                                                                    </span>
+                                                                </div>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    )
                                                 })}
-                                            </div>
-                                        </div>
+                                                <TableRow className={cn("font-bold", roboto.className, "text-xs sm:text-sm")}>
+                                                    <TableCell>Total</TableCell>
+                                                    <TableCell className="text-right">
+                                                        <AnimatedValue value={totals.quantidade} suffix=" un" />
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
+                                                        <AnimatedValue
+                                                            value={totals.faturamento}
+                                                            formatter={(value) => value.toLocaleString('pt-BR', {
+                                                                style: 'currency',
+                                                                currency: 'BRL'
+                                                            })}
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
+                                                        {calculateMargin(totals.faturamento, filteredData.reduce((acc, item) => acc + item.vltotalcustoproduto, 0)) >= 0 ? (
+                                                            <div className="flex justify-end">
+                                                                <div className={cn(
+                                                                    "inline-flex items-center gap-1 rounded-full px-2 py-1",
+                                                                    getMarginStyle(calculateMargin(totals.faturamento, filteredData.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).background,
+                                                                    getMarginStyle(calculateMargin(totals.faturamento, filteredData.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).text
+                                                                )}>
+                                                                    <AnimatedValue
+                                                                        value={calculateMargin(totals.faturamento, filteredData.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))}
+                                                                        formatter={(value) => value.toFixed(2)}
+                                                                        suffix="%"
+                                                                    />
+                                                                    {getMarginStyle(calculateMargin(totals.faturamento, filteredData.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).icon}
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex justify-end">
+                                                                <div className={cn(
+                                                                    "inline-flex items-center gap-1 rounded-full px-2 py-1",
+                                                                    getMarginStyle(calculateMargin(totals.faturamento, filteredData.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).background,
+                                                                    getMarginStyle(calculateMargin(totals.faturamento, filteredData.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).text
+                                                                )}>
+                                                                    {getMarginStyle(calculateMargin(totals.faturamento, filteredData.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).icon}
+                                                                    <AnimatedValue
+                                                                        value={calculateMargin(totals.faturamento, filteredData.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))}
+                                                                        formatter={(value) => value.toFixed(2)}
+                                                                        suffix="%"
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell className="text-right">100%</TableCell>
+                                                </TableRow>
+                                            </TableBody>
+                                        </Table>
                                     </div>
                                 </CardContent>
                             </Card>
-                        )}
-                    </div>
 
-                    {/* Card de sem dados de vendas */}
-                    {!hasSalesData && (
-                        <Card className="mt-4">
-                            <CardContent className="p-6">
-                                <div className="flex flex-col items-center justify-center text-center space-y-4">
-                                    <Package className="h-12 w-12 text-muted-foreground" />
-                                    <div className="space-y-2">
-                                        <h3 className="text-lg font-medium">
-                                            Sem dados de vendas
-                                        </h3>
-                                        <p className="text-sm text-muted-foreground">
-                                            Este produto ainda não possui histórico de vendas.
-                                        </p>
+                            <Card className={cn(
+                                isMobile && "col-span-1"
+                            )}>
+                                <CardHeader>
+                                    <div className="h-8 flex justify-between items-center">
+                                        <CardTitle className="text-sm font-medium">
+                                            Tendência de Vendas
+                                        </CardTitle>
+                                        {selectedMonth ? (
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => setSelectedMonth(null)}
+                                                className="text-muted-foreground"
+                                            >
+                                                <X className="h-4 w-4 mr-2" />
+                                                Limpar filtro: {selectedMonth}
+                                            </Button>
+                                        ) : (
+                                            <div className="invisible">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="opacity-0"
+                                                >
+                                                    <X className="h-4 w-4 mr-2" />
+                                                    Placeholder
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className={cn(
+                                        "w-full",
+                                        isMobile ? "h-[150px]" : "h-[300px]"
+                                    )}>
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <AreaChart
+                                                data={monthlyData}
+                                                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                                                onClick={handleMonthClick}
+                                                onMouseDown={(e) => {
+                                                    if (e && e.activeLabel) {
+                                                        setSelecting(true)
+                                                        setDateRange({ start: e.activeLabel, end: null })
+                                                    }
+                                                }}
+                                                onMouseMove={(e) => {
+                                                    if (selecting && e && e.activeLabel) {
+                                                        setDateRange(prev => ({
+                                                            ...prev,
+                                                            end: e.activeLabel as string
+                                                        }))
+                                                    }
+                                                }}
+                                                onMouseUp={() => {
+                                                    setSelecting(false)
+                                                    if (dateRange.start && dateRange.end) {
+                                                        const [start, end] = [dateRange.start, dateRange.end].sort((a, b) => {
+                                                            const [monthA, yearA] = a.split('/')
+                                                            const [monthB, yearB] = b.split('/')
+                                                            return new Date(Number(yearA), Number(monthA) - 1).getTime() -
+                                                                new Date(Number(yearB), Number(monthB) - 1).getTime()
+                                                        })
+                                                        setSelectedMonth(`${start} - ${end}`)
+                                                    }
+                                                }}
+                                                ref={chartRef}
+                                            >
+                                                <defs>
+                                                    <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                                                        <stop offset="5%" stopColor="#2563eb" stopOpacity={0.3} />
+                                                        <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
+                                                    </linearGradient>
+                                                </defs>
+                                                <CartesianGrid strokeDasharray="3 3" />
+                                                <XAxis
+                                                    dataKey="month"
+                                                    fontSize={12}
+                                                    tickMargin={5}
+                                                />
+                                                <YAxis
+                                                    fontSize={12}
+                                                    tickFormatter={(value) =>
+                                                        new Intl.NumberFormat('pt-BR', {
+                                                            notation: 'compact',
+                                                            compactDisplay: 'short',
+                                                        }).format(value)
+                                                    }
+                                                />
+
+                                                <Area
+                                                    key="quantity-area"
+                                                    type="monotone"
+                                                    dataKey="quantity"
+                                                    stroke="#2563eb"
+                                                    strokeWidth={2}
+                                                    fill="url(#colorValue)"
+                                                    isAnimationActive={isFirstRender.current}
+                                                    onAnimationEnd={() => {
+                                                        isFirstRender.current = false
+                                                    }}
+                                                    dot={(props: any) => {
+                                                        const isInRange = selectedMonth?.includes(' - ')
+                                                            ? isDateInRange(props.payload.month, selectedMonth)
+                                                            : selectedMonth === props.payload.month
+                                                        return (
+                                                            <circle
+                                                                key={`dot-${props.payload.month}`}
+                                                                cx={props.cx}
+                                                                cy={props.cy}
+                                                                r={isInRange ? 6 : 4}
+                                                                fill={isInRange ? "#2563eb" : "#fff"}
+                                                                stroke="#2563eb"
+                                                                strokeWidth={isInRange ? 3 : 2}
+                                                                className={cn(
+                                                                    "transition-all duration-200",
+                                                                    isInRange && "drop-shadow-md"
+                                                                )}
+                                                            />
+                                                        )
+                                                    }}
+                                                    activeDot={{
+                                                        key: "active-dot",
+                                                        r: 6,
+                                                        stroke: "#2563eb",
+                                                        strokeWidth: 2,
+                                                        fill: "#fff",
+                                                        className: "drop-shadow-md"
+                                                    }}
+                                                />
+
+                                                {/* Reference lines for selected range */}
+                                                {selectedMonth?.includes(' - ') && !selecting && (
+                                                    <>
+                                                        <ReferenceLine
+                                                            x={selectedMonth.split(' - ')[0]}
+                                                            stroke="#2563eb"
+                                                            strokeDasharray="3 3"
+                                                            strokeWidth={2}
+                                                            isFront={true}
+                                                            label={{
+                                                                value: '',
+                                                                position: 'top',
+                                                                fill: '#2563eb',
+                                                                fontSize: 12
+                                                            }}
+                                                        />
+                                                        <ReferenceLine
+                                                            x={selectedMonth.split(' - ')[1]}
+                                                            stroke="#2563eb"
+                                                            strokeDasharray="3 3"
+                                                            strokeWidth={2}
+                                                            isFront={true}
+                                                            label={{
+                                                                value: '',
+                                                                position: 'top',
+                                                                fill: '#2563eb',
+                                                                fontSize: 12
+                                                            }}
+                                                        />
+                                                    </>
+                                                )}
+
+                                                {/* Reference lines while selecting */}
+                                                {selecting && dateRange.start && dateRange.end && (
+                                                    <>
+                                                        <ReferenceLine
+                                                            x={dateRange.start}
+                                                            stroke="#2563eb"
+                                                            strokeDasharray="3 3"
+                                                            strokeWidth={2}
+                                                            isFront={true}
+                                                            label={{
+                                                                value: '',
+                                                                position: 'top',
+                                                                fill: '#2563eb',
+                                                                fontSize: 12
+                                                            }}
+                                                        />
+                                                        <ReferenceLine
+                                                            x={dateRange.end}
+                                                            stroke="#2563eb"
+                                                            strokeDasharray="3 3"
+                                                            strokeWidth={2}
+                                                            isFront={true}
+                                                            label={{
+                                                                value: '',
+                                                                position: 'top',
+                                                                fill: '#2563eb',
+                                                                fontSize: 12
+                                                            }}
+                                                        />
+                                                    </>
+                                                )}
+
+                                                {/* Selection overlay */}
+                                                {selecting && dateRange.start && dateRange.end && (
+                                                    <ReferenceArea
+                                                        x1={dateRange.start}
+                                                        x2={dateRange.end}
+                                                        fill="#2563eb"
+                                                        fillOpacity={0.1}
+                                                        strokeOpacity={0}
+                                                    />
+                                                )}
+
+                                                <Tooltip content={<CustomTooltip selectedMonth={selectedMonth} />} />
+                                            </AreaChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                                    <div>
+                                        Histórico de Vendas
+                                        {selectedMonth && (
+                                            <span className="ml-2 text-sm font-normal text-muted-foreground">
+                                                Filtrado por: {selectedMonth}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                            disabled={currentPage === 1}
+                                        >
+                                            <ChevronLeft className="h-4 w-4" />
+                                        </Button>
+                                        <span className="text-sm">
+                                            Página {currentPage} de {totalPages}
+                                        </span>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                            disabled={currentPage === totalPages}
+                                        >
+                                            <ChevronRight className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="overflow-x-auto -mx-6 px-6">
+                                    <div className="min-w-[900px]">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead
+                                                        sortable
+                                                        sortDirection={sortConfig.column === 'dtemissao' ? sortConfig.direction : null}
+                                                        onSort={() => handleSort('dtemissao')}
+                                                    >
+                                                        Data
+                                                    </TableHead>
+                                                    <TableHead
+                                                        sortable
+                                                        sortDirection={sortConfig.column === 'cdpedido' ? sortConfig.direction : null}
+                                                        onSort={() => handleSort('cdpedido')}
+                                                    >
+                                                        Pedido
+                                                    </TableHead>
+                                                    <TableHead
+                                                        sortable
+                                                        sortDirection={sortConfig.column === 'nrdocumento' ? sortConfig.direction : null}
+                                                        onSort={() => handleSort('nrdocumento')}
+                                                    >
+                                                        Documento
+                                                    </TableHead>
+                                                    <TableHead
+                                                        sortable
+                                                        sortDirection={sortConfig.column === 'nmpessoa' ? sortConfig.direction : null}
+                                                        onSort={() => handleSort('nmpessoa')}
+                                                    >
+                                                        Cliente
+                                                    </TableHead>
+                                                    <TableHead
+                                                        sortable
+                                                        sortDirection={sortConfig.column === 'tppessoa' ? sortConfig.direction : null}
+                                                        onSort={() => handleSort('tppessoa')}
+                                                    >
+                                                        Tipo
+                                                    </TableHead>
+                                                    <TableHead
+                                                        sortable
+                                                        sortDirection={sortConfig.column === 'nmempresacurtovenda' ? sortConfig.direction : null}
+                                                        onSort={() => handleSort('nmempresacurtovenda')}
+                                                    >
+                                                        Filial
+                                                    </TableHead>
+                                                    <TableHead
+                                                        sortable
+                                                        sortDirection={sortConfig.column === 'qtbrutaproduto' ? sortConfig.direction : null}
+                                                        onSort={() => handleSort('qtbrutaproduto')}
+                                                        className="text-right"
+                                                    >
+                                                        Qtd
+                                                    </TableHead>
+                                                    <TableHead
+                                                        sortable
+                                                        sortDirection={sortConfig.column === 'vlfaturamento' ? sortConfig.direction : null}
+                                                        onSort={() => handleSort('vlfaturamento')}
+                                                        className="text-right"
+                                                    >
+                                                        Faturamento
+                                                    </TableHead>
+                                                    <TableHead
+                                                        sortable
+                                                        sortDirection={sortConfig.column === 'vltotalcustoproduto' ? sortConfig.direction : null}
+                                                        onSort={() => handleSort('vltotalcustoproduto')}
+                                                        className="text-right"
+                                                    >
+                                                        Custo
+                                                    </TableHead>
+                                                    <TableHead
+                                                        sortable
+                                                        sortDirection={sortConfig.column === 'margem' ? sortConfig.direction : null}
+                                                        onSort={() => handleSort('margem')}
+                                                        className="text-right"
+                                                    >
+                                                        Margem
+                                                    </TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody className={cn(roboto.className, "text-xs sm:text-sm")}>
+                                                {filteredData
+                                                    .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                                                    .map((item, index) => (
+                                                        <TableRow key={index}>
+                                                            <TableCell>{item.dtemissao}</TableCell>
+                                                            <TableCell>
+                                                                <Link
+                                                                    href={`/vendas-dia/${item.cdpedido}?nrdocumento=${item.nrdocumento}&dtemissao=${item.dtemissao}&fromProduct=${item.cdproduto}`}
+                                                                    className="text-blue-500 hover:text-blue-700 underline"
+                                                                >
+                                                                    {item.cdpedido}
+                                                                </Link>
+                                                            </TableCell>
+                                                            <TableCell>{item.nrdocumento}</TableCell>
+                                                            <TableCell>
+                                                                <Link
+                                                                    href={`/cliente/${encodeURIComponent(item.nmpessoa)}?returnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`}
+                                                                    className="text-blue-500 hover:text-blue-700 underline"
+                                                                >
+                                                                    {item.nmpessoa}
+                                                                </Link>
+                                                            </TableCell>
+                                                            <TableCell>{item.tppessoa}</TableCell>
+                                                            <TableCell>{item.nmempresacurtovenda}</TableCell>
+                                                            <TableCell className="text-right">{item.qtbrutaproduto}</TableCell>
+                                                            <TableCell className="text-right">
+                                                                {item.vlfaturamento.toLocaleString('pt-BR', {
+                                                                    style: 'currency',
+                                                                    currency: 'BRL'
+                                                                })}
+                                                            </TableCell>
+                                                            <TableCell className="text-right">
+                                                                {item.vltotalcustoproduto.toLocaleString('pt-BR', {
+                                                                    style: 'currency',
+                                                                    currency: 'BRL'
+                                                                })}
+                                                            </TableCell>
+                                                            <TableCell className="text-right">{item.margem}</TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                            </TableBody>
+                                        </Table>
                                     </div>
                                 </div>
                             </CardContent>
                         </Card>
-                    )}
 
-                    {/* Cards de vendas - só aparecem se houver dados */}
-                    {hasSalesData && (
-                        <>
-                            <div className={cn(
-                                "grid gap-2",
-                                isMobile ? "grid-cols-1" : "grid-cols-2"
-                            )}>
-                                <Card className={cn(isMobile && "col-span-1")}>
-                                    <CardHeader>
-                                        <div className="h-8 flex justify-between items-center">
-                                            <CardTitle className="text-sm font-medium">
-                                                Vendas por Filial
-                                            </CardTitle>
-                                            {selectedFilial ? (
-                                                <Button 
-                                                    variant="ghost" 
-                                                    size="sm"
-                                                    onClick={() => setSelectedFilial(null)}
-                                                >
-                                                    Limpar Filtro
-                                                </Button>
-                                            ) : (
-                                                <div className="invisible">
-                                                    <Button 
-                                                        variant="ghost" 
-                                                        size="sm"
-                                                        className="opacity-0"
-                                                    >
-                                                        Placeholder
-                                                    </Button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className={cn(
-                                            "overflow-x-auto",
-                                            isMobile && "max-h-[300px]"
-                                        )}>
-                                            <Table>
-                                                <TableHeader>
-                                                    <TableRow>
-                                                        <TableHead>Filial</TableHead>
-                                                        <TableHead className="text-right">Quantidade</TableHead>
-                                                        <TableHead className="text-right">Faturamento</TableHead>
-                                                        <TableHead className="text-right">Margem</TableHead>
-                                                        <TableHead className="text-right">% do Total</TableHead>
-                                                    </TableRow>
-                                                </TableHeader>
-                                                <TableBody>
-                                                    {sortedFilials.map(([filial, values]) => {
-                                                        const percentage = (values.quantidade / totals.quantidade) * 100
-                                                        const margin = calculateMargin(values.faturamento, values.custo)
-                                                        return (
-                                                            <TableRow 
-                                                                key={filial}
-                                                                className={cn(
-                                                                    "relative cursor-pointer hover:bg-accent/100 transition-colors duration-200",
-                                                                    selectedFilial === filial && [
-                                                                        "bg-primary/10 dark:bg-primary/20",
-                                                                        "shadow-sm"
-                                                                    ],
-                                                                    roboto.className,
-                                                                    "text-xs sm:text-sm"
-                                                                )}
-                                                                onClick={() => setSelectedFilial(filial === selectedFilial ? null : filial)}
-                                                            >
-                                                                <TableCell className="font-medium py-2">{filial}</TableCell>
-                                                                <TableCell className="text-right py-2">
-                                                                    <AnimatedValue value={values.quantidade} suffix=" un" />
-                                                                </TableCell>
-                                                                <TableCell className="text-right py-2">
-                                                                    <AnimatedValue 
-                                                                        value={values.faturamento}
-                                                                        formatter={(value) => value.toLocaleString('pt-BR', {
-                                                                            style: 'currency',
-                                                                            currency: 'BRL'
-                                                                        })}
-                                                                    />
-                                                                </TableCell>
-                                                                <TableCell className="text-right py-2">
-                                                                    {margin >= 0 ? (
-                                                                        <div className="flex justify-end">
-                                                                            <div className={cn(
-                                                                                "inline-flex items-center gap-1 rounded-full px-2 py-1",
-                                                                                getMarginStyle(margin).background,
-                                                                                getMarginStyle(margin).text
-                                                                            )}>
-                                                                                <AnimatedValue 
-                                                                                    value={margin}
-                                                                                    formatter={(value) => value.toFixed(2)}
-                                                                                    suffix="%"
-                                                                                />
-                                                                                {getMarginStyle(margin).icon}
-                                                                            </div>
-                                                                        </div>
-                                                                    ) : (
-                                                                        <div className="flex justify-end">
-                                                                            <div className={cn(
-                                                                                "inline-flex items-center gap-1 rounded-full px-2 py-1",
-                                                                                getMarginStyle(margin).background,
-                                                                                getMarginStyle(margin).text
-                                                                            )}>
-                                                                                {getMarginStyle(margin).icon}
-                                                                                <AnimatedValue 
-                                                                                    value={margin}
-                                                                                    formatter={(value) => value.toFixed(2)}
-                                                                                    suffix="%"
-                                                                                />
-                                                                            </div>
-                                                                        </div>
-                                                                    )}
-                                                                </TableCell>
-                                                                <TableCell className="text-right py-2">
-                                                                    <div className="relative">
-                                                                        <div 
-                                                                            className="absolute inset-0 bg-blue-200 rounded-full animate-expand"
-                                                                            style={{
-                                                                                width: `${(values.quantidade / maxQuantity) * 100}%`,
-                                                                                opacity: 0.5,
-                                                                                transformOrigin: 'left',
-                                                                            }}
-                                                                        />
-                                                                        <span className="relative z-10">
-                                                                            <AnimatedValue 
-                                                                                value={(values.quantidade / totals.quantidade) * 100}
-                                                                                formatter={(value) => value.toFixed(1)}
-                                                                                suffix="%"
-                                                                            />
-                                                                        </span>
-                                                                    </div>
-                                                                </TableCell>
-                                                            </TableRow>
-                                                        )
-                                                    })}
-                                                    <TableRow className={cn("font-bold", roboto.className, "text-xs sm:text-sm")}>
-                                                        <TableCell>Total</TableCell>
-                                                        <TableCell className="text-right">
-                                                            <AnimatedValue value={totals.quantidade} suffix=" un" />
-                                                        </TableCell>
-                                                        <TableCell className="text-right">
-                                                            <AnimatedValue 
-                                                                value={totals.faturamento}
-                                                                formatter={(value) => value.toLocaleString('pt-BR', {
-                                                                    style: 'currency',
-                                                                    currency: 'BRL'
-                                                                })}
-                                                            />
-                                                        </TableCell>
-                                                        <TableCell className="text-right">
-                                                            {calculateMargin(totals.faturamento, filteredData.reduce((acc, item) => acc + item.vltotalcustoproduto, 0)) >= 0 ? (
-                                                                <div className="flex justify-end">
-                                                                    <div className={cn(
-                                                                        "inline-flex items-center gap-1 rounded-full px-2 py-1",
-                                                                        getMarginStyle(calculateMargin(totals.faturamento, filteredData.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).background,
-                                                                        getMarginStyle(calculateMargin(totals.faturamento, filteredData.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).text
-                                                                    )}>
-                                                                        <AnimatedValue 
-                                                                            value={calculateMargin(totals.faturamento, filteredData.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))}
-                                                                            formatter={(value) => value.toFixed(2)}
-                                                                            suffix="%"
-                                                                        />
-                                                                        {getMarginStyle(calculateMargin(totals.faturamento, filteredData.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).icon}
-                                                                    </div>
-                                                                </div>
-                                                            ) : (
-                                                                <div className="flex justify-end">
-                                                                    <div className={cn(
-                                                                        "inline-flex items-center gap-1 rounded-full px-2 py-1",
-                                                                        getMarginStyle(calculateMargin(totals.faturamento, filteredData.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).background,
-                                                                        getMarginStyle(calculateMargin(totals.faturamento, filteredData.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).text
-                                                                    )}>
-                                                                        {getMarginStyle(calculateMargin(totals.faturamento, filteredData.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))).icon}
-                                                                        <AnimatedValue 
-                                                                            value={calculateMargin(totals.faturamento, filteredData.reduce((acc, item) => acc + item.vltotalcustoproduto, 0))}
-                                                                            formatter={(value) => value.toFixed(2)}
-                                                                            suffix="%"
-                                                                        />
-                                                                    </div>
-                                                                </div>
-                                                            )}
-                                                        </TableCell>
-                                                        <TableCell className="text-right">100%</TableCell>
-                                                    </TableRow>
-                                                </TableBody>
-                                            </Table>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-
-                                <Card className={cn(isMobile && "col-span-1")}>
-                                    <CardHeader>
-                                        <div className="h-8 flex justify-between items-center">
-                                            <CardTitle className="text-sm font-medium">
-                                                Tendência de Vendas
-                                            </CardTitle>
-                                            {selectedMonth ? (
-                                                <Button 
-                                                    variant="ghost" 
-                                                    size="sm"
-                                                    onClick={() => setSelectedMonth(null)}
-                                                    className="text-muted-foreground"
-                                                >
-                                                    <X className="h-4 w-4 mr-2" />
-                                                    Limpar filtro: {selectedMonth}
-                                                </Button>
-                                            ) : (
-                                                <div className="invisible">
-                                                    <Button 
-                                                        variant="ghost" 
-                                                        size="sm"
-                                                        className="opacity-0"
-                                                    >
-                                                        <X className="h-4 w-4 mr-2" />
-                                                        Placeholder
-                                                    </Button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className={cn(
-                                            "w-full",
-                                            isMobile ? "h-[150px]" : "h-[300px]"
-                                        )}>
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                <AreaChart
-                                                    data={monthlyData}
-                                                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                                                    onClick={handleMonthClick}
-                                                    onMouseDown={(e) => {
-                                                        if (e && e.activeLabel) {
-                                                            setSelecting(true)
-                                                            setDateRange({ start: e.activeLabel, end: null })
-                                                        }
-                                                    }}
-                                                    onMouseMove={(e) => {
-                                                        if (selecting && e && e.activeLabel) {
-                                                            setDateRange(prev => ({ 
-                                                                ...prev, 
-                                                                end: e.activeLabel as string 
-                                                            }))
-                                                        }
-                                                    }}
-                                                    onMouseUp={() => {
-                                                        setSelecting(false)
-                                                        if (dateRange.start && dateRange.end) {
-                                                            const [start, end] = [dateRange.start, dateRange.end].sort((a, b) => {
-                                                                const [monthA, yearA] = a.split('/')
-                                                                const [monthB, yearB] = b.split('/')
-                                                                return new Date(Number(yearA), Number(monthA) - 1).getTime() -
-                                                                       new Date(Number(yearB), Number(monthB) - 1).getTime()
-                                                            })
-                                                            setSelectedMonth(`${start} - ${end}`)
-                                                        }
-                                                    }}
-                                                    ref={chartRef}
-                                                >
-                                                    <defs>
-                                                        <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                                                            <stop offset="5%" stopColor="#2563eb" stopOpacity={0.3}/>
-                                                            <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
-                                                        </linearGradient>
-                                                    </defs>
-                                                    <CartesianGrid strokeDasharray="3 3" />
-                                                    <XAxis 
-                                                        dataKey="month" 
-                                                        fontSize={12}
-                                                        tickMargin={5}
-                                                    />
-                                                    <YAxis 
-                                                        fontSize={12}
-                                                        tickFormatter={(value) => 
-                                                            new Intl.NumberFormat('pt-BR', {
-                                                                notation: 'compact',
-                                                                compactDisplay: 'short',
-                                                            }).format(value)
-                                                        }
-                                                    />
-                                                    
-                                                    <Area
-                                                        key="quantity-area"
-                                                        type="monotone"
-                                                        dataKey="quantity"
-                                                        stroke="#2563eb"
-                                                        strokeWidth={2}
-                                                        fill="url(#colorValue)"
-                                                        isAnimationActive={isFirstRender.current}
-                                                        onAnimationEnd={() => {
-                                                            isFirstRender.current = false
-                                                        }}
-                                                        dot={(props: any) => {
-                                                            const isInRange = selectedMonth?.includes(' - ') 
-                                                                ? isDateInRange(props.payload.month, selectedMonth)
-                                                                : selectedMonth === props.payload.month
-                                                            return (
-                                                                <circle
-                                                                    key={`dot-${props.payload.month}`}
-                                                                    cx={props.cx}
-                                                                    cy={props.cy}
-                                                                    r={isInRange ? 6 : 4}
-                                                                    fill={isInRange ? "#2563eb" : "#fff"}
-                                                                    stroke="#2563eb"
-                                                                    strokeWidth={isInRange ? 3 : 2}
-                                                                    className={cn(
-                                                                        "transition-all duration-200",
-                                                                        isInRange && "drop-shadow-md"
-                                                                    )}
-                                                                />
-                                                            )
-                                                        }}
-                                                        activeDot={{
-                                                            key: "active-dot",
-                                                            r: 6,
-                                                            stroke: "#2563eb",
-                                                            strokeWidth: 2,
-                                                            fill: "#fff",
-                                                            className: "drop-shadow-md"
-                                                        }}
-                                                    />
-
-                                                    {/* Reference lines for selected range */}
-                                                    {selectedMonth?.includes(' - ') && !selecting && (
-                                                        <>
-                                                            <ReferenceLine
-                                                                x={selectedMonth.split(' - ')[0]}
-                                                                stroke="#2563eb"
-                                                                strokeDasharray="3 3"
-                                                                strokeWidth={2}
-                                                                isFront={true}
-                                                                label={{
-                                                                    value: '',
-                                                                    position: 'top',
-                                                                    fill: '#2563eb',
-                                                                    fontSize: 12
-                                                                }}
-                                                            />
-                                                            <ReferenceLine
-                                                                x={selectedMonth.split(' - ')[1]}
-                                                                stroke="#2563eb"
-                                                                strokeDasharray="3 3"
-                                                                strokeWidth={2}
-                                                                isFront={true}
-                                                                label={{
-                                                                    value: '',
-                                                                    position: 'top',
-                                                                    fill: '#2563eb',
-                                                                    fontSize: 12
-                                                                }}
-                                                            />
-                                                        </>
-                                                    )}
-
-                                                    {/* Reference lines while selecting */}
-                                                    {selecting && dateRange.start && dateRange.end && (
-                                                        <>
-                                                            <ReferenceLine
-                                                                x={dateRange.start}
-                                                                stroke="#2563eb"
-                                                                strokeDasharray="3 3"
-                                                                strokeWidth={2}
-                                                                isFront={true}
-                                                                label={{
-                                                                    value: '',
-                                                                    position: 'top',
-                                                                    fill: '#2563eb',
-                                                                    fontSize: 12
-                                                                }}
-                                                            />
-                                                            <ReferenceLine
-                                                                x={dateRange.end}
-                                                                stroke="#2563eb"
-                                                                strokeDasharray="3 3"
-                                                                strokeWidth={2}
-                                                                isFront={true}
-                                                                label={{
-                                                                    value: '',
-                                                                    position: 'top',
-                                                                    fill: '#2563eb',
-                                                                    fontSize: 12
-                                                                }}
-                                                            />
-                                                        </>
-                                                    )}
-
-                                                    {/* Selection overlay */}
-                                                    {selecting && dateRange.start && dateRange.end && (
-                                                        <ReferenceArea
-                                                            x1={dateRange.start}
-                                                            x2={dateRange.end}
-                                                            fill="#2563eb"
-                                                            fillOpacity={0.1}
-                                                            strokeOpacity={0}
-                                                        />
-                                                    )}
-
-                                                    <Tooltip content={<CustomTooltip selectedMonth={selectedMonth} />} />
-                                                </AreaChart>
-                                            </ResponsiveContainer>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            </div>
-
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-                                        <div>
-                                            Histórico de Vendas
-                                            {selectedMonth && (
-                                                <span className="ml-2 text-sm font-normal text-muted-foreground">
-                                                    Filtrado por: {selectedMonth}
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                                                disabled={currentPage === 1}
-                                            >
-                                                <ChevronLeft className="h-4 w-4" />
-                                            </Button>
-                                            <span className="text-sm">
-                                                Página {currentPage} de {totalPages}
-                                            </span>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                                                disabled={currentPage === totalPages}
-                                            >
-                                                <ChevronRight className="h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="overflow-x-auto -mx-6 px-6">
-                                        <div className="min-w-[900px]">
-                                            <Table>
-                                                <TableHeader>
-                                                    <TableRow>
-                                                        <TableHead 
-                                                            sortable 
-                                                            sortDirection={sortConfig.column === 'dtemissao' ? sortConfig.direction : null}
-                                                            onSort={() => handleSort('dtemissao')}
-                                                        >
-                                                            Data
-                                                        </TableHead>
-                                                        <TableHead 
-                                                            sortable 
-                                                            sortDirection={sortConfig.column === 'cdpedido' ? sortConfig.direction : null}
-                                                            onSort={() => handleSort('cdpedido')}
-                                                        >
-                                                            Pedido
-                                                        </TableHead>
-                                                        <TableHead 
-                                                            sortable 
-                                                            sortDirection={sortConfig.column === 'nrdocumento' ? sortConfig.direction : null}
-                                                            onSort={() => handleSort('nrdocumento')}
-                                                        >
-                                                            Documento
-                                                        </TableHead>
-                                                        <TableHead 
-                                                            sortable 
-                                                            sortDirection={sortConfig.column === 'nmpessoa' ? sortConfig.direction : null}
-                                                            onSort={() => handleSort('nmpessoa')}
-                                                        >
-                                                            Cliente
-                                                        </TableHead>
-                                                        <TableHead 
-                                                            sortable 
-                                                            sortDirection={sortConfig.column === 'tppessoa' ? sortConfig.direction : null}
-                                                            onSort={() => handleSort('tppessoa')}
-                                                        >
-                                                            Tipo
-                                                        </TableHead>
-                                                        <TableHead 
-                                                            sortable 
-                                                            sortDirection={sortConfig.column === 'nmempresacurtovenda' ? sortConfig.direction : null}
-                                                            onSort={() => handleSort('nmempresacurtovenda')}
-                                                        >
-                                                            Filial
-                                                        </TableHead>
-                                                        <TableHead 
-                                                            sortable 
-                                                            sortDirection={sortConfig.column === 'qtbrutaproduto' ? sortConfig.direction : null}
-                                                            onSort={() => handleSort('qtbrutaproduto')}
-                                                            className="text-right"
-                                                        >
-                                                            Qtd
-                                                        </TableHead>
-                                                        <TableHead 
-                                                            sortable 
-                                                            sortDirection={sortConfig.column === 'vlfaturamento' ? sortConfig.direction : null}
-                                                            onSort={() => handleSort('vlfaturamento')}
-                                                            className="text-right"
-                                                        >
-                                                            Faturamento
-                                                        </TableHead>
-                                                        <TableHead 
-                                                            sortable 
-                                                            sortDirection={sortConfig.column === 'vltotalcustoproduto' ? sortConfig.direction : null}
-                                                            onSort={() => handleSort('vltotalcustoproduto')}
-                                                            className="text-right"
-                                                        >
-                                                            Custo
-                                                        </TableHead>
-                                                        <TableHead 
-                                                            sortable 
-                                                            sortDirection={sortConfig.column === 'margem' ? sortConfig.direction : null}
-                                                            onSort={() => handleSort('margem')}
-                                                            className="text-right"
-                                                        >
-                                                            Margem
-                                                        </TableHead>
-                                                    </TableRow>
-                                                </TableHeader>
-                                                <TableBody className={cn(roboto.className, "text-xs sm:text-sm")}>
-                                                    {filteredData
-                                                        .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
-                                                        .map((item, index) => (
-                                                            <TableRow key={index}>
-                                                                <TableCell>{item.dtemissao}</TableCell>
-                                                                <TableCell>
-                                                                    <Link
-                                                                        href={`/vendas-dia/${item.cdpedido}?nrdocumento=${item.nrdocumento}&dtemissao=${item.dtemissao}&fromProduct=${item.cdproduto}`}
-                                                                        className="text-blue-500 hover:text-blue-700 underline"
-                                                                    >
-                                                                        {item.cdpedido}
-                                                                    </Link>
-                                                                </TableCell>
-                                                                <TableCell>{item.nrdocumento}</TableCell>
-                                                                <TableCell>
-                                                                    <Link
-                                                                        href={`/cliente/${encodeURIComponent(item.nmpessoa)}?returnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`}
-                                                                        className="text-blue-500 hover:text-blue-700 underline"
-                                                                    >
-                                                                        {item.nmpessoa}
-                                                                    </Link>
-                                                                </TableCell>
-                                                                <TableCell>{item.tppessoa}</TableCell>
-                                                                <TableCell>{item.nmempresacurtovenda}</TableCell>
-                                                                <TableCell className="text-right">{item.qtbrutaproduto}</TableCell>
-                                                                <TableCell className="text-right">
-                                                                    {item.vlfaturamento.toLocaleString('pt-BR', {
-                                                                        style: 'currency',
-                                                                        currency: 'BRL'
-                                                                    })}
-                                                                </TableCell>
-                                                                <TableCell className="text-right">
-                                                                    {item.vltotalcustoproduto.toLocaleString('pt-BR', {
-                                                                        style: 'currency',
-                                                                        currency: 'BRL'
-                                                                    })}
-                                                                </TableCell>
-                                                                <TableCell className="text-right">{item.margem}</TableCell>
-                                                            </TableRow>
-                                                        ))}
-                                                </TableBody>
-                                            </Table>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </>
-                    )}
-
-                    {data.stock && data.stock[0] && (
-                        <ProductStockCard stockData={data.stock[0]} />
-                    )}
-                </>
-            )}
-        </div>
+                        {data.stock && data.stock[0] && (
+                            <ProductStockCard stockData={data.stock[0]} />
+                        )}
+                    </>
+                )}
+            </div>
         </PermissionGuard>
     )
 }
