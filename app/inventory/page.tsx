@@ -1393,6 +1393,7 @@ export default function Inventory() {
                                     const imageUrl = imageCache[cdChamada];
                                     const stock = row.getValue('StkTotal') as number;
                                     const price = row.getValue('VlPreco_Empresa59') as number;
+                                    const fornecedor = row.getValue('NmFornecedorPrincipal') as string;
                                     
                                     return (
                                         <div 
@@ -1430,6 +1431,14 @@ export default function Inventory() {
                                                 >
                                                     {productName}
                                                 </Link>
+                                                <div className="flex items-center gap-1">
+                                                    <span 
+                                                        className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-light bg-gray-300 text-black truncate max-w-[200px]"
+                                                        title={fornecedor}
+                                                    >
+                                                        {fornecedor || 'Sem fornecedor'}
+                                                    </span>
+                                                </div>
                                                 <div className="flex justify-between items-center text-sm">
                                                     <span className="text-gray-600">
                                                         Estoque: {stock}

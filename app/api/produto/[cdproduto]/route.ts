@@ -15,24 +15,17 @@ export async function GET(
             )
         }
 
-        // Fetch product details
-        const { data: productData, error: productError } = await supabase
+        // Fetch product/sales data
+        const { data: salesData, error: salesError } = await supabase
             .from('mvw_mssql_bivendas_aux_geral')
             .select('*')
             .eq('cdproduto', cdproduto)
 
-        if (productError) {
-            console.error('Product fetch error:', productError)
+        if (salesError) {
+            console.error('Sales fetch error:', salesError)
             return NextResponse.json(
-                { error: `Failed to fetch product data: ${productError.message}` },
+                { error: `Failed to fetch sales data: ${salesError.message}` },
                 { status: 500 }
-            )
-        }
-
-        if (!productData || productData.length === 0) {
-            return NextResponse.json(
-                { error: 'Product not found' },
-                { status: 404 }
             )
         }
 
@@ -49,6 +42,24 @@ export async function GET(
                 { status: 500 }
             )
         }
+
+        // If no sales data found, create a minimal product record
+        const productData = salesData?.length ? salesData : [{
+            cdproduto: cdproduto,
+            nmproduto: "Produto sem vendas",
+            nmgrupoproduto: "-",
+            nmfornecedorprincipal: "-",
+            qtbrutaproduto: 0,
+            vlfaturamento: 0,
+            vltotalcustoproduto: 0,
+            margem: "0%",
+            dtemissao: new Date().toLocaleDateString('pt-BR'),
+            nmempresacurtovenda: "-",
+            nmpessoa: "-",
+            tppessoa: "-",
+            cdpedido: "-",
+            nrdocumento: "-"
+        }]
 
         // Return the combined data
         return NextResponse.json({

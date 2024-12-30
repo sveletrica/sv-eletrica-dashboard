@@ -52,7 +52,10 @@ export async function GET(
             QtEstoque_Empresa15: data[0].qtestoque_empresa15 || 0,
             QtEstoque_Empresa17: data[0].qtestoque_empresa17 || 0,
             QtEstoque_Empresa59: data[0].qtestoque_empresa59 || 0,
-            StkTotal: data[0].sktotal || 0
+            StkTotal: data[0].sktotal || 0,
+            NmProduto: data[0].nmproduto || '',
+            NmGrupoProduto: data[0].nmgrupoproduto || '',
+            NmFornecedorPrincipal: data[0].nmfornecedorprincipal || ''
         }
 
         return NextResponse.json(stockData)
