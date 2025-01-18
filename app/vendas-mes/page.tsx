@@ -34,6 +34,7 @@ interface DailySale {
 
 interface ChartDataEntry {
     date: string;
+    weekday: string;
     [key: string]: string | number;
 }
 
@@ -160,10 +161,12 @@ export default function MonthlySales() {
             const date = parseISO(day.DataVenda)
             date.setDate(date.getDate() + 1)
             const formattedDate = format(date, 'dd/MM')
+            const weekday = format(date, 'E', { locale: ptBR })
             
             // Initialize dayData with all filials set to 0
             const dayData = {
                 date: formattedDate,
+                weekday: weekday.charAt(0).toUpperCase() + weekday.slice(1),
                 ...Array.from(allFilials).reduce((obj, filial) => ({
                     ...obj,
                     [filial]: 0
@@ -214,10 +217,12 @@ export default function MonthlySales() {
             const date = parseISO(day.DataVenda)
             date.setDate(date.getDate() + 1)
             const formattedDate = format(date, 'dd/MM')
+            const weekday = format(date, 'E', { locale: ptBR })
             
             // Initialize dayData with all filials set to 0
             const dayData = {
                 date: formattedDate,
+                weekday: weekday.charAt(0).toUpperCase() + weekday.slice(1),
                 ...Array.from(allFilials).reduce((obj, filial) => ({
                     ...obj,
                     [filial]: 0
@@ -439,7 +444,7 @@ export default function MonthlySales() {
     // Add this function to get consistently sorted filials
     const getSortedFilials = (data: ChartDataEntry[]) => {
         return Object.keys(data[0] || {})
-            .filter(key => key !== 'date' && key !== 'total')
+            .filter(key => key !== 'date' && key !== 'total' && key !== 'weekday')
             .map(filial => ({
                 filial,
                 total: calculateFilialTotal(data, filial)
@@ -592,7 +597,7 @@ export default function MonthlySales() {
                             {data.length > 0 && chartData.length > 0 && (
                                 <div className="flex flex-wrap gap-2">
                                     {Object.keys(chartData[0] || {})
-                                        .filter(key => key !== 'date')
+                                        .filter(key => key !== 'date' && key !== 'total' && key !== 'weekday')
                                         .map(filial => ({
                                             filial,
                                             total: calculateFilialTotal(chartData, filial)
@@ -645,8 +650,35 @@ export default function MonthlySales() {
                                             dataKey="date"
                                             tickLine={false}
                                             axisLine={false}
-                                            tick={{ fill: 'hsl(var(--muted-foreground))' }}
-                                            tickFormatter={(value) => value.split('/')[0]}
+                                            tick={(props) => {
+                                                const { x, y, payload } = props;
+                                                const weekday = chartData.find(d => d.date === payload.value)?.weekday;
+                                                return (
+                                                    <g transform={`translate(${x},${y})`}>
+                                                        <text
+                                                            x={0}
+                                                            y={0}
+                                                            dy={8}
+                                                            textAnchor="middle"
+                                                            fill="hsl(var(--muted-foreground))"
+                                                        >
+                                                            {payload.value.split('/')[0]}
+                                                        </text>
+                                                        <text
+                                                            x={0}
+                                                            y={0}
+                                                            dy={25}
+                                                            textAnchor="middle"
+                                                            fill="hsl(var(--muted-foreground))"
+                                                            fontSize={11}
+                                                        >
+                                                            {weekday}
+                                                        </text>
+                                                    </g>
+                                                );
+                                            }}
+                                            height={60}
+                                            interval={0}
                                         />
                                         <YAxis
                                             tickLine={false}
@@ -732,7 +764,7 @@ export default function MonthlySales() {
                             {data.length > 0 && ordersChartData.length > 0 && (
                                 <div className="flex flex-wrap gap-2">
                                     {Object.keys(ordersChartData[0] || {})
-                                        .filter(key => key !== 'date' && key !== 'total')
+                                        .filter(key => key !== 'date' && key !== 'total' && key !== 'weekday')
                                         .map(filial => ({
                                             filial,
                                             total: ordersChartData.reduce((sum, day) => 
@@ -782,9 +814,35 @@ export default function MonthlySales() {
                                             dataKey="date"
                                             tickLine={false}
                                             axisLine={false}
-                                            tick={{ fill: 'hsl(var(--muted-foreground))' }}
-                                            tickFormatter={(value) => value.split('/')[0]}
-                                            tickMargin={8}
+                                            tick={(props) => {
+                                                const { x, y, payload } = props;
+                                                const weekday = ordersChartData.find(d => d.date === payload.value)?.weekday;
+                                                return (
+                                                    <g transform={`translate(${x},${y})`}>
+                                                        <text
+                                                            x={0}
+                                                            y={0}
+                                                            dy={8}
+                                                            textAnchor="middle"
+                                                            fill="hsl(var(--muted-foreground))"
+                                                        >
+                                                            {payload.value.split('/')[0]}
+                                                        </text>
+                                                        <text
+                                                            x={0}
+                                                            y={0}
+                                                            dy={25}
+                                                            textAnchor="middle"
+                                                            fill="hsl(var(--muted-foreground))"
+                                                            fontSize={11}
+                                                        >
+                                                            {weekday}
+                                                        </text>
+                                                    </g>
+                                                );
+                                            }}
+                                            height={60}
+                                            interval={0}
                                         />
                                         <YAxis
                                             tickLine={false}
