@@ -210,6 +210,7 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
     const [showGroupDiscounts, setShowGroupDiscounts] = useState(false)
     const [lastExtraction, setLastExtraction] = useState<string | null>(null)
     const [timeLeftMinutes, setTimeLeftMinutes] = useState<number | null>(null)
+    const [targetValue, setTargetValue] = useState<string>('')
     const { user } = useAuth()
 
     const calculateMargin = (revenue: number, cost: number) => {
@@ -436,6 +437,21 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
         updateDiscountsAndGroupDiscounts(newDiscounts)
     }
 
+    const applyTargetValue = () => {
+        const desiredTotal = parseFloat(targetValue)
+        if (isNaN(desiredTotal) || desiredTotal <= 0) return
+
+        const currentTotal = totals.precoLista
+        const globalDiscountNeeded = ((currentTotal - desiredTotal) / currentTotal) * 100
+
+        // Removendo a limitação de 0 a 100 para permitir acréscimos (descontos negativos)
+        const newDiscounts: Record<string, number> = {}
+        data.forEach(item => {
+            newDiscounts[item.cdproduto] = parseFloat(globalDiscountNeeded.toFixed(2))
+        })
+        updateDiscountsAndGroupDiscounts(newDiscounts)
+    }
+
     const saveSimulation = async (notes: string) => {
         if (!user?.email) {
             console.error('No user email available:', user)
@@ -544,6 +560,7 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
         updateDiscountsAndGroupDiscounts({})
         setGlobalDiscount('')
         setTargetMargin('')
+        setTargetValue('')
     }
 
     // Move calculateGroupTotals inside the component
@@ -802,6 +819,34 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                         <Button 
                                             onClick={applyTargetMarginDiscounts}
                                             disabled={!targetMargin}
+                                        >
+                                            Aplicar
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                {/* Target Value Section */}
+                                <div>
+                                    <label className="text-sm font-medium mb-2 block">
+                                        Definir valor final do pedido
+                                    </label>
+                                    <div className="flex gap-2">
+                                        <Input
+                                            type="number"
+                                            value={targetValue}
+                                            onChange={(e) => setTargetValue(e.target.value)}
+                                            placeholder="Digite o valor final"
+                                            step="0.01"
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    e.preventDefault()
+                                                    applyTargetValue()
+                                                }
+                                            }}
+                                        />
+                                        <Button 
+                                            onClick={applyTargetValue}
+                                            disabled={!targetValue}
                                         >
                                             Aplicar
                                         </Button>
