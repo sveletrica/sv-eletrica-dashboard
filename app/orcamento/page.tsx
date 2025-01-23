@@ -1137,6 +1137,13 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                         })}
                                     </p>
                                     <p>
+                                        <span className="font-medium">Custo Total:</span>{' '}
+                                        {totals.custo.toLocaleString('pt-BR', {
+                                            style: 'currency',
+                                            currency: 'BRL'
+                                        })}
+                                    </p>
+                                    <p>
                                         <span className="font-medium">Desconto Total:</span>{' '}
                                         {discountTotal.toFixed(2)}%
                                     </p>
