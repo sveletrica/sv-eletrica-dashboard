@@ -390,8 +390,13 @@ const storeSortConfig = (config: SortableColumnProps) => {
     localStorage.setItem(SORT_STORAGE_KEY, JSON.stringify(config))
 }
 
-const prepareMonthlyData = (salesData: ProductSale[]): MonthlyData[] => {
-    const monthlyTotals = salesData.reduce((acc, sale) => {
+const prepareMonthlyData = (salesData: ProductSale[], selectedFilial: string | null): MonthlyData[] => {
+    // Primeiro filtra os dados pela filial selecionada, se houver
+    const filteredSales = selectedFilial 
+        ? salesData.filter(sale => sale.nmempresacurtovenda === selectedFilial)
+        : salesData;
+
+    const monthlyTotals = filteredSales.reduce((acc, sale) => {
         const [day, month, year] = sale.dtemissao.split('/');
         const monthKey = `${year}-${month.padStart(2, '0')}`;
 
@@ -590,7 +595,10 @@ function ProductSalesDetailsContent() {
             direction: 'desc'
         }
     })
-    const monthlyData = useMemo(() => prepareMonthlyData(data.product), [data.product])
+    const monthlyData = useMemo(() => 
+        prepareMonthlyData(data.product, selectedFilial), 
+        [data.product, selectedFilial]
+    );
     const [selectedMonth, setSelectedMonth] = useState<string | null>(null)
     const [selecting, setSelecting] = useState(false)
     const [dateRange, setDateRange] = useState<DateRange>({ start: null, end: null })
