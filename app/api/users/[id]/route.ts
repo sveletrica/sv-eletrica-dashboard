@@ -22,6 +22,17 @@ export async function PUT(
             )
         }
 
+        // Ensure all permission fields are present
+        const permissions = {
+            inventory: !!body.permissions?.inventory,
+            sales: !!body.permissions?.sales,
+            quotations: !!body.permissions?.quotations,
+            clients: !!body.permissions?.clients,
+            tags: !!body.permissions?.tags,
+            admin: !!body.permissions?.admin,
+            simulations: !!body.permissions?.simulations
+        }
+
         // Check if email is already taken by another user
         const { data: existingUser } = await supabase
             .from('users')
@@ -43,7 +54,7 @@ export async function PUT(
             .update({
                 name: body.name,
                 email: body.email,
-                permissions: body.permissions
+                permissions
             })
             .eq('id', params.id)
 

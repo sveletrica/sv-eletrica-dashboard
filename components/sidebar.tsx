@@ -41,6 +41,12 @@ const sidebarLinks = [
         permission: 'quotations' as const,
     },
     {
+        href: '/simulacao',
+        label: 'Simulações',
+        icon: Calculator,
+        permission: 'simulations' as const,
+    },
+    {
         href: '/produto',
         label: 'Produtos',
         icon: BarChart3,

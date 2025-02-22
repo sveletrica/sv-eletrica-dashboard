@@ -15,6 +15,7 @@ interface User {
         clients: boolean
         tags: boolean
         admin: boolean
+        simulations: boolean
     }
 }
 

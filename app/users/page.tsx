@@ -14,6 +14,7 @@ import { toast } from 'sonner'
 import { generateRandomPassword, formatCredentials } from "@/lib/utils"
 import { useClipboard } from '@/hooks/use-clipboard'
 import { PermissionGuard } from '@/components/guards/permission-guard'
+
 interface User {
     id: string
     name: string
@@ -25,11 +26,22 @@ interface User {
         clients: boolean
         tags: boolean
         admin: boolean
+        simulations: boolean
     }
 }
 
 interface UserFormData extends Omit<User, 'id'> {
     password?: string
+}
+
+const permissionLabels: Record<keyof User['permissions'], string> = {
+    inventory: 'Estoque',
+    sales: 'Vendas',
+    quotations: 'Orçamentos',
+    clients: 'Clientes',
+    tags: 'Tags',
+    admin: 'Admin',
+    simulations: 'Simulações'
 }
 
 export default function Users() {
@@ -44,7 +56,8 @@ export default function Users() {
             quotations: false,
             clients: false,
             tags: false,
-            admin: false
+            admin: false,
+            simulations: false
         }
     })
     const [editingUser, setEditingUser] = useState<User | null>(null)
@@ -116,7 +129,8 @@ export default function Users() {
                     quotations: false,
                     clients: false,
                     tags: false,
-                    admin: false
+                    admin: false,
+                    simulations: false
                 }
             })
         } catch (err) {
@@ -371,6 +385,19 @@ export default function Users() {
                                     />
                                     <span>Admin</span>
                                 </label>
+                                <label className="flex items-center space-x-2">
+                                    <Checkbox
+                                        checked={newUser.permissions.simulations}
+                                        onCheckedChange={(checked) => setNewUser(prev => ({
+                                            ...prev,
+                                            permissions: {
+                                                ...prev.permissions,
+                                                simulations: checked as boolean
+                                            }
+                                        }))}
+                                    />
+                                    <span>Simulações</span>
+                                </label>
                             </div>
                         </div>
 
@@ -534,10 +561,10 @@ export default function Users() {
                         <div className="space-y-2">
                             <Label>Permissões</Label>
                             <div className="grid grid-cols-2 gap-2">
-                                {Object.entries(editingUser?.permissions || {}).map(([key, value]) => (
+                                {Object.entries(permissionLabels).map(([key, label]) => (
                                     <label key={key} className="flex items-center space-x-2">
                                         <Checkbox
-                                            checked={value}
+                                            checked={editingUser?.permissions[key as keyof User['permissions']] || false}
                                             onCheckedChange={(checked) => setEditingUser(prev => prev ? {
                                                 ...prev,
                                                 permissions: {
@@ -546,7 +573,7 @@ export default function Users() {
                                                 }
                                             } : null)}
                                         />
-                                        <span>{key}</span>
+                                        <span>{label}</span>
                                     </label>
                                 ))}
                             </div>
