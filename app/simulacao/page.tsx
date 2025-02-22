@@ -131,10 +131,151 @@ function AddProductDialog({ open, onOpenChange, onProductSelect }: AddProductDia
   )
 }
 
+interface ImportDialogProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onImport: (items: { codigo: string; quantidade: number; precoFinal: number }[]) => void
+}
+
+function ImportDialog({ open, onOpenChange, onImport }: ImportDialogProps) {
+  const [text, setText] = useState('')
+  const [processing, setProcessing] = useState(false)
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    e.preventDefault() // Previne o comportamento padrão
+    const clipboardData = e.clipboardData.getData('text')
+    setText(clipboardData)
+  }
+
+  const handleImport = () => {
+    if (processing) return // Evita processamento duplo
+    
+    setProcessing(true)
+    try {
+      const items = parseClipboardData(text)
+      if (items.length > 0) {
+        onImport(items)
+        onOpenChange(false)
+        setText('')
+      } else {
+        toast.error('Nenhum item válido encontrado')
+      }
+    } finally {
+      setProcessing(false)
+    }
+  }
+
+  // Limpa o texto quando o diálogo é fechado
+  useEffect(() => {
+    if (!open) {
+      setText('')
+      setProcessing(false)
+    }
+  }, [open])
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>Importar Produtos do Excel</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Cole os dados do Excel aqui. O sistema irá extrair o código do produto, 
+            quantidade e preço unitário.
+          </p>
+          <textarea
+            className="w-full h-[300px] p-2 border rounded-md font-mono text-sm"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onPaste={handlePaste}
+            placeholder="Cole os dados do Excel aqui..."
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleImport}
+              disabled={processing || !text.trim()}
+            >
+              {processing ? 'Importando...' : 'Importar'}
+            </Button>
+          </DialogFooter>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+const parseClipboardData = (text: string) => {
+  const rows = text.split('\n')
+  const items: { codigo: string; quantidade: number; precoFinal: number }[] = []
+
+  // Encontra os índices das colunas importantes no cabeçalho
+  const headerRow = rows[0]?.split('\t') || []
+  const qtdIndex = headerRow.findIndex(col => col.trim().toLowerCase().startsWith('qtd'))
+  const vlUnitIndex = headerRow.findIndex(col => col.trim().toLowerCase().startsWith('vl'))
+
+  if (qtdIndex === -1 || vlUnitIndex === -1) {
+    console.error('Colunas Qtd. ou Vl. Unit não encontradas')
+    return items
+  }
+
+  const parseNumber = (value: string) => {
+    // Remove espaços e substitui vírgula por ponto
+    const cleanValue = value.trim().replace(/\s/g, '')
+    
+    // Se contém ponto como separador de milhar e vírgula como decimal
+    if (cleanValue.includes('.') && cleanValue.includes(',')) {
+      return parseFloat(cleanValue.replace(/\./g, '').replace(',', '.'))
+    }
+    
+    // Se contém apenas vírgula
+    if (cleanValue.includes(',')) {
+      return parseFloat(cleanValue.replace(',', '.'))
+    }
+    
+    // Se é um número simples
+    return parseFloat(cleanValue)
+  }
+
+  rows.forEach((row, index) => {
+    // Pula o cabeçalho
+    if (index === 0 || row.trim() === '') return
+
+    const parts = row.split('\t')
+    
+    // Procura por um código de 6 dígitos no início da linha
+    const codigo = parts[0]?.replace(/\s+/g, '')
+    
+    if (codigo?.match(/^\d{6}$/)) {
+      // Pega os valores diretamente das colunas corretas
+      const quantidadeStr = parts[qtdIndex]?.trim()
+      const precoStr = parts[vlUnitIndex]?.trim()
+      
+      const quantidade = parseNumber(quantidadeStr)
+      const precoFinal = parseNumber(precoStr)
+
+      // Verifica se os valores são válidos
+      if (!isNaN(quantidade) && !isNaN(precoFinal)) {
+        items.push({
+          codigo,
+          quantidade,
+          precoFinal
+        })
+      }
+    }
+  })
+
+  return items
+}
+
 export default function SimulationPage() {
   const [items, setItems] = useState<SimulationItem[]>([])
   const [addProductOpen, setAddProductOpen] = useState(false)
   const [globalDiscount, setGlobalDiscount] = useState('')
+  const [importDialogOpen, setImportDialogOpen] = useState(false)
   const { user } = useAuth()
 
   const calculateMargin = (revenue: number, cost: number) => {
@@ -189,6 +330,42 @@ export default function SimulationPage() {
     ? calculateMargin(totals.faturamento, totals.custo)
     : 0
 
+  const handleImportItems = async (importedItems: { codigo: string; quantidade: number; precoFinal: number }[]) => {
+    try {
+      // Buscar detalhes dos produtos
+      const products: SimulationItem[] = []
+      
+      for (const item of importedItems) {
+        const response = await fetch(`/api/produtos/search?q=${item.codigo}`)
+        if (!response.ok) continue
+        
+        const data = await response.json()
+        const product = data.find((p: Product) => p.cdchamada.trim() === item.codigo)
+        
+        if (product) {
+          // Calcular o desconto baseado no preço final desejado
+          const desconto = ((product.vlprecosugerido - item.precoFinal) / product.vlprecosugerido) * 100
+          
+          products.push({
+            ...product,
+            quantidade: item.quantidade,
+            desconto: Math.max(0, Math.min(100, desconto)) // Limita o desconto entre 0 e 100
+          })
+        }
+      }
+
+      if (products.length > 0) {
+        setItems(prev => [...prev, ...products])
+        toast.success(`${products.length} produtos importados`)
+      } else {
+        toast.error('Nenhum produto encontrado')
+      }
+    } catch (error) {
+      console.error('Error importing items:', error)
+      toast.error('Erro ao importar produtos')
+    }
+  }
+
   return (
     <PermissionGuard permission="quotations">
       <div className="container py-6 space-y-6">
@@ -202,6 +379,10 @@ export default function SimulationPage() {
                 <Button onClick={() => setAddProductOpen(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Adicionar Produto
+                </Button>
+                <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
+                  <Search className="h-4 w-4 mr-2" />
+                  Importar do Excel
                 </Button>
               </div>
 
@@ -360,6 +541,12 @@ export default function SimulationPage() {
           open={addProductOpen}
           onOpenChange={setAddProductOpen}
           onProductSelect={handleAddProduct}
+        />
+
+        <ImportDialog
+          open={importDialogOpen}
+          onOpenChange={setImportDialogOpen}
+          onImport={handleImportItems}
         />
       </div>
     </PermissionGuard>

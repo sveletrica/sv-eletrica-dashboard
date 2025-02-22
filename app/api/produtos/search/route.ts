@@ -15,11 +15,18 @@ export async function GET(request: Request) {
             return NextResponse.json([])
         }
 
-        const { data, error } = await supabase
+        let supabaseQuery = supabase
             .from('mvw_mssql_etiquetasio_estoques')
             .select('*')
-            .or(`cdchamada.ilike.%${query}%,nmproduto.ilike.%${query}%`)
-            .limit(10)
+
+        // Se o query for exatamente 6 dígitos, busca exata pelo código
+        if (query.match(/^\d{6}$/)) {
+            supabaseQuery = supabaseQuery.eq('cdchamada', query)
+        } else {
+            supabaseQuery = supabaseQuery.or(`cdchamada.ilike.%${query}%,nmproduto.ilike.%${query}%`)
+        }
+
+        const { data, error } = await supabaseQuery.limit(10)
 
         if (error) throw error
 
