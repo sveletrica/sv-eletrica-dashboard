@@ -271,6 +271,107 @@ const parseClipboardData = (text: string) => {
   return items
 }
 
+interface ImportSQLDialogProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onImport: (items: SimulationItem[]) => void
+}
+
+function ImportSQLDialog({ open, onOpenChange, onImport }: ImportSQLDialogProps) {
+  const [orderNumber, setOrderNumber] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const handleImport = async () => {
+    if (!orderNumber.trim() || loading) return
+    
+    setLoading(true)
+    try {
+      const response = await fetch('https://n8n2.sveletrica.com/webhook/orcamentos', {
+        method: 'POST',
+        headers: {
+          'cdpedido': orderNumber.trim()
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error('Falha ao importar orçamento')
+      }
+
+      const data = await response.json()
+      
+      // Transformar os dados do orçamento para o formato SimulationItem
+      const items: SimulationItem[] = data.map((item: any) => {
+        const desconto = ((item.VlPrecoVendaInformado - item.VlFaturamento) / item.VlPrecoVendaInformado) * 100
+        
+        return {
+          cdchamada: item.CdProduto,
+          nmproduto: item.NmProduto,
+          nmgrupoproduto: '', // Não disponível na API
+          vlprecosugerido: item.VlPrecoVendaInformado / item.QtPedida,
+          vlprecoreposicao: item.VlPrecoCustoInformado / item.QtPedida,
+          quantidade: item.QtPedida,
+          desconto: parseFloat(desconto.toFixed(2)),
+          qtestoque_empresa1: 0, // Valores default já que não temos o estoque por empresa
+          qtestoque_empresa4: 0,
+          qtestoque_empresa12: 0,
+          qtestoque_empresa13: 0,
+          qtestoque_empresa15: 0,
+          qtestoque_empresa17: 0,
+          qtestoque_empresa59: 0,
+          stktotal: item.QtEstoqueAtualEmpresa
+        }
+      })
+
+      onImport(items)
+      onOpenChange(false)
+      toast.success(`${items.length} produtos importados do orçamento`)
+    } catch (error) {
+      console.error('Erro ao importar do SQL:', error)
+      toast.error('Erro ao importar orçamento')
+    } finally {
+      setLoading(false)
+      setOrderNumber('')
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Importar do SQL</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Número do Orçamento</label>
+            <Input
+              value={orderNumber}
+              onChange={(e) => setOrderNumber(e.target.value)}
+              placeholder="Digite o número do orçamento"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  handleImport()
+                }
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleImport}
+              disabled={loading || !orderNumber.trim()}
+            >
+              {loading ? 'Importando...' : 'Importar'}
+            </Button>
+          </DialogFooter>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 export default function SimulationPage() {
   const [items, setItems] = useState<SimulationItem[]>([])
   const [addProductOpen, setAddProductOpen] = useState(false)
@@ -278,6 +379,7 @@ export default function SimulationPage() {
   const [importDialogOpen, setImportDialogOpen] = useState(false)
   const [targetMargin, setTargetMargin] = useState<string>('')
   const [targetValue, setTargetValue] = useState<string>('')
+  const [importSQLDialogOpen, setImportSQLDialogOpen] = useState(false)
   const { user } = useAuth()
 
   const calculateMargin = (revenue: number, cost: number) => {
@@ -444,6 +546,10 @@ export default function SimulationPage() {
     }))
   }
 
+  const handleImportSQL = (importedItems: SimulationItem[]) => {
+    setItems(prev => [...prev, ...importedItems])
+  }
+
   return (
     <PermissionGuard permission="quotations">
       <div className="container py-6 space-y-6">
@@ -461,6 +567,10 @@ export default function SimulationPage() {
                 <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
                   <Search className="h-4 w-4 mr-2" />
                   Importar do Excel
+                </Button>
+                <Button variant="outline" onClick={() => setImportSQLDialogOpen(true)}>
+                  <Calculator className="h-4 w-4 mr-2" />
+                  Importar do SQL
                 </Button>
               </div>
 
@@ -711,6 +821,12 @@ export default function SimulationPage() {
           open={importDialogOpen}
           onOpenChange={setImportDialogOpen}
           onImport={handleImportItems}
+        />
+
+        <ImportSQLDialog
+          open={importSQLDialogOpen}
+          onOpenChange={setImportSQLDialogOpen}
+          onImport={handleImportSQL}
         />
       </div>
     </PermissionGuard>
