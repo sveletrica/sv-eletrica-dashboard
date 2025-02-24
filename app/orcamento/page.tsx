@@ -1420,7 +1420,16 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                                             margin < -0.01 && "animate-pulseRow bg-red-500/50"
                                                         )}
                                                     >
-                                                        <TableCell>{item.cdproduto}</TableCell>
+                                                        <TableCell>
+                                                            <a 
+                                                                href={`https://app.sveletrica.com/produto/${item.cdproduto}`}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:underline"
+                                                            >
+                                                                {item.cdproduto}
+                                                            </a>
+                                                        </TableCell>
                                                         <TableCell>{item.nmproduto}</TableCell>
                                                         <TableCell className="text-right">
                                                             <StockPopover 
