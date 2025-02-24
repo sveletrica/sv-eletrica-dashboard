@@ -276,6 +276,8 @@ export default function SimulationPage() {
   const [addProductOpen, setAddProductOpen] = useState(false)
   const [globalDiscount, setGlobalDiscount] = useState('')
   const [importDialogOpen, setImportDialogOpen] = useState(false)
+  const [targetMargin, setTargetMargin] = useState<string>('')
+  const [targetValue, setTargetValue] = useState<string>('')
   const { user } = useAuth()
 
   const calculateMargin = (revenue: number, cost: number) => {
@@ -366,6 +368,82 @@ export default function SimulationPage() {
     }
   }
 
+  const calculateDiscountForTargetMargin = (listPrice: number, cost: number, targetMarginPercent: number) => {
+    const taxRate = 0.268
+    const discountDecimal = 1 - (cost / (listPrice * (1 - taxRate - targetMarginPercent/100)))
+    return Math.max(Math.min(discountDecimal * 100, 100), 0)
+  }
+
+  const applyTargetMarginDiscounts = () => {
+    const marginValue = parseFloat(targetMargin)
+    if (isNaN(marginValue)) return
+
+    const newDiscounts: Record<string, number> = {}
+    items.forEach(item => {
+      const targetMarginDiscount = calculateDiscountForTargetMargin(
+        item.vlprecosugerido,
+        item.vlprecoreposicao,
+        marginValue
+      )
+      newDiscounts[item.cdchamada] = parseFloat(targetMarginDiscount.toFixed(2))
+    })
+    setItems(prev => prev.map(item => ({
+      ...item,
+      desconto: newDiscounts[item.cdchamada]
+    })))
+  }
+
+  const applyTargetValue = () => {
+    const desiredTotal = parseFloat(targetValue)
+    if (isNaN(desiredTotal) || desiredTotal <= 0) return
+
+    const currentTotal = items.reduce((acc, item) => acc + (item.vlprecosugerido * item.quantidade), 0)
+    const globalDiscountNeeded = ((currentTotal - desiredTotal) / currentTotal) * 100
+
+    const newDiscounts: Record<string, number> = {}
+    items.forEach(item => {
+      newDiscounts[item.cdchamada] = parseFloat(globalDiscountNeeded.toFixed(2))
+    })
+    setItems(prev => prev.map(item => ({
+      ...item,
+      desconto: newDiscounts[item.cdchamada]
+    })))
+  }
+
+  const clearSimulation = () => {
+    setItems([])
+    setGlobalDiscount('')
+    setTargetMargin('')
+    setTargetValue('')
+  }
+
+  const handleUnitPriceChange = (index: number, price: number) => {
+    setItems(prev => prev.map((item, i) => {
+      if (i !== index) return item
+      
+      // Calculate new discount based on the new unit price
+      const discount = ((item.vlprecosugerido - price) / item.vlprecosugerido) * 100
+      return {
+        ...item,
+        desconto: Math.max(0, Math.min(100, parseFloat(discount.toFixed(2))))
+      }
+    }))
+  }
+
+  const handleFinalPriceChange = (index: number, finalPrice: number) => {
+    setItems(prev => prev.map((item, i) => {
+      if (i !== index) return item
+      
+      // Calculate new discount based on the desired final price
+      const unitPrice = finalPrice / item.quantidade
+      const discount = ((item.vlprecosugerido - unitPrice) / item.vlprecosugerido) * 100
+      return {
+        ...item,
+        desconto: Math.max(0, Math.min(100, parseFloat(discount.toFixed(2))))
+      }
+    }))
+  }
+
   return (
     <PermissionGuard permission="quotations">
       <div className="container py-6 space-y-6">
@@ -388,17 +466,80 @@ export default function SimulationPage() {
 
               {items.length > 0 && (
                 <div className="space-y-4">
-                  <div className="flex gap-2 items-center">
-                    <Input
-                      type="number"
-                      placeholder="Desconto global %"
-                      value={globalDiscount}
-                      onChange={(e) => setGlobalDiscount(e.target.value)}
-                      className="w-40"
-                    />
-                    <Button variant="secondary" onClick={applyGlobalDiscount}>
-                      Aplicar
-                    </Button>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">
+                        Aplicar desconto em todos os itens
+                      </label>
+                      <div className="flex gap-2">
+                        <Input
+                          type="number"
+                          placeholder="Digite o desconto %"
+                          value={globalDiscount}
+                          onChange={(e) => setGlobalDiscount(e.target.value)}
+                          className="w-40"
+                        />
+                        <Button variant="secondary" onClick={applyGlobalDiscount}>
+                          Aplicar
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">
+                        Definir margem alvo
+                      </label>
+                      <div className="flex gap-2">
+                        <Input
+                          type="number"
+                          value={targetMargin}
+                          onChange={(e) => setTargetMargin(e.target.value)}
+                          placeholder="Digite a margem %"
+                          min="-100"
+                          max="100"
+                          step="0.1"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault()
+                              applyTargetMarginDiscounts()
+                            }
+                          }}
+                        />
+                        <Button 
+                          onClick={applyTargetMarginDiscounts}
+                          disabled={!targetMargin}
+                        >
+                          Aplicar
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">
+                        Definir valor final do pedido
+                      </label>
+                      <div className="flex gap-2">
+                        <Input
+                          type="number"
+                          value={targetValue}
+                          onChange={(e) => setTargetValue(e.target.value)}
+                          placeholder="Digite o valor final"
+                          step="0.01"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault()
+                              applyTargetValue()
+                            }
+                          }}
+                        />
+                        <Button 
+                          onClick={applyTargetValue}
+                          disabled={!targetValue}
+                        >
+                          Aplicar
+                        </Button>
+                      </div>
+                    </div>
                   </div>
 
                   <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
@@ -433,6 +574,20 @@ export default function SimulationPage() {
                               currency: 'BRL'
                             })}
                           </p>
+                          <p>
+                            <span className="font-medium">Desconto:</span>{' '}
+                            {(totals.faturamento - totals.precoLista).toLocaleString('pt-BR', {
+                              style: 'currency',
+                              currency: 'BRL'
+                            })}
+                            {' '}
+                            <span className={cn(
+                              "font-medium",
+                              totals.faturamento >= totals.precoLista ? "text-green-600" : "text-red-600"
+                            )}>
+                              ({((totals.faturamento - totals.precoLista) / totals.precoLista * 100).toFixed(2)}%)
+                            </span>
+                          </p>
                           <p className={cn(
                             "font-medium",
                             marginTotal >= 5 ? "text-green-600" :
@@ -455,7 +610,7 @@ export default function SimulationPage() {
                         <TableHead className="text-right">Quantidade</TableHead>
                         <TableHead className="text-right">Preço Lista</TableHead>
                         <TableHead className="text-right">Desconto %</TableHead>
-                        <TableHead className="text-right">Preço Final</TableHead>
+                        <TableHead className="text-right">Preço Unit.</TableHead>
                         <TableHead className="text-right">Total</TableHead>
                         <TableHead className="text-right">Margem</TableHead>
                         <TableHead></TableHead>
@@ -495,19 +650,28 @@ export default function SimulationPage() {
                                 className="w-20"
                                 min="0"
                                 max="100"
+                                step="0.1"
                               />
                             </TableCell>
-                            <TableCell className="text-right">
-                              {priceAfterDiscount.toLocaleString('pt-BR', {
-                                style: 'currency',
-                                currency: 'BRL'
-                              })}
+                            <TableCell>
+                              <Input
+                                type="number"
+                                value={priceAfterDiscount.toFixed(2)}
+                                onChange={(e) => handleUnitPriceChange(index, Number(e.target.value))}
+                                className="w-24"
+                                min="0"
+                                step="0.01"
+                              />
                             </TableCell>
-                            <TableCell className="text-right">
-                              {totalPrice.toLocaleString('pt-BR', {
-                                style: 'currency',
-                                currency: 'BRL'
-                              })}
+                            <TableCell>
+                              <Input
+                                type="number"
+                                value={totalPrice.toFixed(2)}
+                                onChange={(e) => handleFinalPriceChange(index, Number(e.target.value))}
+                                className="w-24"
+                                min="0"
+                                step="0.01"
+                              />
                             </TableCell>
                             <TableCell className={cn(
                               "text-right",
