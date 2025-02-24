@@ -672,7 +672,7 @@ export default function ClientDetails() {
                                         <TableHead className="py-1 text-sm">Código</TableHead>
                                         <TableHead className="py-1 text-sm">Filial</TableHead>
                                         <TableHead className="py-1 text-sm">Vendedor</TableHead>
-                                        <TableHead className="py-1 text-sm text-right">Qtd</TableHead>
+                                        <TableHead className="py-1 text-sm text-right">Qtd Skus.</TableHead>
                                         <TableHead className="py-1 text-sm text-right">Total</TableHead>
                                         <TableHead className="py-1 text-sm text-right">Margem</TableHead>
                                         <TableHead className="py-1 w-8"></TableHead>
