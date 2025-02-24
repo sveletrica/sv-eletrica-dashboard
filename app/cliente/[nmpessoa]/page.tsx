@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, ArrowUpDown, ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { ArrowLeft, ArrowUpDown, ChevronLeft, ChevronRight, X, Search } from 'lucide-react'
 import Loading from '../../vendas-dia/loading'
 import Link from 'next/link'
 import { Roboto } from 'next/font/google'
@@ -161,6 +161,19 @@ const getYearlyTotals = (orders: GroupedOrder[]) => {
     }, {} as Record<string, number>);
 };
 
+// Adicione a interface para orçamentos
+interface ClientQuotation {
+    dtemissao: string
+    cdpedidodevenda: string
+    nmempresacurtovenda: string
+    nmrepresentantevenda: string
+    qtd_produtos: number
+    total_preco_venda: number
+    total_faturamento: number
+    total_preco_custo: number
+    total_custo_produto: number
+}
+
 export default function ClientDetails() {
     const router = useRouter()
     const params = useParams()
@@ -172,6 +185,8 @@ export default function ClientDetails() {
     const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
     const [currentPage, setCurrentPage] = useState(1)
     const [selectedMonth, setSelectedMonth] = useState<string | null>(null)
+    const [recentQuotations, setRecentQuotations] = useState<ClientQuotation[]>([])
+    const [loadingQuotations, setLoadingQuotations] = useState(false)
 
     const filteredData = useMemo(() => {
         if (!selectedMonth) return data;
@@ -303,6 +318,30 @@ export default function ClientDetails() {
             setCurrentPage(1);
         }
     };
+
+    // Função para buscar orçamentos recentes
+    const fetchRecentQuotations = async (clientName: string) => {
+        setLoadingQuotations(true)
+        try {
+            const response = await fetch(`/api/quotations/client/${encodeURIComponent(clientName)}?limit=10`)
+            if (!response.ok) {
+                throw new Error('Failed to fetch client quotations')
+            }
+            const data = await response.json()
+            setRecentQuotations(data)
+        } catch (error) {
+            console.error('Error fetching client quotations:', error)
+        } finally {
+            setLoadingQuotations(false)
+        }
+    }
+
+    // Adicionar ao useEffect existente que carrega os dados do cliente
+    useEffect(() => {
+        if (params?.nmpessoa) {
+            fetchRecentQuotations(params.nmpessoa as string)
+        }
+    }, [params?.nmpessoa])
 
     if (isLoading) return <Loading />
 
@@ -611,6 +650,96 @@ export default function ClientDetails() {
                     </CardContent>
                 </Card>
             </div>
+
+            <Card>
+                <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium">Orçamentos Recentes</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                    {loadingQuotations ? (
+                        <div className="flex flex-col items-center justify-center p-4 space-y-2">
+                            <Loading />
+                            <p className="text-sm text-muted-foreground">
+                                Carregando orçamentos recentes...
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="relative rounded-md border">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow className="hover:bg-transparent">
+                                        <TableHead className="py-1 text-sm">Data</TableHead>
+                                        <TableHead className="py-1 text-sm">Código</TableHead>
+                                        <TableHead className="py-1 text-sm">Filial</TableHead>
+                                        <TableHead className="py-1 text-sm">Vendedor</TableHead>
+                                        <TableHead className="py-1 text-sm text-right">Qtd</TableHead>
+                                        <TableHead className="py-1 text-sm text-right">Total</TableHead>
+                                        <TableHead className="py-1 text-sm text-right">Margem</TableHead>
+                                        <TableHead className="py-1 w-8"></TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {recentQuotations.map((quotation) => {
+                                        const margin = ((quotation.total_faturamento - (quotation.total_faturamento * 0.268 + quotation.total_custo_produto)) / quotation.total_faturamento) * 100
+
+                                        return (
+                                            <TableRow 
+                                                key={quotation.cdpedidodevenda}
+                                                className="cursor-pointer hover:bg-muted/50"
+                                                onClick={() => router.push(`/orcamento/${quotation.cdpedidodevenda}`)}
+                                            >
+                                                <TableCell className="py-1 text-sm">
+                                                    {quotation.dtemissao}
+                                                </TableCell>
+                                                <TableCell className="py-1 text-sm">
+                                                    {quotation.cdpedidodevenda}
+                                                </TableCell>
+                                                <TableCell className="py-1 text-sm">
+                                                    {quotation.nmempresacurtovenda}
+                                                </TableCell>
+                                                <TableCell className="py-1 text-sm">
+                                                    {quotation.nmrepresentantevenda}
+                                                </TableCell>
+                                                <TableCell className="py-1 text-sm text-right">
+                                                    {quotation.qtd_produtos}
+                                                </TableCell>
+                                                <TableCell className="py-1 text-sm text-right whitespace-nowrap">
+                                                    {quotation.total_faturamento.toLocaleString('pt-BR', {
+                                                        style: 'currency',
+                                                        currency: 'BRL'
+                                                    })}
+                                                </TableCell>
+                                                <TableCell className={`py-1 text-sm text-right ${
+                                                    margin >= 5
+                                                        ? 'text-green-600 dark:text-green-400'
+                                                        : margin >= 0
+                                                            ? 'text-yellow-600 dark:text-yellow-400'
+                                                            : 'text-red-600 dark:text-red-400'
+                                                }`}>
+                                                    {margin.toFixed(2)}%
+                                                </TableCell>
+                                                <TableCell className="py-1 px-1">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-6 w-6"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            router.push(`/orcamento/${quotation.cdpedidodevenda}`)
+                                                        }}
+                                                    >
+                                                        <Search className="h-3 w-3" />
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        )
+                                    })}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
 
             <Card>
                 <CardHeader>
