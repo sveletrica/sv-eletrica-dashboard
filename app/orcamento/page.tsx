@@ -18,6 +18,13 @@ import { Textarea } from "@/components/ui/textarea"
 import { toast } from "sonner"
 import { CountdownTimer, TIMER_CONFIG } from "@/components/countdown-timer"
 import { useAuth } from '@/components/providers/auth-provider'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
 
 const roboto = Roboto({
     weight: ['400', '500', '700'],
@@ -77,6 +84,20 @@ interface SavedSimulation {
 
 interface DataExtractionInfo {
     dataextracao: string;
+}
+
+interface QuotationSummary {
+    dtemissao: string
+    data_ordenacao: string
+    cdpedidodevenda: string
+    nmempresacurtovenda: string
+    nmpessoa: string
+    nmrepresentantevenda: string
+    qtd_produtos: number
+    total_preco_venda: number
+    total_faturamento: number
+    total_preco_custo: number
+    total_custo_produto: number
 }
 
 const getMarginStyle = (margin: number) => {
@@ -190,6 +211,21 @@ interface GroupTotals {
     quantidade: number
 }
 
+const formatBrazilianDate = (dateStr: string) => {
+    // Se já estiver no formato dd/mm/aaaa, retorna direto
+    if (dateStr.includes('/')) {
+        return dateStr
+    }
+    
+    // Se não, tenta converter
+    try {
+        const [day, month, year] = dateStr.split('/')
+        return `${day}/${month}/${year}`
+    } catch (error) {
+        return dateStr // Em caso de erro, retorna a string original
+    }
+}
+
 export default function QuotationDetails({ initialCode }: QuotationDetailsProps = {}) {
     const router = useRouter()
     const [quotationCode, setQuotationCode] = useState(initialCode || '')
@@ -211,6 +247,10 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
     const [lastExtraction, setLastExtraction] = useState<string | null>(null)
     const [timeLeftMinutes, setTimeLeftMinutes] = useState<number | null>(null)
     const [targetValue, setTargetValue] = useState<string>('')
+    const [recentQuotations, setRecentQuotations] = useState<QuotationSummary[]>([])
+    const [loadingRecent, setLoadingRecent] = useState(false)
+    const [selectedBranch, setSelectedBranch] = useState<string>('all')
+    const [selectedSeller, setSelectedSeller] = useState<string>('all')
     const { user } = useAuth()
 
     const calculateMargin = (revenue: number, cost: number) => {
@@ -602,25 +642,16 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
 
     const fetchLastExtraction = async () => {
         try {
-            const response = await fetch(
-                'https://kinftxezwizaoyrcbfqc.supabase.co/rest/v1/vw_biorcamento_aux?select=dataextracao&order=dataextracao.desc&limit=1',
-                {
-                    headers: {
-                        'apikey': process.env.SUPABASE_SERVICE_ROLE_KEY || '',
-                    }
-                }
-            );
-
+            const response = await fetch('/api/quotations/extraction-date')
             if (!response.ok) {
-                throw new Error('Failed to fetch extraction date');
+                throw new Error('Failed to fetch extraction date')
             }
-
-            const [data]: DataExtractionInfo[] = await response.json();
-            setLastExtraction(data.dataextracao);
+            const data = await response.json()
+            setLastExtraction(data.dataextracao)
         } catch (error) {
-            console.error('Error fetching extraction date:', error);
+            console.error('Error fetching extraction date:', error)
         }
-    };
+    }
 
     useEffect(() => {
         fetchLastExtraction();
@@ -656,12 +687,69 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
         console.log('Current auth user:', user) // Debug log
     }, [user])
 
+    const fetchRecentQuotations = async (branch = selectedBranch, seller = selectedSeller) => {
+        setLoadingRecent(true)
+        try {
+            const params = new URLSearchParams()
+            if (branch !== 'all') params.append('branch', branch)
+            if (seller !== 'all') params.append('seller', seller)
+
+            const response = await fetch(`/api/quotations/recent?${params}`)
+            if (!response.ok) {
+                throw new Error('Failed to fetch recent quotations')
+            }
+            const data = await response.json()
+            setRecentQuotations(data)
+        } catch (error) {
+            console.error('Error fetching recent quotations:', error)
+            toast.error('Erro ao carregar orçamentos recentes')
+        } finally {
+            setLoadingRecent(false)
+        }
+    }
+
+    // Atualizar os handlers dos filtros
+    const handleBranchChange = (value: string) => {
+        setSelectedBranch(value)
+        fetchRecentQuotations(value, selectedSeller)
+    }
+
+    const handleSellerChange = (value: string) => {
+        setSelectedSeller(value)
+        fetchRecentQuotations(selectedBranch, value)
+    }
+
+    // Função para obter filiais únicas
+    const getUniqueBranches = (quotations: QuotationSummary[]) => {
+        const branches = new Set(quotations.map(q => q.nmempresacurtovenda))
+        return Array.from(branches).sort()
+    }
+
+    // Função para obter vendedores únicos
+    const getUniqueSellers = (quotations: QuotationSummary[]) => {
+        const sellers = new Set(quotations.map(q => q.nmrepresentantevenda))
+        return Array.from(sellers).sort()
+    }
+
+    // Atualizar a função de filtro para incluir vendedor
+    const filteredQuotations = recentQuotations.filter(quotation => 
+        (selectedBranch === 'all' || quotation.nmempresacurtovenda === selectedBranch) &&
+        (selectedSeller === 'all' || quotation.nmrepresentantevenda === selectedSeller)
+    )
+
+    // Adicionar o useEffect para o fetch inicial
+    useEffect(() => {
+        if (!initialCode) {
+            fetchRecentQuotations()
+        }
+    }, []) // Executar apenas uma vez ao montar o componente
+
     if (isLoading) return <Loading />
 
     if (!initialCode && data.length === 0) {
         return (
             <PermissionGuard permission="quotations">
-            <div className="h-[80vh] flex items-center justify-center">
+            <div className="h-full p-4 space-y-4">
                 <Card className="w-full max-w-2xl mx-auto">
                     <CardHeader>
                         <CardTitle className="text-center text-2xl font-bold">
@@ -689,40 +777,140 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                 <p className="text-center text-red-500 text-sm">{error}</p>
                             )}
                         </div>
-
-                        <div className="bg-muted/50 rounded-lg p-4 space-y-3">
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                                <Info className="h-5 w-5" />
-                                <h3 className="font-semibold">O que você encontrará aqui:</h3>
-                            </div>
-                            <ul className="space-y-2 text-sm text-muted-foreground">
-                                <li> Detalhes completos do orçamento</li>
-                                <li>• Informações do cliente e localização</li>
-                                <li>• Lista detalhada de produtos</li>
-                                <li>• Preços, descontos e margens</li>
-                                <li>• Simulador de descontos</li>
-                            </ul>
-                            
-                            <div className="text-sm text-muted-foreground mt-4">
-                                <p className="font-medium">Como usar:</p>
-                                <p>1. Digite o código do orçamento no campo acima</p>
-                                <p>2. Clique em Buscar ou pressione Enter</p>
-                                <p>3. Analise os dados e utilize o simulador de descontos se necessário</p>
-                            </div>
-                        </div>
                     </CardContent>
-                    {lastExtraction && (
-                        <div className="px-6 py-4 border-t text-center text-sm text-muted-foreground">
-                            Dados atualizados em: {new Date(lastExtraction).toLocaleString('pt-BR', {
-                                day: '2-digit',
-                                month: '2-digit',
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                            })}
-                        </div>
-                    )}
                 </Card>
+
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-x-4">
+                        <CardTitle>Orçamentos Recentes</CardTitle>
+                        <div className="flex items-center gap-2">
+                            <Select
+                                value={selectedBranch}
+                                onValueChange={handleBranchChange}
+                            >
+                                <SelectTrigger className="w-[200px]">
+                                    <SelectValue placeholder="Filtrar por filial" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todas as filiais</SelectItem>
+                                    {getUniqueBranches(recentQuotations).map(branch => (
+                                        <SelectItem key={branch} value={branch}>
+                                            {branch}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+
+                            <Select
+                                value={selectedSeller}
+                                onValueChange={handleSellerChange}
+                            >
+                                <SelectTrigger className="w-[200px]">
+                                    <SelectValue placeholder="Filtrar por vendedor" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todos os vendedores</SelectItem>
+                                    {getUniqueSellers(recentQuotations).map(seller => (
+                                        <SelectItem key={seller} value={seller}>
+                                            {seller}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        {loadingRecent ? (
+                            <div className="flex flex-col items-center justify-center p-8 space-y-4">
+                                <Loading />
+                                <p className="text-sm text-muted-foreground">
+                                    Carregando orçamentos recentes...
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="relative rounded-md border">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Data</TableHead>
+                                            <TableHead>Código</TableHead>
+                                            <TableHead>Cliente</TableHead>
+                                            <TableHead>Filial</TableHead>
+                                            <TableHead>Vendedor</TableHead>
+                                            <TableHead className="text-right">Qtd Produtos</TableHead>
+                                            <TableHead className="text-right">Total</TableHead>
+                                            <TableHead className="text-right">Margem</TableHead>
+                                            <TableHead></TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {filteredQuotations.map((quotation) => {
+                                            const margin = ((quotation.total_faturamento - (quotation.total_faturamento * 0.268 + quotation.total_custo_produto)) / quotation.total_faturamento) * 100
+
+                                            return (
+                                                <TableRow 
+                                                    key={quotation.cdpedidodevenda}
+                                                    className="cursor-pointer hover:bg-muted/50"
+                                                    onClick={() => router.push(`/orcamento/${quotation.cdpedidodevenda}`)}
+                                                >
+                                                    <TableCell>
+                                                        {quotation.dtemissao}
+                                                    </TableCell>
+                                                    <TableCell>{quotation.cdpedidodevenda}</TableCell>
+                                                    <TableCell>{quotation.nmpessoa}</TableCell>
+                                                    <TableCell>{quotation.nmempresacurtovenda}</TableCell>
+                                                    <TableCell>{quotation.nmrepresentantevenda}</TableCell>
+                                                    <TableCell className="text-right">
+                                                        {quotation.qtd_produtos}
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
+                                                        {quotation.total_faturamento.toLocaleString('pt-BR', {
+                                                            style: 'currency',
+                                                            currency: 'BRL'
+                                                        })}
+                                                    </TableCell>
+                                                    <TableCell className={`text-right ${
+                                                        margin >= 5
+                                                            ? 'text-green-600 dark:text-green-400'
+                                                            : margin >= 0
+                                                                ? 'text-yellow-600 dark:text-yellow-400'
+                                                                : 'text-red-600 dark:text-red-400'
+                                                    }`}>
+                                                        {margin.toFixed(2)}%
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation()
+                                                                router.push(`/orcamento/${quotation.cdpedidodevenda}`)
+                                                            }}
+                                                        >
+                                                            <Search className="h-4 w-4" />
+                                                        </Button>
+                                                    </TableCell>
+                                                </TableRow>
+                                            )
+                                        })}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+
+                {lastExtraction && (
+                    <div className="text-center text-sm text-muted-foreground">
+                        Dados atualizados em: {new Date(lastExtraction).toLocaleString('pt-BR', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        })}
+                    </div>
+                )}
             </div>
             </PermissionGuard>
         )
