@@ -381,6 +381,8 @@ export default function SimulationPage() {
   const [targetMargin, setTargetMargin] = useState<string>('')
   const [targetValue, setTargetValue] = useState<string>('')
   const [importSQLDialogOpen, setImportSQLDialogOpen] = useState(false)
+  const [editingUnitPrice, setEditingUnitPrice] = useState<{[key: number]: string}>({})
+  const [editingTotalPrice, setEditingTotalPrice] = useState<{[key: number]: string}>({})
   const { user } = useAuth()
 
   const calculateMargin = (revenue: number, cost: number) => {
@@ -527,12 +529,19 @@ export default function SimulationPage() {
       if (i !== index) return item
       
       // Calculate new discount based on the new unit price
+      // Negative discount means price increase (acréscimo)
       const discount = ((item.vlprecosugerido - price) / item.vlprecosugerido) * 100
       return {
         ...item,
-        desconto: Math.max(0, Math.min(100, parseFloat(discount.toFixed(2))))
+        desconto: parseFloat(discount.toFixed(2))
       }
     }))
+    // Clear the editing state for this index
+    setEditingUnitPrice(prev => {
+      const newState = {...prev}
+      delete newState[index]
+      return newState
+    })
   }
 
   const handleFinalPriceChange = (index: number, finalPrice: number) => {
@@ -540,13 +549,20 @@ export default function SimulationPage() {
       if (i !== index) return item
       
       // Calculate new discount based on the desired final price
+      // Negative discount means price increase (acréscimo)
       const unitPrice = finalPrice / item.quantidade
       const discount = ((item.vlprecosugerido - unitPrice) / item.vlprecosugerido) * 100
       return {
         ...item,
-        desconto: Math.max(0, Math.min(100, parseFloat(discount.toFixed(2))))
+        desconto: parseFloat(discount.toFixed(2))
       }
     }))
+    // Clear the editing state for this index
+    setEditingTotalPrice(prev => {
+      const newState = {...prev}
+      delete newState[index]
+      return newState
+    })
   }
 
   const handleImportSQL = (importedItems: SimulationItem[]) => {
@@ -789,22 +805,92 @@ export default function SimulationPage() {
                             </TableCell>
                             <TableCell>
                               <Input
-                                type="number"
-                                value={priceAfterDiscount.toFixed(2)}
-                                onChange={(e) => handleUnitPriceChange(index, Number(e.target.value))}
+                                type="text"
+                                value={editingUnitPrice[index] !== undefined 
+                                  ? editingUnitPrice[index] 
+                                  : priceAfterDiscount.toFixed(2).replace('.', ',')}
+                                onChange={(e) => {
+                                  setEditingUnitPrice(prev => ({
+                                    ...prev,
+                                    [index]: e.target.value
+                                  }))
+                                }}
+                                onBlur={(e) => {
+                                  const value = e.target.value.replace(',', '.')
+                                  if (!isNaN(parseFloat(value))) {
+                                    handleUnitPriceChange(index, parseFloat(value))
+                                  } else {
+                                    // Reset to calculated value if invalid input
+                                    setEditingUnitPrice(prev => {
+                                      const newState = {...prev}
+                                      delete newState[index]
+                                      return newState
+                                    })
+                                  }
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault()
+                                    const value = e.currentTarget.value.replace(',', '.')
+                                    if (!isNaN(parseFloat(value))) {
+                                      handleUnitPriceChange(index, parseFloat(value))
+                                    } else {
+                                      // Reset to calculated value if invalid input
+                                      setEditingUnitPrice(prev => {
+                                        const newState = {...prev}
+                                        delete newState[index]
+                                        return newState
+                                      })
+                                    }
+                                  }
+                                }}
                                 className="w-24"
-                                min="0"
-                                step="0.01"
+                                inputMode="decimal"
                               />
                             </TableCell>
                             <TableCell>
                               <Input
-                                type="number"
-                                value={totalPrice.toFixed(2)}
-                                onChange={(e) => handleFinalPriceChange(index, Number(e.target.value))}
+                                type="text"
+                                value={editingTotalPrice[index] !== undefined 
+                                  ? editingTotalPrice[index] 
+                                  : totalPrice.toFixed(2).replace('.', ',')}
+                                onChange={(e) => {
+                                  setEditingTotalPrice(prev => ({
+                                    ...prev,
+                                    [index]: e.target.value
+                                  }))
+                                }}
+                                onBlur={(e) => {
+                                  const value = e.target.value.replace(',', '.')
+                                  if (!isNaN(parseFloat(value))) {
+                                    handleFinalPriceChange(index, parseFloat(value))
+                                  } else {
+                                    // Reset to calculated value if invalid input
+                                    setEditingTotalPrice(prev => {
+                                      const newState = {...prev}
+                                      delete newState[index]
+                                      return newState
+                                    })
+                                  }
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault()
+                                    const value = e.currentTarget.value.replace(',', '.')
+                                    if (!isNaN(parseFloat(value))) {
+                                      handleFinalPriceChange(index, parseFloat(value))
+                                    } else {
+                                      // Reset to calculated value if invalid input
+                                      setEditingTotalPrice(prev => {
+                                        const newState = {...prev}
+                                        delete newState[index]
+                                        return newState
+                                      })
+                                    }
+                                  }
+                                }}
                                 className="w-24"
-                                min="0"
-                                step="0.01"
+                                inputMode="decimal"
                               />
                             </TableCell>
                             <TableCell className={cn(
