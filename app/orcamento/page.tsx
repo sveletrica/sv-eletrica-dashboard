@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Search, Calculator, Info, Check, X, Copy, Share2 } from 'lucide-react'
+import { Search, Calculator, Info, Check, X, Copy, Share2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
 import Loading from './loading'
 import { Roboto } from 'next/font/google'
 import { useRouter } from 'next/navigation'
@@ -99,6 +99,16 @@ interface QuotationSummary {
     total_preco_custo: number
     total_custo_produto: number
     percentualdisponivel: number
+}
+
+interface PaginatedResponse<T> {
+    data: T[];
+    pagination: {
+        page: number;
+        pageSize: number;
+        totalCount: number;
+        totalPages: number;
+    };
 }
 
 const getMarginStyle = (margin: number) => {
@@ -253,6 +263,10 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
     const [selectedBranch, setSelectedBranch] = useState<string>('all')
     const [selectedSeller, setSelectedSeller] = useState<string>('all')
     const { user } = useAuth()
+    const [currentPage, setCurrentPage] = useState(1)
+    const [totalPages, setTotalPages] = useState(1)
+    const [pageSize] = useState(25)
+    const [totalCount, setTotalCount] = useState(0)
 
     const calculateMargin = (revenue: number, cost: number) => {
         return ((revenue - (revenue * 0.268 + cost)) / revenue) * 100
@@ -688,19 +702,24 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
         console.log('Current auth user:', user) // Debug log
     }, [user])
 
-    const fetchRecentQuotations = async (branch = selectedBranch, seller = selectedSeller) => {
+    const fetchRecentQuotations = async (branch = selectedBranch, seller = selectedSeller, page = currentPage) => {
         setLoadingRecent(true)
         try {
             const params = new URLSearchParams()
             if (branch !== 'all') params.append('branch', branch)
             if (seller !== 'all') params.append('seller', seller)
+            params.append('page', page.toString())
+            params.append('pageSize', pageSize.toString())
 
             const response = await fetch(`/api/quotations/recent?${params}`)
             if (!response.ok) {
                 throw new Error('Failed to fetch recent quotations')
             }
-            const data = await response.json()
-            setRecentQuotations(data)
+            const result: PaginatedResponse<QuotationSummary> = await response.json()
+            setRecentQuotations(result.data)
+            setCurrentPage(result.pagination.page)
+            setTotalPages(result.pagination.totalPages)
+            setTotalCount(result.pagination.totalCount)
         } catch (error) {
             console.error('Error fetching recent quotations:', error)
             toast.error('Erro ao carregar orçamentos recentes')
@@ -709,15 +728,27 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
         }
     }
 
-    // Atualizar os handlers dos filtros
+    // Adicione funções para navegação de páginas
+    const goToPage = (page: number) => {
+        if (page < 1 || page > totalPages) return
+        setCurrentPage(page)
+        fetchRecentQuotations(selectedBranch, selectedSeller, page)
+    }
+
+    const goToFirstPage = () => goToPage(1)
+    const goToPreviousPage = () => goToPage(currentPage - 1)
+    const goToNextPage = () => goToPage(currentPage + 1)
+    const goToLastPage = () => goToPage(totalPages)
+
+    // Atualize os handlers dos filtros para resetar a paginação
     const handleBranchChange = (value: string) => {
         setSelectedBranch(value)
-        fetchRecentQuotations(value, selectedSeller)
+        fetchRecentQuotations(value, selectedSeller, 1)
     }
 
     const handleSellerChange = (value: string) => {
         setSelectedSeller(value)
-        fetchRecentQuotations(selectedBranch, value)
+        fetchRecentQuotations(selectedBranch, value, 1)
     }
 
     // Função para obter filiais únicas
@@ -829,81 +860,128 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                 </p>
                             </div>
                         ) : (
-                            <div className="relative rounded-md border">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Data</TableHead>
-                                            <TableHead>Código</TableHead>
-                                            <TableHead>Cliente</TableHead>
-                                            <TableHead>Filial</TableHead>
-                                            <TableHead>Vendedor</TableHead>
-                                            <TableHead className="text-right">Qtd Produtos</TableHead>
-                                            <TableHead className="text-right">Total</TableHead>
-                                            <TableHead className="text-right">Margem</TableHead>
-                                            <TableHead className="text-right">% Disp</TableHead>
-                                            <TableHead></TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {filteredQuotations.map((quotation) => {
-                                            const margin = ((quotation.total_faturamento - (quotation.total_faturamento * 0.268 + quotation.total_custo_produto)) / quotation.total_faturamento) * 100
-                                            const isFullyAvailable = quotation.percentualdisponivel === 100;
+                            <>
+                                <div className="relative rounded-md border">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Data</TableHead>
+                                                <TableHead>Código</TableHead>
+                                                <TableHead>Cliente</TableHead>
+                                                <TableHead>Filial</TableHead>
+                                                <TableHead>Vendedor</TableHead>
+                                                <TableHead className="text-right">Qtd Produtos</TableHead>
+                                                <TableHead className="text-right">Total</TableHead>
+                                                <TableHead className="text-right">Margem</TableHead>
+                                                <TableHead className="text-right">% Disp</TableHead>
+                                                <TableHead></TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {filteredQuotations.map((quotation) => {
+                                                const margin = ((quotation.total_faturamento - (quotation.total_faturamento * 0.268 + quotation.total_custo_produto)) / quotation.total_faturamento) * 100
+                                                const isFullyAvailable = quotation.percentualdisponivel === 100;
 
-                                            return (
-                                                <TableRow 
-                                                    key={quotation.cdpedidodevenda}
-                                                    className="cursor-pointer hover:bg-muted/50"
-                                                    onClick={() => router.push(`/orcamento/${quotation.cdpedidodevenda}`)}
-                                                >
-                                                    <TableCell>
-                                                        {quotation.dtemissao}
-                                                    </TableCell>
-                                                    <TableCell>{quotation.cdpedidodevenda}</TableCell>
-                                                    <TableCell>{quotation.nmpessoa}</TableCell>
-                                                    <TableCell>{quotation.nmempresacurtovenda}</TableCell>
-                                                    <TableCell>{quotation.nmrepresentantevenda}</TableCell>
-                                                    <TableCell className="text-right">
-                                                        {quotation.qtd_produtos}
-                                                    </TableCell>
-                                                    <TableCell className="text-right">
-                                                        {quotation.total_faturamento.toLocaleString('pt-BR', {
-                                                            style: 'currency',
-                                                            currency: 'BRL'
-                                                        })}
-                                                    </TableCell>
-                                                    <TableCell className={`text-right ${
-                                                        margin >= 5
-                                                            ? 'text-green-600 dark:text-green-400'
-                                                            : margin >= 0
-                                                                ? 'text-yellow-600 dark:text-yellow-400'
-                                                                : 'text-red-600 dark:text-red-400'
-                                                    }`}>
-                                                        {margin.toFixed(2)}%
-                                                    </TableCell>
-                                                    <TableCell className={`text-right ${
-                                                        isFullyAvailable ? 'bg-green-100 dark:bg-green-900/30' : ''
-                                                    }`}>
-                                                        {quotation.percentualdisponivel?.toFixed(2)}%
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation()
-                                                                router.push(`/orcamento/${quotation.cdpedidodevenda}`)
-                                                            }}
-                                                        >
-                                                            <Search className="h-4 w-4" />
-                                                        </Button>
-                                                    </TableCell>
-                                                </TableRow>
-                                            )
-                                        })}
-                                    </TableBody>
-                                </Table>
-                            </div>
+                                                return (
+                                                    <TableRow 
+                                                        key={quotation.cdpedidodevenda}
+                                                        className="cursor-pointer hover:bg-muted/50"
+                                                        onClick={() => router.push(`/orcamento/${quotation.cdpedidodevenda}`)}
+                                                    >
+                                                        <TableCell>
+                                                            {quotation.dtemissao}
+                                                        </TableCell>
+                                                        <TableCell>{quotation.cdpedidodevenda}</TableCell>
+                                                        <TableCell>{quotation.nmpessoa}</TableCell>
+                                                        <TableCell>{quotation.nmempresacurtovenda}</TableCell>
+                                                        <TableCell>{quotation.nmrepresentantevenda}</TableCell>
+                                                        <TableCell className="text-right">
+                                                            {quotation.qtd_produtos}
+                                                        </TableCell>
+                                                        <TableCell className="text-right">
+                                                            {quotation.total_faturamento.toLocaleString('pt-BR', {
+                                                                style: 'currency',
+                                                                currency: 'BRL'
+                                                            })}
+                                                        </TableCell>
+                                                        <TableCell className={`text-right ${
+                                                            margin >= 5
+                                                                ? 'text-green-600 dark:text-green-400'
+                                                                : margin >= 0
+                                                                    ? 'text-yellow-600 dark:text-yellow-400'
+                                                                    : 'text-red-600 dark:text-red-400'
+                                                        }`}>
+                                                            {margin.toFixed(2)}%
+                                                        </TableCell>
+                                                        <TableCell className={`text-right ${
+                                                            isFullyAvailable ? 'bg-green-100 dark:bg-green-900/30' : ''
+                                                        }`}>
+                                                            {quotation.percentualdisponivel?.toFixed(2)}%
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation()
+                                                                    router.push(`/orcamento/${quotation.cdpedidodevenda}`)
+                                                                }}
+                                                            >
+                                                                <Search className="h-4 w-4" />
+                                                            </Button>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                )
+                                            })}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                                
+                                {recentQuotations.length > 0 && (
+                                    <div className="flex items-center justify-between mt-4">
+                                        <div className="text-sm text-muted-foreground">
+                                            Mostrando {((currentPage - 1) * pageSize) + 1} a {Math.min(currentPage * pageSize, totalCount)} de {totalCount} orçamentos
+                                        </div>
+                                        <div className="flex items-center space-x-2">
+                                            <Button
+                                                variant="outline"
+                                                size="icon"
+                                                onClick={goToFirstPage}
+                                                disabled={currentPage === 1 || loadingRecent}
+                                            >
+                                                <ChevronsLeft className="h-4 w-4" />
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="icon"
+                                                onClick={goToPreviousPage}
+                                                disabled={currentPage === 1 || loadingRecent}
+                                            >
+                                                <ChevronLeft className="h-4 w-4" />
+                                            </Button>
+                                            <span className="text-sm">
+                                                Página {currentPage} de {totalPages}
+                                            </span>
+                                            <Button
+                                                variant="outline"
+                                                size="icon"
+                                                onClick={goToNextPage}
+                                                disabled={currentPage === totalPages || loadingRecent}
+                                            >
+                                                <ChevronRight className="h-4 w-4" />
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="icon"
+                                                onClick={goToLastPage}
+                                                disabled={currentPage === totalPages || loadingRecent}
+                                            >
+                                                <ChevronsRight className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
                         )}
                     </CardContent>
                 </Card>
