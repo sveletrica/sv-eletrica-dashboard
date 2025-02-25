@@ -604,48 +604,114 @@ export default function Inventory() {
     // Update the debouncedSearch to be memoized with useCallback
     const debouncedSearch = useCallback(
         useDebouncedCallback((searchValue: string) => {
-            if (!searchIndexRef.current) return;
+            // Start with all data
+            let filtered = data;
 
+            // 1. Aplicar filtro de estoque primeiro
+            if (showOnlyInStock) {
+                filtered = filtered.filter(item => item.StkTotal > 0);
+            }
+
+            // 2. Se não há termo de busca, retorna os dados filtrados até aqui
             if (!searchValue.trim()) {
-                setFilteredData(data);
+                setFilteredData(filtered);
                 return;
             }
 
-            const searchTerms = searchValue.trim().toLowerCase().split(/\s+/);
-            
-            const filteredResults = data.filter(item => {
-                const itemString = Array.from(visibleColumns)
-                    .map(columnId => {
-                        const value = item[columnId];
+            // 3. Split and normalize search terms, separating include and exclude terms
+            const terms = searchValue
+                .trim()
+                .toLowerCase()
+                .split(/\s+/)
+                .filter(term => term.length >= 2); // Ignore terms shorter than 2 characters
+
+            const includedTerms: string[] = [];
+            const excludedTerms: string[] = [];
+
+            terms.forEach(term => {
+                if (term.startsWith('-')) {
+                    const cleanTerm = term.slice(1); // Remove the '-' prefix
+                    if (cleanTerm.length >= 2) { // Only add if term is still long enough
+                        excludedTerms.push(cleanTerm);
+                    }
+                } else {
+                    includedTerms.push(term);
+                }
+            });
+
+            // Create a memoized search string builder
+            const getSearchString = (item: InventoryItem) => {
+                if (!item) return '';
+                
+                // Priorize certain fields for better matching
+                const priorityFields = ['CdChamada', 'NmProduto', 'NmGrupoProduto'];
+                const otherFields = Array.from(visibleColumns).filter(field => !priorityFields.includes(field));
+                
+                // Concatenate priority fields first
+                const searchString = [
+                    ...priorityFields.map(field => {
+                        const value = item[field];
+                        if (value === null || value === undefined) return '';
+                        return String(value).toLowerCase();
+                    }),
+                    ...otherFields.map(field => {
+                        const value = item[field];
                         if (value === null || value === undefined) return '';
                         
-                        if (columnId === 'Atualizacao' || columnId === 'DataInicio' || columnId === 'DataFim') {
+                        if (field === 'Atualizacao' || field === 'DataInicio' || field === 'DataFim') {
                             if (!value) return '';
-                            return new Date(value).toLocaleString('pt-BR', {
-                                timeZone: 'UTC'
-                            });
+                            return new Date(value).toLocaleString('pt-BR', { timeZone: 'UTC' });
                         }
                         
-                        if (columnId.startsWith('VlPreco') || columnId === 'PrecoPromo' || columnId === 'PrecoDe') {
+                        if (field.startsWith('VlPreco') || field === 'PrecoPromo' || field === 'PrecoDe') {
                             return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
                         }
                         
-                        if (columnId.startsWith('QtEstoque') || columnId === 'StkTotal') {
+                        if (field.startsWith('QtEstoque') || field === 'StkTotal') {
                             return value.toLocaleString('pt-BR');
                         }
                         
                         return String(value);
                     })
-                    .join(' ')
-                    .toLowerCase();
+                ].join(' ').toLowerCase();
 
-                return searchTerms.every(term => itemString.includes(term));
-            });
+                return searchString;
+            };
 
-            setFilteredData(filteredResults);
-        }, 150),
-        [data, visibleColumns]
-    ); // Add dependencies for useCallback
+            // 4. Batch process items for better performance
+            const batchSize = isMobile ? 50 : 100;
+            const results: InventoryItem[] = [];
+            
+            for (let i = 0; i < filtered.length; i += batchSize) {
+                const batch = filtered.slice(i, i + batchSize);
+                const batchResults = batch.filter(item => {
+                    const searchString = getSearchString(item);
+                    
+                    // Check if all included terms are present
+                    const hasAllIncludedTerms = includedTerms.length === 0 || 
+                        includedTerms.every(term => searchString.includes(term));
+                    
+                    // Check if any excluded terms are present
+                    const hasNoExcludedTerms = excludedTerms.length === 0 || 
+                        !excludedTerms.some(term => searchString.includes(term));
+                    
+                    // Item matches if it has all included terms AND none of the excluded terms
+                    return hasAllIncludedTerms && hasNoExcludedTerms;
+                });
+                results.push(...batchResults);
+                
+                // If we're on mobile, update results progressively
+                if (isMobile && i % (batchSize * 2) === 0) {
+                    setTimeout(() => {
+                        setFilteredData(results);
+                    }, 0);
+                }
+            }
+
+            setFilteredData(results);
+        }, 300),
+        [data, visibleColumns, isMobile, showOnlyInStock]
+    );
 
     // Update search term and trigger search
     const handleSearch = (value: string) => {
@@ -1355,7 +1421,12 @@ export default function Inventory() {
                                     </TableHeader>
                                     <TableBody>
                                         {table.getRowModel().rows.map((row) => (
-                                            <TableRow key={row.id}>
+                                            <TableRow 
+                                                key={row.id}
+                                                className={cn(
+                                                    (row.getValue('StkTotal') <= 0) && "text-gray-400 bg-gray-50"
+                                                )}
+                                            >
                                                 {row.getVisibleCells().map((cell) => (
                                                     <TableCell 
                                                         key={cell.id}
@@ -1365,7 +1436,8 @@ export default function Inventory() {
                                                             "text-xs sm:text-sm",
                                                             cell.column.id === 'NmGrupoProduto' && "max-w-[100px] sm:max-w-[120px] truncate",
                                                             cell.column.id === 'NmProduto' && "max-w-[200px] sm:max-w-[600px]",
-                                                            cell.column.id === 'NmFornecedorPrincipal' && "max-w-[120px] sm:max-w-[150px] truncate" // Add truncate for supplier
+                                                            cell.column.id === 'NmFornecedorPrincipal' && "max-w-[120px] sm:max-w-[150px] truncate",
+                                                            cell.column.id === 'StkTotal' && row.getValue('StkTotal') <= 0 && "text-gray-400"
                                                         )}
                                                         style={{
                                                             width: cell.column.getSize(),
@@ -1394,11 +1466,15 @@ export default function Inventory() {
                                     const stock = row.getValue('StkTotal') as number;
                                     const price = row.getValue('VlPreco_Empresa59') as number;
                                     const fornecedor = row.getValue('NmFornecedorPrincipal') as string;
+                                    const hasNoStock = stock <= 0;
                                     
                                     return (
                                         <div 
                                             key={row.id}
-                                            className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
+                                            className={cn(
+                                                "bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow",
+                                                hasNoStock && "bg-gray-50"
+                                            )}
                                         >
                                             <div 
                                                 className="relative aspect-square cursor-pointer"
@@ -1415,7 +1491,10 @@ export default function Inventory() {
                                                         src={imageUrl}
                                                         alt={productName}
                                                         fill
-                                                        className="object-contain p-2"
+                                                        className={cn(
+                                                            "object-contain p-2",
+                                                            hasNoStock && "opacity-75"
+                                                        )}
                                                         sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                                                     />
                                                 ) : (
@@ -1427,23 +1506,34 @@ export default function Inventory() {
                                             <div className="p-3 space-y-2">
                                                 <Link
                                                     href={`/produto/${cdChamada.trim()}`}
-                                                    className="text-sm font-medium text-blue-600 hover:text-blue-800 line-clamp-2"
+                                                    className={cn(
+                                                        "text-sm font-medium line-clamp-2",
+                                                        hasNoStock ? "text-gray-500" : "text-blue-600 hover:text-blue-800"
+                                                    )}
                                                 >
                                                     {productName}
                                                 </Link>
                                                 <div className="flex items-center gap-1">
                                                     <span 
-                                                        className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-light bg-gray-300 text-black truncate max-w-[200px]"
+                                                        className={cn(
+                                                            "inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-light truncate max-w-[200px]",
+                                                            hasNoStock ? "bg-gray-200 text-gray-600" : "bg-gray-300 text-black"
+                                                        )}
                                                         title={fornecedor}
                                                     >
                                                         {fornecedor || 'Sem fornecedor'}
                                                     </span>
                                                 </div>
                                                 <div className="flex justify-between items-center text-sm">
-                                                    <span className="text-gray-600">
+                                                    <span className={cn(
+                                                        hasNoStock ? "text-gray-400" : "text-gray-600"
+                                                    )}>
                                                         Estoque: {stock}
                                                     </span>
-                                                    <span className="font-medium">
+                                                    <span className={cn(
+                                                        "font-medium",
+                                                        hasNoStock ? "text-gray-400" : "text-gray-900"
+                                                    )}>
                                                         {price?.toLocaleString('pt-BR', { 
                                                             style: 'currency', 
                                                             currency: 'BRL' 
