@@ -240,6 +240,10 @@ export default function Inventory() {
     // Load saved state on component mount
     const [initialStateLoaded, setInitialStateLoaded] = useState(false);
 
+    // Add these state variables near the other state declarations
+    const [isSearching, setIsSearching] = useState(false);
+    const [searchProgress, setSearchProgress] = useState(0);
+
     useEffect(() => {
         if (!initialStateLoaded) {
             const savedState = loadPageState();
@@ -604,118 +608,156 @@ export default function Inventory() {
     // Update the debouncedSearch to be memoized with useCallback
     const debouncedSearch = useCallback(
         useDebouncedCallback((searchValue: string) => {
-            // Start with all data
-            let filtered = data;
-
-            // 1. Aplicar filtro de estoque primeiro
-            if (showOnlyInStock) {
-                filtered = filtered.filter(item => item.StkTotal > 0);
-            }
-
-            // 2. Se não há termo de busca, retorna os dados filtrados até aqui
-            if (!searchValue.trim()) {
-                setFilteredData(filtered);
-                return;
-            }
-
-            // 3. Split and normalize search terms, separating include and exclude terms
-            const terms = searchValue
-                .trim()
-                .toLowerCase()
-                .split(/\s+/)
-                .filter(term => term.length >= 2); // Ignore terms shorter than 2 characters
-
-            const includedTerms: string[] = [];
-            const excludedTerms: string[] = [];
-
-            terms.forEach(term => {
-                if (term.startsWith('-')) {
-                    const cleanTerm = term.slice(1); // Remove the '-' prefix
-                    if (cleanTerm.length >= 2) { // Only add if term is still long enough
-                        excludedTerms.push(cleanTerm);
-                    }
-                } else {
-                    includedTerms.push(term);
-                }
-            });
-
-            // Create a memoized search string builder
-            const getSearchString = (item: InventoryItem) => {
-                if (!item) return '';
-                
-                // Priorize certain fields for better matching
-                const priorityFields = ['CdChamada', 'NmProduto', 'NmGrupoProduto'];
-                const otherFields = Array.from(visibleColumns).filter(field => !priorityFields.includes(field));
-                
-                // Concatenate priority fields first
-                const searchString = [
-                    ...priorityFields.map(field => {
-                        const value = item[field];
-                        if (value === null || value === undefined) return '';
-                        return String(value).toLowerCase();
-                    }),
-                    ...otherFields.map(field => {
-                        const value = item[field];
-                        if (value === null || value === undefined) return '';
-                        
-                        if (field === 'Atualizacao' || field === 'DataInicio' || field === 'DataFim') {
-                            if (!value) return '';
-                            return new Date(value).toLocaleString('pt-BR', { timeZone: 'UTC' });
-                        }
-                        
-                        if (field.startsWith('VlPreco') || field === 'PrecoPromo' || field === 'PrecoDe') {
-                            return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                        }
-                        
-                        if (field.startsWith('QtEstoque') || field === 'StkTotal') {
-                            return value.toLocaleString('pt-BR');
-                        }
-                        
-                        return String(value);
-                    })
-                ].join(' ').toLowerCase();
-
-                return searchString;
-            };
-
-            // 4. Batch process items for better performance
-            const batchSize = isMobile ? 50 : 100;
-            const results: InventoryItem[] = [];
+            // Show a loading indicator during search
+            setIsSearching(true);
             
-            for (let i = 0; i < filtered.length; i += batchSize) {
-                const batch = filtered.slice(i, i + batchSize);
-                const batchResults = batch.filter(item => {
-                    const searchString = getSearchString(item);
-                    
-                    // Check if all included terms are present
-                    const hasAllIncludedTerms = includedTerms.length === 0 || 
-                        includedTerms.every(term => searchString.includes(term));
-                    
-                    // Check if any excluded terms are present
-                    const hasNoExcludedTerms = excludedTerms.length === 0 || 
-                        !excludedTerms.some(term => searchString.includes(term));
-                    
-                    // Item matches if it has all included terms AND none of the excluded terms
-                    return hasAllIncludedTerms && hasNoExcludedTerms;
-                });
-                results.push(...batchResults);
-                
-                // If we're on mobile, update results progressively
-                if (isMobile && i % (batchSize * 2) === 0) {
-                    setTimeout(() => {
-                        setFilteredData(results);
-                    }, 0);
-                }
-            }
+            // Use a more aggressive debounce on mobile
+            setTimeout(() => {
+                // Start with all data
+                let filtered = data;
 
-            setFilteredData(results);
-        }, 300),
+                // 1. Aplicar filtro de estoque primeiro
+                if (showOnlyInStock) {
+                    filtered = filtered.filter(item => item.StkTotal > 0);
+                }
+
+                // 2. Se não há termo de busca, retorna os dados filtrados até aqui
+                if (!searchValue.trim()) {
+                    setFilteredData(filtered);
+                    setIsSearching(false);
+                    return;
+                }
+
+                // 3. Split and normalize search terms, separating include and exclude terms
+                const terms = searchValue
+                    .trim()
+                    .toLowerCase()
+                    .split(/\s+/)
+                    .filter(term => term.length >= 2); // Ignore terms shorter than 2 characters
+
+                const includedTerms: string[] = [];
+                const excludedTerms: string[] = [];
+
+                terms.forEach(term => {
+                    if (term.startsWith('-')) {
+                        const cleanTerm = term.slice(1); // Remove the '-' prefix
+                        if (cleanTerm.length >= 2) { // Only add if term is still long enough
+                            excludedTerms.push(cleanTerm);
+                        }
+                    } else {
+                        includedTerms.push(term);
+                    }
+                });
+
+                // Create a memoized search string builder
+                const getSearchString = (item: InventoryItem) => {
+                    if (!item) return '';
+                    
+                    // Priorize certain fields for better matching
+                    const priorityFields = ['CdChamada', 'NmProduto', 'NmGrupoProduto'];
+                    const otherFields = Array.from(visibleColumns).filter(field => !priorityFields.includes(field));
+                    
+                    // Concatenate priority fields first
+                    const searchString = [
+                        ...priorityFields.map(field => {
+                            const value = item[field as keyof InventoryItem];
+                            if (value === null || value === undefined) return '';
+                            return String(value).toLowerCase();
+                        }),
+                        ...otherFields.map(field => {
+                            const value = item[field as keyof InventoryItem];
+                            if (value === null || value === undefined) return '';
+                            
+                            if (field === 'Atualizacao' || field === 'DataInicio' || field === 'DataFim') {
+                                if (!value) return '';
+                                return new Date(value as string).toLocaleString('pt-BR', { timeZone: 'UTC' });
+                            }
+                            
+                            if (field.startsWith('VlPreco') || field === 'PrecoPromo' || field === 'PrecoDe') {
+                                return (value as number).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                            }
+                            
+                            if (field.startsWith('QtEstoque') || field === 'StkTotal') {
+                                return (value as number).toLocaleString('pt-BR');
+                            }
+                            
+                            return String(value);
+                        })
+                    ].join(' ').toLowerCase();
+
+                    return searchString;
+                };
+
+                // 4. Batch process items for better performance
+                const batchSize = isMobile ? 25 : 100; // Smaller batch size for mobile
+                const results: InventoryItem[] = [];
+                let processedCount = 0;
+                
+                // Use a more efficient approach with requestAnimationFrame for smoother UI
+                const processBatch = (startIndex: number) => {
+                    const endIndex = Math.min(startIndex + batchSize, filtered.length);
+                    const batch = filtered.slice(startIndex, endIndex);
+                    
+                    const batchResults = batch.filter(item => {
+                        const searchString = getSearchString(item);
+                        
+                        // Check if all included terms are present
+                        const hasAllIncludedTerms = includedTerms.length === 0 || 
+                            includedTerms.every(term => searchString.includes(term));
+                        
+                        // Check if any excluded terms are present
+                        const hasNoExcludedTerms = excludedTerms.length === 0 || 
+                            !excludedTerms.some(term => searchString.includes(term));
+                        
+                        // Item matches if it has all included terms AND none of the excluded terms
+                        return hasAllIncludedTerms && hasNoExcludedTerms;
+                    });
+                    
+                    results.push(...batchResults);
+                    processedCount = endIndex;
+                    
+                    // Update progress for UI feedback
+                    setSearchProgress(Math.floor((endIndex / filtered.length) * 100));
+                    
+                    // If we're on mobile, update results progressively for better UX
+                    if (isMobile && results.length > 0 && (endIndex % (batchSize * 2) === 0 || endIndex === filtered.length)) {
+                        setFilteredData([...results]);
+                    }
+                    
+                    // Continue processing if there are more items
+                    if (endIndex < filtered.length) {
+                        // Use requestAnimationFrame to avoid blocking the UI
+                        requestAnimationFrame(() => processBatch(endIndex));
+                    } else {
+                        // All done
+                        setFilteredData(results);
+                        setIsSearching(false);
+                        setSearchProgress(100);
+                    }
+                };
+                
+                // Start processing
+                processBatch(0);
+                
+            }, 0);
+        }, isMobile ? 600 : 300), // Increase debounce time for mobile
         [data, visibleColumns, isMobile, showOnlyInStock]
     );
 
     // Update search term and trigger search
     const handleSearch = (value: string) => {
         setSearchTerm(value);
+        
+        // If the search term is very short, don't trigger search yet
+        if (value.length < 2) {
+            setIsSearching(false);
+            if (value.length === 0) {
+                // Reset to all data if search is cleared
+                const filtered = showOnlyInStock ? data.filter(item => item.StkTotal > 0) : data;
+                setFilteredData(filtered);
+            }
+            return;
+        }
         
         const params = new URLSearchParams(searchParams);
         if (value) {
@@ -732,6 +774,11 @@ export default function Inventory() {
         }
         
         router.replace(`/inventory?${params.toString()}`);
+        
+        // Show immediate feedback that search is starting
+        setIsSearching(true);
+        setSearchProgress(0);
+        
         debouncedSearch(value);
     };
 
@@ -1317,12 +1364,27 @@ export default function Inventory() {
                                         </div>
                                     </div>
                                     {/* Second row/group with search input */}
-                                    <Input
-                                        placeholder="Buscar em todos os campos..."
-                                        value={searchTerm}
-                                        onChange={(e) => handleSearch(e.target.value)}
-                                        className="w-96 text-xs sm:text-sm sm:min-w-[100px]"
-                                    />
+                                    <div className="relative w-full sm:w-96">
+                                        <Input
+                                            placeholder="Buscar em todos os campos..."
+                                            value={searchTerm}
+                                            onChange={(e) => handleSearch(e.target.value)}
+                                            className="w-full text-xs sm:text-sm"
+                                        />
+                                        {isSearching && (
+                                            <div className="absolute -bottom-6 left-0 right-0">
+                                                <div className="w-full bg-gray-200 rounded-full h-1.5">
+                                                    <div 
+                                                        className="bg-blue-600 h-1.5 rounded-full transition-all duration-300 ease-in-out" 
+                                                        style={{ width: `${searchProgress}%` }}
+                                                    ></div>
+                                                </div>
+                                                <div className="text-xs text-gray-500 text-right mt-1">
+                                                    {searchProgress < 100 ? 'Buscando...' : ''}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </div>
