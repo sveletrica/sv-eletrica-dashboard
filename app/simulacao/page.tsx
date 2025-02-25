@@ -374,6 +374,7 @@ function ImportSQLDialog({ open, onOpenChange, onImport }: ImportSQLDialogProps)
 
 export default function SimulationPage() {
   const [items, setItems] = useState<SimulationItem[]>([])
+  const [originalItems, setOriginalItems] = useState<SimulationItem[]>([])
   const [addProductOpen, setAddProductOpen] = useState(false)
   const [globalDiscount, setGlobalDiscount] = useState('')
   const [importDialogOpen, setImportDialogOpen] = useState(false)
@@ -387,7 +388,9 @@ export default function SimulationPage() {
   }
 
   const handleAddProduct = (product: Product) => {
-    setItems(prev => [...prev, { ...product, quantidade: 1, desconto: 0 }])
+    const newItem = { ...product, quantidade: 1, desconto: 0 }
+    setItems(prev => [...prev, newItem])
+    setOriginalItems(prev => [...prev, newItem])
   }
 
   const handleQuantityChange = (index: number, quantity: number) => {
@@ -436,7 +439,6 @@ export default function SimulationPage() {
 
   const handleImportItems = async (importedItems: { codigo: string; quantidade: number; precoFinal: number }[]) => {
     try {
-      // Buscar detalhes dos produtos
       const products: SimulationItem[] = []
       
       for (const item of importedItems) {
@@ -447,19 +449,19 @@ export default function SimulationPage() {
         const product = data.find((p: Product) => p.cdchamada.trim() === item.codigo)
         
         if (product) {
-          // Calcular o desconto baseado no preço final desejado
           const desconto = ((product.vlprecosugerido - item.precoFinal) / product.vlprecosugerido) * 100
           
           products.push({
             ...product,
             quantidade: item.quantidade,
-            desconto: Math.max(0, Math.min(100, desconto)) // Limita o desconto entre 0 e 100
+            desconto: Math.max(0, Math.min(100, desconto))
           })
         }
       }
 
       if (products.length > 0) {
         setItems(prev => [...prev, ...products])
+        setOriginalItems(prev => [...prev, ...products])
         toast.success(`${products.length} produtos importados`)
       } else {
         toast.error('Nenhum produto encontrado')
@@ -514,6 +516,7 @@ export default function SimulationPage() {
 
   const clearSimulation = () => {
     setItems([])
+    setOriginalItems([])
     setGlobalDiscount('')
     setTargetMargin('')
     setTargetValue('')
@@ -548,6 +551,15 @@ export default function SimulationPage() {
 
   const handleImportSQL = (importedItems: SimulationItem[]) => {
     setItems(prev => [...prev, ...importedItems])
+    setOriginalItems(prev => [...prev, ...importedItems])
+  }
+
+  // Modify resetValues to use original values
+  const resetValues = () => {
+    setItems([...originalItems])
+    setGlobalDiscount('')
+    setTargetMargin('')
+    setTargetValue('')
   }
 
   return (
@@ -573,10 +585,16 @@ export default function SimulationPage() {
                   Importar do SQL
                 </Button>
                 {items.length > 0 && (
-                  <Button variant="destructive" onClick={clearSimulation}>
-                    <Trash className="h-4 w-4 mr-2" />
-                    Limpar Simulação
-                  </Button>
+                  <>
+                    <Button variant="secondary" onClick={resetValues}>
+                      <Calculator className="h-4 w-4 mr-2" />
+                      Resetar Valores
+                    </Button>
+                    <Button variant="destructive" onClick={clearSimulation}>
+                      <Trash className="h-4 w-4 mr-2" />
+                      Limpar Simulação
+                    </Button>
+                  </>
                 )}
               </div>
 
