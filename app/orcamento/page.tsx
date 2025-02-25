@@ -98,6 +98,7 @@ interface QuotationSummary {
     total_faturamento: number
     total_preco_custo: number
     total_custo_produto: number
+    percentualdisponivel: number
 }
 
 const getMarginStyle = (margin: number) => {
@@ -840,12 +841,14 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                             <TableHead className="text-right">Qtd Produtos</TableHead>
                                             <TableHead className="text-right">Total</TableHead>
                                             <TableHead className="text-right">Margem</TableHead>
+                                            <TableHead className="text-right">% Disp</TableHead>
                                             <TableHead></TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {filteredQuotations.map((quotation) => {
                                             const margin = ((quotation.total_faturamento - (quotation.total_faturamento * 0.268 + quotation.total_custo_produto)) / quotation.total_faturamento) * 100
+                                            const isFullyAvailable = quotation.percentualdisponivel === 100;
 
                                             return (
                                                 <TableRow 
@@ -877,6 +880,11 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                                                 : 'text-red-600 dark:text-red-400'
                                                     }`}>
                                                         {margin.toFixed(2)}%
+                                                    </TableCell>
+                                                    <TableCell className={`text-right ${
+                                                        isFullyAvailable ? 'bg-green-100 dark:bg-green-900/30' : ''
+                                                    }`}>
+                                                        {quotation.percentualdisponivel?.toFixed(2)}%
                                                     </TableCell>
                                                     <TableCell>
                                                         <Button
