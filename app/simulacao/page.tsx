@@ -572,6 +572,12 @@ export default function SimulationPage() {
                   <Calculator className="h-4 w-4 mr-2" />
                   Importar do SQL
                 </Button>
+                {items.length > 0 && (
+                  <Button variant="destructive" onClick={clearSimulation}>
+                    <Trash className="h-4 w-4 mr-2" />
+                    Limpar Simulação
+                  </Button>
+                )}
               </div>
 
               {items.length > 0 && (
