@@ -743,12 +743,24 @@ export default function DailySales() {
             faturamento: acc.faturamento + summary.faturamento,
             custo: acc.custo + summary.custo,
             count: acc.count + summary.count,
-            margin: 0 // será calculado abaixo
+            margin: 0, // será calculado abaixo
+            corporativoFaturamento: acc.corporativoFaturamento + (
+                (summary.empresa === 'SV MATRIZ' || summary.empresa === 'SV FILIAL') 
+                    ? summary.faturamento 
+                    : 0
+            ),
+            varejoFaturamento: acc.varejoFaturamento + (
+                (summary.empresa !== 'SV MATRIZ' && summary.empresa !== 'SV FILIAL') 
+                    ? summary.faturamento 
+                    : 0
+            )
         }), {
             faturamento: 0,
             custo: 0,
             count: 0,
-            margin: 0
+            margin: 0,
+            corporativoFaturamento: 0,
+            varejoFaturamento: 0
         });
     }, [companySummaries]);
 
@@ -1000,7 +1012,32 @@ export default function DailySales() {
                                                 currency: 'BRL'
                                             })}</span>
                                         </div>
-                                        <div className="mt-2 p-2 rounded-md bg-white/10">
+                                        
+                                        {/* Progress bar showing Corporativo vs Varejo - optimized for space */}
+                                        <div className="mt-1 mb-1">
+                                            <div className="w-full h-1.5 bg-white/20 rounded-full overflow-hidden">
+                                                {totalSummary.faturamento > 0 && (
+                                                    <div 
+                                                        className="h-full bg-white/70 rounded-full"
+                                                        style={{ 
+                                                            width: `${(totalSummary.corporativoFaturamento / totalSummary.faturamento) * 100}%` 
+                                                        }}
+                                                    />
+                                                )}
+                                            </div>
+                                            <div className="flex justify-between items-center text-[9px] text-white/80 mt-0.5">
+                                                <span>Corp: {totalSummary.faturamento > 0 
+                                                    ? `${((totalSummary.corporativoFaturamento / totalSummary.faturamento) * 100).toFixed(0)}%` 
+                                                    : '0%'}
+                                                </span>
+                                                <span>Varejo: {totalSummary.faturamento > 0 
+                                                    ? `${((totalSummary.varejoFaturamento / totalSummary.faturamento) * 100).toFixed(0)}%` 
+                                                    : '0%'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="mt-1 p-2 rounded-md bg-white/10">
                                             <div className="flex justify-between items-center">
                                                 <span className="text-xs font-medium text-white">
                                                     Margem
