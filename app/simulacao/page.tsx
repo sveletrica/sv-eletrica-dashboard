@@ -274,7 +274,7 @@ const parseClipboardData = (text: string) => {
 interface ImportSQLDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onImport: (items: SimulationItem[]) => void
+  onImport: (items: SimulationItem[], orderNumber?: string) => void
 }
 
 function ImportSQLDialog({ open, onOpenChange, onImport }: ImportSQLDialogProps) {
@@ -322,9 +322,9 @@ function ImportSQLDialog({ open, onOpenChange, onImport }: ImportSQLDialogProps)
         }
       })
 
-      onImport(items)
+      onImport(items, orderNumber.trim())
       onOpenChange(false)
-      toast.success(`${items.length} produtos importados do orçamento`)
+      toast.success(`${items.length} produtos importados do orçamento ${orderNumber.trim()}`)
     } catch (error) {
       console.error('Erro ao importar do SQL:', error)
       toast.error('Erro ao importar orçamento')
@@ -383,6 +383,7 @@ export default function SimulationPage() {
   const [importSQLDialogOpen, setImportSQLDialogOpen] = useState(false)
   const [editingUnitPrice, setEditingUnitPrice] = useState<{[key: number]: string}>({})
   const [editingTotalPrice, setEditingTotalPrice] = useState<{[key: number]: string}>({})
+  const [orderNumber, setOrderNumber] = useState<string>('')
   const { user } = useAuth()
 
   const calculateMargin = (revenue: number, cost: number) => {
@@ -516,12 +517,30 @@ export default function SimulationPage() {
     })))
   }
 
+  const handleImportSQL = (importedItems: SimulationItem[], orderNum?: string) => {
+    setItems(prev => [...prev, ...importedItems])
+    setOriginalItems(prev => [...prev, ...importedItems])
+    if (orderNum) {
+      setOrderNumber(orderNum)
+    }
+  }
+
+  // Modify resetValues to use original values
+  const resetValues = () => {
+    setItems([...originalItems])
+    setGlobalDiscount('')
+    setTargetMargin('')
+    setTargetValue('')
+    setOrderNumber('')
+  }
+
   const clearSimulation = () => {
     setItems([])
     setOriginalItems([])
     setGlobalDiscount('')
     setTargetMargin('')
     setTargetValue('')
+    setOrderNumber('')
   }
 
   const handleUnitPriceChange = (index: number, price: number) => {
@@ -565,25 +584,19 @@ export default function SimulationPage() {
     })
   }
 
-  const handleImportSQL = (importedItems: SimulationItem[]) => {
-    setItems(prev => [...prev, ...importedItems])
-    setOriginalItems(prev => [...prev, ...importedItems])
-  }
-
-  // Modify resetValues to use original values
-  const resetValues = () => {
-    setItems([...originalItems])
-    setGlobalDiscount('')
-    setTargetMargin('')
-    setTargetValue('')
-  }
-
   return (
     <PermissionGuard permission="quotations">
       <div className="container py-6 space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>Simulação de Orçamento</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              Simulação de Orçamento
+              {orderNumber && (
+                <span className="text-md font-normal bg-muted px-2 py-1 rounded-md ml-2">
+                  #{orderNumber}
+                </span>
+              )}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
