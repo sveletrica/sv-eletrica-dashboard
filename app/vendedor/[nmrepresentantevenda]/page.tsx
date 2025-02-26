@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, ArrowUpDown, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ArrowLeft, ArrowUpDown, ChevronLeft, ChevronRight, Search } from 'lucide-react'
 import Loading from '../../vendas-dia/loading'
 import Link from 'next/link'
 import { Roboto } from 'next/font/google'
@@ -56,6 +56,21 @@ interface GroupedOrder {
 interface MonthlyData {
     month: string
     value: number
+}
+
+// Add the quotations interface
+interface ClientQuotation {
+    dtemissao: string
+    cdpedidodevenda: string
+    nmempresacurtovenda: string
+    nmrepresentantevenda: string
+    nmpessoa: string
+    qtd_produtos: number
+    total_preco_venda: number
+    total_faturamento: number
+    total_preco_custo: number
+    total_custo_produto: number
+    percentualdisponivel: number
 }
 
 type SortField = 'qtdsku' | 'vlfaturamento' | 'vltotalcustoproduto' | 'margem' | 'dtemissao'
@@ -134,6 +149,8 @@ export default function SalesmanDetails() {
     const [sortField, setSortField] = useState<SortField>('dtemissao')
     const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
     const [currentPage, setCurrentPage] = useState(1)
+    const [recentQuotations, setRecentQuotations] = useState<ClientQuotation[]>([])
+    const [loadingQuotations, setLoadingQuotations] = useState(false)
 
     // Reuse the same helper functions from the client page
     const groupOrders = (sales: ClientSale[]) => {
@@ -142,6 +159,7 @@ export default function SalesmanDetails() {
             nrdocumento: string
             dtemissao: string
             nmpessoa: string
+            nmrepresentantevenda: string
             nmempresacurtovenda: string
             tpmovimentooperacao: string
             qtdsku: number
@@ -159,6 +177,7 @@ export default function SalesmanDetails() {
                     nrdocumento: sale.nrdocumento,
                     dtemissao: sale.dtemissao,
                     nmpessoa: sale.nmpessoa,
+                    nmrepresentantevenda: sale.nmrepresentantevenda,
                     nmempresacurtovenda: sale.nmempresacurtovenda,
                     tpmovimentooperacao: sale.tpmovimentooperacao,
                     qtdsku: 0,
@@ -224,6 +243,30 @@ export default function SalesmanDetails() {
     useEffect(() => {
         setCurrentPage(1)
     }, [sortField, sortOrder])
+
+    // Add the fetchRecentQuotations function
+    const fetchRecentQuotations = async (salesmanName: string) => {
+        setLoadingQuotations(true)
+        try {
+            const response = await fetch(`/api/quotations/seller/${encodeURIComponent(salesmanName)}?limit=10`)
+            if (!response.ok) {
+                throw new Error('Failed to fetch salesman quotations')
+            }
+            const data = await response.json()
+            setRecentQuotations(data)
+        } catch (error) {
+            console.error('Error fetching salesman quotations:', error)
+        } finally {
+            setLoadingQuotations(false)
+        }
+    }
+
+    // Add useEffect to fetch quotations
+    useEffect(() => {
+        if (params?.nmrepresentantevenda) {
+            fetchRecentQuotations(params.nmrepresentantevenda as string)
+        }
+    }, [params?.nmrepresentantevenda])
 
     const handleBack = () => {
         const returnUrl = searchParams.get('returnUrl')
@@ -513,8 +556,105 @@ export default function SalesmanDetails() {
             </div>
 
             <Card>
+                <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium">Orçamentos Recentes</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                    {loadingQuotations ? (
+                        <div className="flex flex-col items-center justify-center p-4 space-y-2">
+                            <Loading />
+                            <p className="text-sm text-muted-foreground">
+                                Carregando orçamentos recentes...
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="relative rounded-md border">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow className="hover:bg-transparent">
+                                        <TableHead className="py-1 text-sm">Data</TableHead>
+                                        <TableHead className="py-1 text-sm">Código</TableHead>
+                                        <TableHead className="py-1 text-sm">Filial</TableHead>
+                                        <TableHead className="py-1 text-sm">Cliente</TableHead>
+                                        <TableHead className="py-1 text-sm text-right">Qtd Skus.</TableHead>
+                                        <TableHead className="py-1 text-sm text-right">Total</TableHead>
+                                        <TableHead className="py-1 text-sm text-right">Margem</TableHead>
+                                        <TableHead className="py-1 text-sm text-right">% Disp</TableHead>
+                                        <TableHead className="py-1 w-8"></TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {recentQuotations.map((quotation) => {
+                                        const margin = ((quotation.total_faturamento - (quotation.total_faturamento * 0.268 + quotation.total_custo_produto)) / quotation.total_faturamento) * 100
+                                        const isFullyAvailable = quotation.percentualdisponivel === 100;
+
+                                        return (
+                                            <TableRow 
+                                                key={quotation.cdpedidodevenda}
+                                                className="cursor-pointer hover:bg-muted/50"
+                                                onClick={() => router.push(`/orcamento/${quotation.cdpedidodevenda}`)}
+                                            >
+                                                <TableCell className="py-1 text-sm">
+                                                    {quotation.dtemissao}
+                                                </TableCell>
+                                                <TableCell className="py-1 text-sm">
+                                                    {quotation.cdpedidodevenda}
+                                                </TableCell>
+                                                <TableCell className="py-1 text-sm">
+                                                    {quotation.nmempresacurtovenda}
+                                                </TableCell>
+                                                <TableCell className="py-1 text-sm">
+                                                    {quotation.nmpessoa}
+                                                </TableCell>
+                                                <TableCell className="py-1 text-sm text-right">
+                                                    {quotation.qtd_produtos}
+                                                </TableCell>
+                                                <TableCell className="py-1 text-sm text-right whitespace-nowrap">
+                                                    {quotation.total_faturamento.toLocaleString('pt-BR', {
+                                                        style: 'currency',
+                                                        currency: 'BRL'
+                                                    })}
+                                                </TableCell>
+                                                <TableCell className={`py-1 text-sm text-right ${
+                                                    margin >= 5
+                                                        ? 'text-green-600 dark:text-green-400'
+                                                        : margin >= 0
+                                                            ? 'text-yellow-600 dark:text-yellow-400'
+                                                            : 'text-red-600 dark:text-red-400'
+                                                }`}>
+                                                    {margin.toFixed(2)}%
+                                                </TableCell>
+                                                <TableCell className={`py-1 text-sm text-right ${
+                                                    isFullyAvailable ? 'bg-green-100 dark:bg-green-900/30' : ''
+                                                }`}>
+                                                    {Math.max(0, quotation.percentualdisponivel || 0).toFixed(2)}%
+                                                </TableCell>
+                                                <TableCell className="py-1 px-1">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-6 w-6"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            router.push(`/orcamento/${quotation.cdpedidodevenda}`)
+                                                        }}
+                                                    >
+                                                        <Search className="h-3 w-3" />
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        )
+                                    })}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+
+            <Card>
                 <CardHeader>
-                    <CardTitle>Histórico de Pedidos</CardTitle>
+                    <CardTitle className="text-sm font-medium">Histórico de Pedidos</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <Table>
