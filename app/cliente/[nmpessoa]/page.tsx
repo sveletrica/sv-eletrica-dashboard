@@ -172,6 +172,7 @@ interface ClientQuotation {
     total_faturamento: number
     total_preco_custo: number
     total_custo_produto: number
+    percentualdisponivel: number
 }
 
 export default function ClientDetails() {
@@ -675,12 +676,14 @@ export default function ClientDetails() {
                                         <TableHead className="py-1 text-sm text-right">Qtd Skus.</TableHead>
                                         <TableHead className="py-1 text-sm text-right">Total</TableHead>
                                         <TableHead className="py-1 text-sm text-right">Margem</TableHead>
+                                        <TableHead className="py-1 text-sm text-right">% Disp</TableHead>
                                         <TableHead className="py-1 w-8"></TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {recentQuotations.map((quotation) => {
                                         const margin = ((quotation.total_faturamento - (quotation.total_faturamento * 0.268 + quotation.total_custo_produto)) / quotation.total_faturamento) * 100
+                                        const isFullyAvailable = quotation.percentualdisponivel === 100;
 
                                         return (
                                             <TableRow 
@@ -717,6 +720,11 @@ export default function ClientDetails() {
                                                             : 'text-red-600 dark:text-red-400'
                                                 }`}>
                                                     {margin.toFixed(2)}%
+                                                </TableCell>
+                                                <TableCell className={`py-1 text-sm text-right ${
+                                                    isFullyAvailable ? 'bg-green-100 dark:bg-green-900/30' : ''
+                                                }`}>
+                                                    {Math.max(0, quotation.percentualdisponivel || 0).toFixed(2)}%
                                                 </TableCell>
                                                 <TableCell className="py-1 px-1">
                                                     <Button

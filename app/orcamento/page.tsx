@@ -892,7 +892,17 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                                             {quotation.dtemissao}
                                                         </TableCell>
                                                         <TableCell>{quotation.cdpedidodevenda}</TableCell>
-                                                        <TableCell>{quotation.nmpessoa}</TableCell>
+                                                        <TableCell>
+                                                            <a 
+                                                                href={`/cliente/${encodeURIComponent(quotation.nmpessoa)}`}
+                                                                className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:underline"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation(); // Previne que o clique propague para a linha
+                                                                }}
+                                                            >
+                                                                {quotation.nmpessoa}
+                                                            </a>
+                                                        </TableCell>
                                                         <TableCell>{quotation.nmempresacurtovenda}</TableCell>
                                                         <TableCell>{quotation.nmrepresentantevenda}</TableCell>
                                                         <TableCell className="text-right">
@@ -916,7 +926,7 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                                         <TableCell className={`text-right ${
                                                             isFullyAvailable ? 'bg-green-100 dark:bg-green-900/30' : ''
                                                         }`}>
-                                                            {quotation.percentualdisponivel?.toFixed(2)}%
+                                                            {Math.max(0, quotation.percentualdisponivel || 0).toFixed(2)}%
                                                         </TableCell>
                                                         <TableCell>
                                                             <Button
