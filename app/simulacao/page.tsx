@@ -299,8 +299,19 @@ function ImportSQLDialog({ open, onOpenChange, onImport }: ImportSQLDialogProps)
 
       const data = await response.json()
       
+      // Verificar se a resposta está vazia ou contém apenas um objeto vazio
+      if (!data || data.length === 0 || (data.length === 1 && Object.keys(data[0]).length === 0)) {
+        toast.error('Pedido não encontrado, verifique se já foi fechado ou se o número está correto')
+        return
+      }
+      
       // Transformar os dados do orçamento para o formato SimulationItem
       const items: SimulationItem[] = data.map((item: any) => {
+        // Verificar se o item tem as propriedades necessárias
+        if (!item.CdProduto || !item.NmProduto) {
+          return null
+        }
+        
         const desconto = ((item.VlPrecoVendaInformado - item.VlFaturamento) / item.VlPrecoVendaInformado) * 100
         
         return {
@@ -320,7 +331,13 @@ function ImportSQLDialog({ open, onOpenChange, onImport }: ImportSQLDialogProps)
           qtestoque_empresa59: 0,
           stktotal: item.QtEstoqueAtualEmpresa
         }
-      })
+      }).filter(Boolean)
+      
+      // Verificar se há itens válidos após o processamento
+      if (items.length === 0) {
+        toast.error('Pedido não encontrado, verifique se já foi fechado ou se o número está correto')
+        return
+      }
 
       onImport(items, orderNumber.trim())
       onOpenChange(false)
@@ -330,7 +347,6 @@ function ImportSQLDialog({ open, onOpenChange, onImport }: ImportSQLDialogProps)
       toast.error('Erro ao importar orçamento')
     } finally {
       setLoading(false)
-      setOrderNumber('')
     }
   }
 
