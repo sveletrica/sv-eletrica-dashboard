@@ -403,6 +403,14 @@ interface VendorPerformance {
   margem: string
 }
 
+// Adicione esta interface para os dados do canal
+interface ChannelPerformance {
+  nmempresacurtovenda: string
+  vlfaturamento: number
+  vltotalcustoproduto: number
+  margem: string
+}
+
 export default function SimulationPage() {
   const [items, setItems] = useState<SimulationItem[]>([])
   const [originalItems, setOriginalItems] = useState<SimulationItem[]>([])
@@ -419,6 +427,8 @@ export default function SimulationPage() {
   const [branchName, setBranchName] = useState<string>('')
   const [vendorPerformance, setVendorPerformance] = useState<VendorPerformance[]>([])
   const [loadingVendorData, setLoadingVendorData] = useState(false)
+  const [channelPerformance, setChannelPerformance] = useState<ChannelPerformance[]>([])
+  const [loadingChannelData, setLoadingChannelData] = useState(false)
   const { user } = useAuth()
 
   const calculateMargin = (revenue: number, cost: number) => {
@@ -661,6 +671,105 @@ export default function SimulationPage() {
     })
   }
 
+  // Função para buscar o desempenho dos canais
+  const fetchChannelPerformance = async () => {
+    setLoadingChannelData(true)
+    try {
+      const response = await fetch('/api/canais/performance')
+      
+      if (!response.ok) {
+        throw new Error('Falha ao buscar dados dos canais')
+      }
+      
+      const data = await response.json()
+      setChannelPerformance(data)
+    } catch (error) {
+      console.error('Erro ao buscar desempenho dos canais:', error)
+      toast.error('Erro ao carregar dados dos canais')
+    } finally {
+      setLoadingChannelData(false)
+    }
+  }
+
+  // Carregar dados dos canais ao montar o componente
+  useEffect(() => {
+    fetchChannelPerformance()
+  }, [])
+
+  // Função para calcular o impacto da simulação atual no canal
+  const calculateChannelImpact = () => {
+    if (!channelPerformance.length || !items.length) return null;
+
+    // Determinar se a simulação atual é para Corporativo ou Varejo
+    const isCurrentCorporativo = branchName === 'SV FILIAL' || branchName === 'SV MATRIZ';
+    const currentChannel = isCurrentCorporativo ? 'Corporativo' : 'Varejo';
+    
+    // Encontrar os dados do canal atual
+    const channelData = channelPerformance.find(c => c.nmempresacurtovenda === currentChannel);
+    
+    if (!channelData) return null;
+    
+    // Calcular totais da simulação atual
+    const simulationTotals = items.reduce((acc, item) => {
+      const priceAfterDiscount = item.vlprecosugerido * (1 - item.desconto / 100);
+      const totalPrice = priceAfterDiscount * item.quantidade;
+      const totalCost = item.vlprecoreposicao * item.quantidade;
+      
+      return {
+        faturamento: acc.faturamento + totalPrice,
+        custo: acc.custo + totalCost
+      };
+    }, { faturamento: 0, custo: 0 });
+    
+    // Calcular totais projetados
+    const projectedTotals = {
+      faturamento: channelData.vlfaturamento + simulationTotals.faturamento,
+      custo: parseFloat(channelData.vltotalcustoproduto) + simulationTotals.custo
+    };
+    
+    // Calcular margens usando a fórmula correta
+    const calculateMarginWithTax = (revenue: number, cost: number) => {
+      if (revenue === 0) return 0;
+      return ((revenue - (revenue * 0.268 + cost)) / revenue) * 100;
+    };
+    
+    // Calcular a margem atual do canal usando a fórmula correta
+    const currentMargin = calculateMarginWithTax(
+      channelData.vlfaturamento, 
+      parseFloat(channelData.vltotalcustoproduto)
+    );
+    
+    // Calcular a margem projetada usando a fórmula correta
+    const projectedMargin = calculateMarginWithTax(
+      projectedTotals.faturamento, 
+      projectedTotals.custo
+    );
+    
+    // Calcular o impacto percentual no faturamento e na margem
+    const faturamentoImpact = (simulationTotals.faturamento / channelData.vlfaturamento) * 100;
+    const margemImpact = projectedMargin - currentMargin;
+    
+    return {
+      channel: currentChannel,
+      current: {
+        faturamento: channelData.vlfaturamento,
+        margin: currentMargin
+      },
+      projected: {
+        faturamento: projectedTotals.faturamento,
+        margin: projectedMargin
+      },
+      impact: {
+        faturamento: faturamentoImpact,
+        margem: margemImpact
+      },
+      simulation: simulationTotals
+    };
+  };
+
+  // Calcular o impacto no canal
+  const channelImpact = calculateChannelImpact();
+
   // Função para calcular o impacto da simulação atual no desempenho do vendedor
   const calculateVendorImpact = () => {
     if (!vendorPerformance.length || !items.length) return null;
@@ -880,7 +989,7 @@ export default function SimulationPage() {
                     </div>
                   </div>
 
-                  <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                  <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
                     <Card>
                       <CardHeader>
                         <CardTitle className="text-sm">Totais</CardTitle>
@@ -996,7 +1105,7 @@ export default function SimulationPage() {
                       </Card>
                     )}
 
-                    {/* Novo Card de Impacto da Simulação */}
+                    {/* Novo Card de Impacto no Vendedor */}
                     {vendorName && vendorImpact && (
                       <Card>
                         <CardHeader className="pb-2">
@@ -1085,6 +1194,105 @@ export default function SimulationPage() {
                                     </p>
                                   </div>
                                 </div>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Novo Card de Impacto no Canal */}
+                    {channelImpact && (
+                      <Card className={cn(
+                        channelImpact.projected.margin >= 3 ? "border-green-200 dark:border-green-800" :
+                        channelImpact.projected.margin > 0 ? "border-yellow-200 dark:border-yellow-800" : 
+                        "border-red-200 dark:border-red-800",
+                        "border-2"
+                      )}>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm flex items-center justify-between">
+                            <span>Impacto no Canal {channelImpact.channel}</span>
+                            {loadingChannelData && (
+                              <span className="text-xs text-muted-foreground">Carregando...</span>
+                            )}
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <p className="text-xs text-muted-foreground">Fat. Atual</p>
+                                <p className="text-md font-medium">
+                                  {channelImpact.current.faturamento.toLocaleString('pt-BR', {
+                                    style: 'currency',
+                                    currency: 'BRL'
+                                  })}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-muted-foreground">Fat. Projetado</p>
+                                <p className="text-md font-medium">
+                                  {channelImpact.projected.faturamento.toLocaleString('pt-BR', {
+                                    style: 'currency',
+                                    currency: 'BRL'
+                                  })}
+                                </p>
+                              </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <p className="text-xs text-muted-foreground">Margem Atual</p>
+                                <p className={cn(
+                                  "text-lg font-medium",
+                                  channelImpact.current.margin >= 3 ? "text-green-600" :
+                                  channelImpact.current.margin > 0 ? "text-yellow-600" : "text-red-600"
+                                )}>
+                                  {channelImpact.current.margin.toFixed(2)}%
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-muted-foreground">Margem Projetada</p>
+                                <p className={cn(
+                                  "text-lg font-medium",
+                                  channelImpact.projected.margin >= 3 ? "text-green-600" :
+                                  channelImpact.projected.margin > 0 ? "text-yellow-600" : "text-red-600"
+                                )}>
+                                  {channelImpact.projected.margin.toFixed(2)}%
+                                </p>
+                              </div>
+                            </div>
+                            
+                            <div className="pt-2 border-t">
+                              <p className="text-xs text-muted-foreground mb-1">Impacto desta simulação</p>
+                              <div className="flex justify-between">
+                                <p>
+                                  <span className="text-xs text-muted-foreground">Valor:</span>{' '}
+                                  <span className="font-medium">
+                                    {channelImpact.simulation.faturamento.toLocaleString('pt-BR', {
+                                      style: 'currency',
+                                      currency: 'BRL'
+                                    })}
+                                  </span>
+                                </p>
+                                <p>
+                                  <span className="text-xs text-muted-foreground">% do canal:</span>{' '}
+                                  <span className="font-medium">
+                                    {channelImpact.impact.faturamento.toFixed(2)}%
+                                  </span>
+                                </p>
+                              </div>
+                              <div className="flex justify-between mt-1">
+                                <p>
+                                  <span className="text-xs text-muted-foreground">Impacto na margem:</span>{' '}
+                                </p>
+                                <p className={cn(
+                                  "font-medium",
+                                  channelImpact.impact.margem >= 0 ? "text-green-600" : "text-red-600"
+                                )}>
+                                  {channelImpact.impact.margem > 0 ? "+" : ""}
+                                  {channelImpact.impact.margem.toFixed(2)}%
+                                </p>
                               </div>
                             </div>
                           </div>
