@@ -911,11 +911,11 @@ export default function SimulationPage() {
 
   return (
     <PermissionGuard permission="quotations">
-      <div className="container py-6 space-y-6">
+      <div className="container py-4 md:py-6 space-y-4 md:space-y-6 px-2 md:px-4">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 flex-wrap">
-              Simulação de Orçamento
+            <CardTitle className="flex flex-col sm:flex-row sm:items-center gap-2 flex-wrap">
+              <span>Simulação de Orçamento</span>
               <div className="flex flex-wrap gap-2 items-center">
                 {orderNumber && (
                   <span className="text-md font-normal bg-muted px-2 py-1 rounded-md">
@@ -937,7 +937,7 @@ export default function SimulationPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2 justify-start">
                 <Button onClick={() => setAddProductOpen(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Adicionar Produto
@@ -962,8 +962,8 @@ export default function SimulationPage() {
 
               {items.length > 0 && (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
+                  <div className="flex flex-col lg:flex-row gap-4">
+                    <div className="lg:flex-1">
                       <label className="text-sm font-medium mb-2 block">
                         Aplicar desconto em todos os itens
                       </label>
@@ -973,7 +973,7 @@ export default function SimulationPage() {
                           placeholder="Digite o desconto %"
                           value={globalDiscount}
                           onChange={(e) => setGlobalDiscount(e.target.value)}
-                          className="w-40"
+                          className="w-full"
                         />
                         <Button variant="secondary" onClick={applyGlobalDiscount}>
                           Aplicar
@@ -981,7 +981,7 @@ export default function SimulationPage() {
                       </div>
                     </div>
 
-                    <div>
+                    <div className="lg:flex-1">
                       <label className="text-sm font-medium mb-2 block">
                         Definir margem alvo
                       </label>
@@ -994,6 +994,7 @@ export default function SimulationPage() {
                           min="-100"
                           max="100"
                           step="0.1"
+                          className="w-full"
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') {
                               e.preventDefault()
@@ -1010,7 +1011,7 @@ export default function SimulationPage() {
                       </div>
                     </div>
 
-                    <div>
+                    <div className="lg:flex-1">
                       <label className="text-sm font-medium mb-2 block">
                         Definir valor final do pedido
                       </label>
@@ -1021,6 +1022,7 @@ export default function SimulationPage() {
                           onChange={(e) => setTargetValue(e.target.value)}
                           placeholder="Digite o valor final"
                           step="0.01"
+                          className="w-full"
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') {
                               e.preventDefault()
@@ -1038,7 +1040,7 @@ export default function SimulationPage() {
                     </div>
                   </div>
 
-                  <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
+                  <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
                     <Card>
                       <CardHeader>
                         <CardTitle className="text-sm">Totais</CardTitle>
@@ -1365,87 +1367,73 @@ export default function SimulationPage() {
                     )}
                   </div>
 
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Código</TableHead>
-                        <TableHead>Produto</TableHead>
-                        <TableHead className="text-right">Estoque</TableHead>
-                        <TableHead className="text-right">Quantidade</TableHead>
-                        <TableHead className="text-right">Preço Lista</TableHead>
-                        <TableHead className="text-right">Desconto %</TableHead>
-                        <TableHead className="text-right">Preço Unit.</TableHead>
-                        <TableHead className="text-right">Total</TableHead>
-                        <TableHead className="text-right">Margem</TableHead>
-                        <TableHead></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {items.map((item, index) => {
-                        const priceAfterDiscount = item.vlprecosugerido * (1 - item.desconto / 100)
-                        const totalPrice = priceAfterDiscount * item.quantidade
-                        const margin = calculateMargin(totalPrice, item.vlprecoreposicao * item.quantidade)
+                  <div className="overflow-x-auto -mx-6 px-6">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Código</TableHead>
+                          <TableHead>Produto</TableHead>
+                          <TableHead className="text-right">Estoque</TableHead>
+                          <TableHead className="text-right">Quantidade</TableHead>
+                          <TableHead className="text-right">Preço Lista</TableHead>
+                          <TableHead className="text-right">Desconto %</TableHead>
+                          <TableHead className="text-right">Preço Unit.</TableHead>
+                          <TableHead className="text-right">Total</TableHead>
+                          <TableHead className="text-right">Margem</TableHead>
+                          <TableHead></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {items.map((item, index) => {
+                          const priceAfterDiscount = item.vlprecosugerido * (1 - item.desconto / 100)
+                          const totalPrice = priceAfterDiscount * item.quantidade
+                          const margin = calculateMargin(totalPrice, item.vlprecoreposicao * item.quantidade)
 
-                        return (
-                          <TableRow key={index}>
-                            <TableCell>{item.cdchamada}</TableCell>
-                            <TableCell>{item.nmproduto}</TableCell>
-                            <TableCell className="text-right">{item.stktotal}</TableCell>
-                            <TableCell>
-                              <Input
-                                type="number"
-                                value={item.quantidade}
-                                onChange={(e) => handleQuantityChange(index, Number(e.target.value))}
-                                className="w-20"
-                                min="1"
-                              />
-                            </TableCell>
-                            <TableCell className="text-right">
-                              {item.vlprecosugerido.toLocaleString('pt-BR', {
-                                style: 'currency',
-                                currency: 'BRL'
-                              })}
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                type="number"
-                                value={item.desconto}
-                                onChange={(e) => handleDiscountChange(index, Number(e.target.value))}
-                                className="w-20"
-                                min="0"
-                                max="100"
-                                step="0.1"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                type="text"
-                                value={editingUnitPrice[index] !== undefined 
-                                  ? editingUnitPrice[index] 
-                                  : priceAfterDiscount.toFixed(2).replace('.', ',')}
-                                onChange={(e) => {
-                                  setEditingUnitPrice(prev => ({
-                                    ...prev,
-                                    [index]: e.target.value
-                                  }))
-                                }}
-                                onBlur={(e) => {
-                                  const value = e.target.value.replace(',', '.')
-                                  if (!isNaN(parseFloat(value))) {
-                                    handleUnitPriceChange(index, parseFloat(value))
-                                  } else {
-                                    // Reset to calculated value if invalid input
-                                    setEditingUnitPrice(prev => {
-                                      const newState = {...prev}
-                                      delete newState[index]
-                                      return newState
-                                    })
-                                  }
-                                }}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    e.preventDefault()
-                                    const value = e.currentTarget.value.replace(',', '.')
+                          return (
+                            <TableRow key={index}>
+                              <TableCell>{item.cdchamada}</TableCell>
+                              <TableCell>{item.nmproduto}</TableCell>
+                              <TableCell className="text-right">{item.stktotal}</TableCell>
+                              <TableCell>
+                                <Input
+                                  type="number"
+                                  value={item.quantidade}
+                                  onChange={(e) => handleQuantityChange(index, Number(e.target.value))}
+                                  className="w-20"
+                                  min="1"
+                                />
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {item.vlprecosugerido.toLocaleString('pt-BR', {
+                                  style: 'currency',
+                                  currency: 'BRL'
+                                })}
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  type="number"
+                                  value={item.desconto}
+                                  onChange={(e) => handleDiscountChange(index, Number(e.target.value))}
+                                  className="w-20"
+                                  min="0"
+                                  max="100"
+                                  step="0.1"
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  type="text"
+                                  value={editingUnitPrice[index] !== undefined 
+                                    ? editingUnitPrice[index] 
+                                    : priceAfterDiscount.toFixed(2).replace('.', ',')}
+                                  onChange={(e) => {
+                                    setEditingUnitPrice(prev => ({
+                                      ...prev,
+                                      [index]: e.target.value
+                                    }))
+                                  }}
+                                  onBlur={(e) => {
+                                    const value = e.target.value.replace(',', '.')
                                     if (!isNaN(parseFloat(value))) {
                                       handleUnitPriceChange(index, parseFloat(value))
                                     } else {
@@ -1456,41 +1444,41 @@ export default function SimulationPage() {
                                         return newState
                                       })
                                     }
-                                  }
-                                }}
-                                className="w-24"
-                                inputMode="decimal"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                type="text"
-                                value={editingTotalPrice[index] !== undefined 
-                                  ? editingTotalPrice[index] 
-                                  : totalPrice.toFixed(2).replace('.', ',')}
-                                onChange={(e) => {
-                                  setEditingTotalPrice(prev => ({
-                                    ...prev,
-                                    [index]: e.target.value
-                                  }))
-                                }}
-                                onBlur={(e) => {
-                                  const value = e.target.value.replace(',', '.')
-                                  if (!isNaN(parseFloat(value))) {
-                                    handleFinalPriceChange(index, parseFloat(value))
-                                  } else {
-                                    // Reset to calculated value if invalid input
-                                    setEditingTotalPrice(prev => {
-                                      const newState = {...prev}
-                                      delete newState[index]
-                                      return newState
-                                    })
-                                  }
-                                }}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    e.preventDefault()
-                                    const value = e.currentTarget.value.replace(',', '.')
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault()
+                                      const value = e.currentTarget.value.replace(',', '.')
+                                      if (!isNaN(parseFloat(value))) {
+                                        handleUnitPriceChange(index, parseFloat(value))
+                                      } else {
+                                        // Reset to calculated value if invalid input
+                                        setEditingUnitPrice(prev => {
+                                          const newState = {...prev}
+                                          delete newState[index]
+                                          return newState
+                                        })
+                                      }
+                                    }
+                                  }}
+                                  className="w-20 sm:w-24"
+                                  inputMode="decimal"
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  type="text"
+                                  value={editingTotalPrice[index] !== undefined 
+                                    ? editingTotalPrice[index] 
+                                    : totalPrice.toFixed(2).replace('.', ',')}
+                                  onChange={(e) => {
+                                    setEditingTotalPrice(prev => ({
+                                      ...prev,
+                                      [index]: e.target.value
+                                    }))
+                                  }}
+                                  onBlur={(e) => {
+                                    const value = e.target.value.replace(',', '.')
                                     if (!isNaN(parseFloat(value))) {
                                       handleFinalPriceChange(index, parseFloat(value))
                                     } else {
@@ -1501,34 +1489,50 @@ export default function SimulationPage() {
                                         return newState
                                       })
                                     }
-                                  }
-                                }}
-                                className="w-24"
-                                inputMode="decimal"
-                              />
-                            </TableCell>
-                            <TableCell className={cn(
-                              "text-right",
-                              margin >= 5 ? "text-green-600" :
-                              margin >= 0 ? "text-yellow-600" : "text-red-600"
-                            )}>
-                              {margin.toFixed(2)}%
-                            </TableCell>
-                            <TableCell>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleRemoveItem(index)}
-                                className="text-red-500 hover:text-red-600"
-                              >
-                                <Trash className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        )
-                      })}
-                    </TableBody>
-                  </Table>
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault()
+                                      const value = e.currentTarget.value.replace(',', '.')
+                                      if (!isNaN(parseFloat(value))) {
+                                        handleFinalPriceChange(index, parseFloat(value))
+                                      } else {
+                                        // Reset to calculated value if invalid input
+                                        setEditingTotalPrice(prev => {
+                                          const newState = {...prev}
+                                          delete newState[index]
+                                          return newState
+                                        })
+                                      }
+                                    }
+                                  }}
+                                  className="w-20 sm:w-24"
+                                  inputMode="decimal"
+                                />
+                              </TableCell>
+                              <TableCell className={cn(
+                                "text-right",
+                                margin >= 5 ? "text-green-600" :
+                                margin >= 0 ? "text-yellow-600" : "text-red-600"
+                              )}>
+                                {margin.toFixed(2)}%
+                              </TableCell>
+                              <TableCell>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleRemoveItem(index)}
+                                  className="text-red-500 hover:text-red-600"
+                                >
+                                  <Trash className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          )
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </div>
               )}
             </div>
