@@ -784,10 +784,6 @@ export default function SimulationPage() {
                   <Plus className="h-4 w-4 mr-2" />
                   Adicionar Produto
                 </Button>
-                <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
-                  <Search className="h-4 w-4 mr-2" />
-                  Importar do Excel
-                </Button>
                 <Button variant="outline" onClick={() => setImportSQLDialogOpen(true)}>
                   <Calculator className="h-4 w-4 mr-2" />
                   Importar do SQL
@@ -1271,12 +1267,6 @@ export default function SimulationPage() {
           open={addProductOpen}
           onOpenChange={setAddProductOpen}
           onProductSelect={handleAddProduct}
-        />
-
-        <ImportDialog
-          open={importDialogOpen}
-          onOpenChange={setImportDialogOpen}
-          onImport={handleImportItems}
         />
 
         <ImportSQLDialog
