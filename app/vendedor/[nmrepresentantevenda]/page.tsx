@@ -138,6 +138,18 @@ const getYearlyTotals = (orders: GroupedOrder[]) => {
     }, {} as Record<string, number>)
 }
 
+// Define interface for monthly performance data
+interface ChannelPerformance {
+    faturamento: number;
+    custo: number;
+}
+
+interface MonthlyPerformanceData {
+    faturamento: number;
+    custo: number;
+    channels: Record<string, ChannelPerformance>;
+}
+
 export default function SalesmanDetails() {
     // Use the same state and logic as in the client page
     const router = useRouter()
@@ -151,6 +163,8 @@ export default function SalesmanDetails() {
     const [currentPage, setCurrentPage] = useState(1)
     const [recentQuotations, setRecentQuotations] = useState<ClientQuotation[]>([])
     const [loadingQuotations, setLoadingQuotations] = useState(false)
+    const [monthlyPerformance, setMonthlyPerformance] = useState<any[]>([])
+    const [loadingMonthlyPerformance, setLoadingMonthlyPerformance] = useState(false)
 
     // Reuse the same helper functions from the client page
     const groupOrders = (sales: ClientSale[]) => {
@@ -268,6 +282,38 @@ export default function SalesmanDetails() {
         }
     }, [params?.nmrepresentantevenda])
 
+    // Add the fetchMonthlyPerformance function
+    const fetchMonthlyPerformance = async (salesmanName: string) => {
+        setLoadingMonthlyPerformance(true)
+        try {
+            const response = await fetch('/api/vendedores/performance', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ vendorName: salesmanName }),
+            })
+            
+            if (!response.ok) {
+                throw new Error('Failed to fetch monthly performance')
+            }
+            
+            const data = await response.json()
+            setMonthlyPerformance(data)
+        } catch (error) {
+            console.error('Error fetching monthly performance:', error)
+        } finally {
+            setLoadingMonthlyPerformance(false)
+        }
+    }
+
+    // Add useEffect to fetch monthly performance
+    useEffect(() => {
+        if (params?.nmrepresentantevenda) {
+            fetchMonthlyPerformance(params.nmrepresentantevenda as string)
+        }
+    }, [params?.nmrepresentantevenda])
+
     const handleBack = () => {
         const returnUrl = searchParams.get('returnUrl')
         if (returnUrl) {
@@ -360,6 +406,37 @@ export default function SalesmanDetails() {
         </div>
     )
 
+    // Calculate monthly performance totals
+    const monthlyTotals = monthlyPerformance.reduce((acc: MonthlyPerformanceData, item) => {
+        acc.faturamento += item.vlfaturamento || 0;
+        acc.custo += item.vltotalcustoproduto || 0;
+        
+        // Track performance by channel
+        if (!acc.channels[item.nmempresacurtovenda]) {
+            acc.channels[item.nmempresacurtovenda] = {
+                faturamento: 0,
+                custo: 0
+            };
+        }
+        
+        acc.channels[item.nmempresacurtovenda].faturamento += item.vlfaturamento || 0;
+        acc.channels[item.nmempresacurtovenda].custo += item.vltotalcustoproduto || 0;
+        
+        return acc;
+    }, { faturamento: 0, custo: 0, channels: {} });
+
+    // Calculate overall margin
+    const monthlyMargin = monthlyTotals.faturamento > 0
+        ? ((monthlyTotals.faturamento - (monthlyTotals.faturamento * 0.268 + monthlyTotals.custo)) / monthlyTotals.faturamento) * 100
+        : 0;
+
+    // Get background color based on margin
+    const getMarginBackgroundColor = (margin: number) => {
+        if (margin >= 5) return 'bg-green-50 dark:bg-green-900/20';
+        if (margin >= 0) return 'bg-yellow-50 dark:bg-yellow-900/20';
+        return 'bg-red-50 dark:bg-red-900/20';
+    };
+
     return (
         <PermissionGuard permission="sales">
         <div className="space-y-4">
@@ -377,7 +454,7 @@ export default function SalesmanDetails() {
                 {decodeURIComponent(params?.nmrepresentantevenda as string)}
             </h1>
 
-            <div className="grid gap-4 grid-cols-3 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 grid-cols-2 md:grid-cols-2 lg:grid-cols-5">
                 <Card>
                     <CardHeader>
                         <CardTitle className="text-sm font-medium">
@@ -446,7 +523,68 @@ export default function SalesmanDetails() {
                     </CardContent>
                 </Card>
 
-                <Card className="col-span-3 md:col-span-1 lg:col-span-1">
+                <Card className={getMarginBackgroundColor(monthlyMargin)}>
+                    <CardHeader>
+                        <CardTitle className="text-sm font-medium">
+                            Resultado Mensal
+                            {loadingMonthlyPerformance && (
+                                <span className="ml-2 text-xs text-muted-foreground">(Carregando...)</span>
+                            )}
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-2">
+                            <div className="text-md md:text-sm lg:text-xl font-bold">
+                                {monthlyTotals.faturamento.toLocaleString('pt-BR', {
+                                    style: 'currency',
+                                    currency: 'BRL'
+                                })}
+                            </div>
+                            <div className={`text-md font-medium ${
+                                monthlyMargin >= 5
+                                    ? 'text-green-600 dark:text-green-400'
+                                    : monthlyMargin >= 0
+                                        ? 'text-yellow-600 dark:text-yellow-400'
+                                        : 'text-red-600 dark:text-red-400'
+                            }`}>
+                                Margem: {monthlyMargin.toFixed(2)}%
+                            </div>
+                            <div className="space-y-1 pt-2">
+                                <p className="text-xs font-medium">Por Canal:</p>
+                                {Object.entries(monthlyTotals.channels)
+                                    .sort((a, b) => b[1].faturamento - a[1].faturamento)
+                                    .map(([channel, data]) => {
+                                        const channelMargin = data.faturamento > 0
+                                            ? ((data.faturamento - (data.faturamento * 0.268 + data.custo)) / data.faturamento) * 100
+                                            : 0
+                                        
+                                        return (
+                                            <div key={channel} className="flex justify-between text-xs">
+                                                <span className="truncate" title={channel}>{channel}:</span>
+                                                <span className={
+                                                    channelMargin >= 5
+                                                        ? 'text-green-600 dark:text-green-400'
+                                                        : channelMargin >= 0
+                                                            ? 'text-yellow-600 dark:text-yellow-400'
+                                                            : 'text-red-600 dark:text-red-400'
+                                                }>
+                                                    {new Intl.NumberFormat('pt-BR', {
+                                                        notation: 'compact',
+                                                        compactDisplay: 'short',
+                                                        style: 'currency',
+                                                        currency: 'BRL'
+                                                    }).format(data.faturamento)}
+                                                    {' '}({channelMargin.toFixed(1)}%)
+                                                </span>
+                                            </div>
+                                        )
+                                    })}
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card className="col-span-2 md:col-span-1 lg:col-span-1">
                     <CardHeader>
                         <CardTitle className="text-sm font-medium">
                             Comparativo Anual
@@ -495,7 +633,7 @@ export default function SalesmanDetails() {
                     </CardContent>
                 </Card>
 
-                <Card className="col-span-3 md:col-span-3 lg:col-span-4">
+                <Card className="col-span-2 md:col-span-3 lg:col-span-5">
                     <CardHeader>
                         <CardTitle className="text-sm font-medium">
                             Evolução do Faturamento
