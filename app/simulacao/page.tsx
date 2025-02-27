@@ -12,6 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { toast } from "sonner"
 import { useAuth } from '@/components/providers/auth-provider'
+import { Building2, ShoppingBag, TrendingUp, TrendingDown, ArrowRight } from 'lucide-react'
 
 interface Product {
   cdchamada: string
@@ -723,8 +724,8 @@ export default function SimulationPage() {
     
     // Calcular totais projetados
     const projectedTotals = {
-      faturamento: channelData.vlfaturamento + simulationTotals.faturamento,
-      custo: parseFloat(channelData.vltotalcustoproduto) + simulationTotals.custo
+      faturamento: Number(channelData.vlfaturamento) + simulationTotals.faturamento,
+      custo: Number(channelData.vltotalcustoproduto) + simulationTotals.custo
     };
     
     // Calcular margens usando a fórmula correta
@@ -735,8 +736,8 @@ export default function SimulationPage() {
     
     // Calcular a margem atual do canal usando a fórmula correta
     const currentMargin = calculateMarginWithTax(
-      channelData.vlfaturamento, 
-      parseFloat(channelData.vltotalcustoproduto)
+      Number(channelData.vlfaturamento), 
+      Number(channelData.vltotalcustoproduto)
     );
     
     // Calcular a margem projetada usando a fórmula correta
@@ -746,13 +747,13 @@ export default function SimulationPage() {
     );
     
     // Calcular o impacto percentual no faturamento e na margem
-    const faturamentoImpact = (simulationTotals.faturamento / channelData.vlfaturamento) * 100;
+    const faturamentoImpact = (simulationTotals.faturamento / Number(channelData.vlfaturamento)) * 100;
     const margemImpact = projectedMargin - currentMargin;
     
     return {
       channel: currentChannel,
       current: {
-        faturamento: channelData.vlfaturamento,
+        faturamento: Number(channelData.vlfaturamento),
         margin: currentMargin
       },
       projected: {
@@ -788,13 +789,13 @@ export default function SimulationPage() {
     
     // Calcular totais atuais por canal
     const corporativoTotals = {
-      faturamento: corporativoData.length > 0 ? corporativoData[0].vlfaturamento : 0,
-      custo: corporativoData.length > 0 ? parseFloat(corporativoData[0].vltotalcustoproduto) : 0
+      faturamento: corporativoData.length > 0 ? Number(corporativoData[0].vlfaturamento) : 0,
+      custo: corporativoData.length > 0 ? Number(corporativoData[0].vltotalcustoproduto) : 0
     };
     
     const varejoTotals = {
-      faturamento: varejoData.length > 0 ? varejoData[0].vlfaturamento : 0,
-      custo: varejoData.length > 0 ? parseFloat(varejoData[0].vltotalcustoproduto) : 0
+      faturamento: varejoData.length > 0 ? Number(varejoData[0].vlfaturamento) : 0,
+      custo: varejoData.length > 0 ? Number(varejoData[0].vltotalcustoproduto) : 0
     };
     
     // Calcular totais da simulação atual
@@ -820,6 +821,17 @@ export default function SimulationPage() {
       custo: varejoTotals.custo + (!isCurrentCorporativo ? simulationTotals.custo : 0)
     };
     
+    // Calcular totais combinados (Corporativo + Varejo)
+    const combinedCurrentTotals = {
+      faturamento: corporativoTotals.faturamento + varejoTotals.faturamento,
+      custo: corporativoTotals.custo + varejoTotals.custo
+    };
+    
+    const combinedProjectedTotals = {
+      faturamento: newCorporativoTotals.faturamento + newVarejoTotals.faturamento,
+      custo: newCorporativoTotals.custo + newVarejoTotals.custo
+    };
+    
     // Calcular margens atuais e projetadas
     const calculateMarginWithTax = (revenue: number, cost: number) => {
       if (revenue === 0) return 0;
@@ -828,9 +840,14 @@ export default function SimulationPage() {
     
     const currentCorporativoMargin = calculateMarginWithTax(corporativoTotals.faturamento, corporativoTotals.custo);
     const currentVarejoMargin = calculateMarginWithTax(varejoTotals.faturamento, varejoTotals.custo);
+    const currentCombinedMargin = calculateMarginWithTax(combinedCurrentTotals.faturamento, combinedCurrentTotals.custo);
     
     const projectedCorporativoMargin = calculateMarginWithTax(newCorporativoTotals.faturamento, newCorporativoTotals.custo);
     const projectedVarejoMargin = calculateMarginWithTax(newVarejoTotals.faturamento, newVarejoTotals.custo);
+    const projectedCombinedMargin = calculateMarginWithTax(combinedProjectedTotals.faturamento, combinedProjectedTotals.custo);
+    
+    // Calcular o impacto na margem combinada
+    const combinedMarginImpact = projectedCombinedMargin - currentCombinedMargin;
     
     return {
       corporativo: {
@@ -853,12 +870,44 @@ export default function SimulationPage() {
           margin: projectedVarejoMargin
         }
       },
+      combined: {
+        current: {
+          faturamento: combinedCurrentTotals.faturamento,
+          margin: currentCombinedMargin
+        },
+        projected: {
+          faturamento: combinedProjectedTotals.faturamento,
+          margin: projectedCombinedMargin
+        },
+        impact: combinedMarginImpact
+      },
       channel: isCurrentCorporativo ? 'Corporativo' : 'Varejo'
     };
   };
 
   // Calcular o impacto no vendedor
   const vendorImpact = calculateVendorImpact();
+
+  // Helper functions for the vendor impact card
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      maximumFractionDigits: 0
+    }).format(value);
+  };
+
+  const getMarginColor = (margin: number) => {
+    if (margin >= 3) return "text-green-600";
+    if (margin > 0) return "text-yellow-600";
+    return "text-red-600";
+  };
+
+  const getImpactIcon = (impact: number) => {
+    if (impact > 0) return <TrendingUp className="h-3 w-3 mr-0.5" />;
+    if (impact < 0) return <TrendingDown className="h-3 w-3 mr-0.5" />;
+    return <ArrowRight className="h-3 w-3 mr-0.5" />;
+  };
 
   return (
     <PermissionGuard permission="quotations">
@@ -995,34 +1044,34 @@ export default function SimulationPage() {
                         <CardTitle className="text-sm">Totais</CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <div className="space-y-2">
+                        <div className="space-y-1">
                           <p>
-                            <span className="font-medium">Quantidade:</span>{' '}
+                            <span className="text-sm font-medium">Quantidade:</span>{' '}
                             {totals.quantidade}
                           </p>
                           <p>
-                            <span className="font-medium">Preço Lista:</span>{' '}
+                            <span className="text-sm font-medium">Preço Lista:</span>{' '}
                             {totals.precoLista.toLocaleString('pt-BR', {
                               style: 'currency',
                               currency: 'BRL'
                             })}
                           </p>
                           <p>
-                            <span className="font-medium">Faturamento:</span>{' '}
+                            <span className="text-sm font-medium">Faturamento:</span>{' '}
                             {totals.faturamento.toLocaleString('pt-BR', {
                               style: 'currency',
                               currency: 'BRL'
                             })}
                           </p>
                           <p>
-                            <span className="font-medium">Custo:</span>{' '}
+                            <span className="text-sm font-medium">Custo:</span>{' '}
                             {totals.custo.toLocaleString('pt-BR', {
                               style: 'currency',
                               currency: 'BRL'
                             })}
                           </p>
                           <p>
-                            <span className="font-medium">Desconto:</span>{' '}
+                            <span className="text-sm font-medium">Desconto:</span>{' '}
                             {(totals.faturamento - totals.precoLista).toLocaleString('pt-BR', {
                               style: 'currency',
                               currency: 'BRL'
@@ -1109,90 +1158,105 @@ export default function SimulationPage() {
                     {vendorName && vendorImpact && (
                       <Card>
                         <CardHeader className="pb-2">
-                          <CardTitle className="text-sm">
-                            Impacto da Simulação no Vendedor
+                          <CardTitle className="text-sm flex items-center justify-between">
+                            <span>Impacto da Simulação</span>
+                            <span className="text-xs font-normal text-muted-foreground">{vendorImpact.channel}</span>
                           </CardTitle>
                         </CardHeader>
-                        <CardContent>
-                          <div className="space-y-4">
-                            <div className="text-sm">
-                              <p className="font-medium mb-2">Canal: {vendorImpact.channel}</p>
-                              
-                              {/* Corporativo */}
-                              <div className="mb-3">
-                                <p className="font-medium">Corporativo:</p>
-                                <div className="grid grid-cols-2 gap-2 mt-1">
-                                  <div>
-                                    <p className="text-xs text-muted-foreground">Atual</p>
-                                    <p>
-                                      {vendorImpact.corporativo.current.faturamento.toLocaleString('pt-BR', {
-                                        style: 'currency',
-                                        currency: 'BRL'
-                                      })}
-                                    </p>
-                                    <p className={cn(
-                                      "font-medium",
-                                      vendorImpact.corporativo.current.margin >= 3 ? "text-green-600" :
-                                      vendorImpact.corporativo.current.margin > 0 ? "text-yellow-600" : "text-red-600"
-                                    )}>
-                                      {vendorImpact.corporativo.current.margin.toFixed(2)}%
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <p className="text-xs text-muted-foreground">Projetado</p>
-                                    <p>
-                                      {vendorImpact.corporativo.projected.faturamento.toLocaleString('pt-BR', {
-                                        style: 'currency',
-                                        currency: 'BRL'
-                                      })}
-                                    </p>
-                                    <p className={cn(
-                                      "font-medium",
-                                      vendorImpact.corporativo.projected.margin >= 3 ? "text-green-600" :
-                                      vendorImpact.corporativo.projected.margin > 0 ? "text-yellow-600" : "text-red-600"
-                                    )}>
-                                      {vendorImpact.corporativo.projected.margin.toFixed(2)}%
-                                    </p>
-                                  </div>
+                        <CardContent className="pt-0">
+                          <div className="grid grid-cols-3 gap-2 text-sm mb-3">
+                            <div></div>
+                            <div className="text-center text-xs text-muted-foreground">Atual</div>
+                            <div className="text-center text-xs text-muted-foreground">Projetado</div>
+
+                            {/* Corporativo */}
+                            <div className="flex items-center gap-1">
+                              <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span className="text-xs">Corporativo</span>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-xs">{formatCurrency(vendorImpact.corporativo.current.faturamento)}</div>
+                              <div className={cn("text-xs font-medium", getMarginColor(vendorImpact.corporativo.current.margin))}>
+                                {vendorImpact.corporativo.current.margin.toFixed(1)}%
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-xs">{formatCurrency(vendorImpact.corporativo.projected.faturamento)}</div>
+                              <div className={cn("text-xs font-medium", getMarginColor(vendorImpact.corporativo.projected.margin))}>
+                                {vendorImpact.corporativo.projected.margin.toFixed(1)}%
+                              </div>
+                            </div>
+
+                            {/* Varejo */}
+                            <div className="flex items-center gap-1">
+                              <ShoppingBag className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span className="text-xs">Varejo</span>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-xs">{formatCurrency(vendorImpact.varejo.current.faturamento)}</div>
+                              <div className={cn("text-xs font-medium", getMarginColor(vendorImpact.varejo.current.margin))}>
+                                {vendorImpact.varejo.current.margin.toFixed(1)}%
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-xs">{formatCurrency(vendorImpact.varejo.projected.faturamento)}</div>
+                              <div className={cn("text-xs font-medium", getMarginColor(vendorImpact.varejo.projected.margin))}>
+                                {vendorImpact.varejo.projected.margin.toFixed(1)}%
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Total Combinado */}
+                          <div
+                            className={cn(
+                              "mt-5 p-2 rounded-md border border-dashed",
+                              vendorImpact.combined.projected.margin >= 3
+                                ? "bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800"
+                                : vendorImpact.combined.projected.margin > 0
+                                  ? "bg-yellow-50 dark:bg-yellow-950/30 border-yellow-200 dark:border-yellow-800"
+                                  : "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800",
+                            )}
+                          >
+                            <div className="flex justify-between items-center mb-1">
+                              <div className="flex items-center gap-1">
+                                <TrendingUp className="h-4 w-4" />
+                                <span className="font-medium text-xs">Total Combinado</span>
+                              </div>
+                              <div className="flex items-center gap-1 text-xs">
+                                <span>Impacto:</span>
+                                <div
+                                  className={cn(
+                                    "flex items-center font-medium",
+                                    vendorImpact.combined.impact >= 0 ? "text-green-600" : "text-red-600",
+                                  )}
+                                >
+                                  {getImpactIcon(vendorImpact.combined.impact)}
+                                  {Math.abs(vendorImpact.combined.impact).toFixed(1)}%
                                 </div>
                               </div>
-                              
-                              {/* Varejo */}
-                              <div className="mb-3">
-                                <p className="font-medium">Varejo:</p>
-                                <div className="grid grid-cols-2 gap-2 mt-1">
-                                  <div>
-                                    <p className="text-xs text-muted-foreground">Atual</p>
-                                    <p>
-                                      {vendorImpact.varejo.current.faturamento.toLocaleString('pt-BR', {
-                                        style: 'currency',
-                                        currency: 'BRL'
-                                      })}
-                                    </p>
-                                    <p className={cn(
-                                      "font-medium",
-                                      vendorImpact.varejo.current.margin >= 3 ? "text-green-600" :
-                                      vendorImpact.varejo.current.margin > 0 ? "text-yellow-600" : "text-red-600"
-                                    )}>
-                                      {vendorImpact.varejo.current.margin.toFixed(2)}%
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <p className="text-xs text-muted-foreground">Projetado</p>
-                                    <p>
-                                      {vendorImpact.varejo.projected.faturamento.toLocaleString('pt-BR', {
-                                        style: 'currency',
-                                        currency: 'BRL'
-                                      })}
-                                    </p>
-                                    <p className={cn(
-                                      "font-medium",
-                                      vendorImpact.varejo.projected.margin >= 3 ? "text-green-600" :
-                                      vendorImpact.varejo.projected.margin > 0 ? "text-yellow-600" : "text-red-600"
-                                    )}>
-                                      {vendorImpact.varejo.projected.margin.toFixed(2)}%
-                                    </p>
-                                  </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <div className="flex justify-between text-xs">
+                                  <span className="text-muted-foreground">Atual:</span>
+                                  <span>{formatCurrency(vendorImpact.combined.current.faturamento)}</span>
+                                </div>
+                                <div
+                                  className={cn("text-right text-xs font-medium", getMarginColor(vendorImpact.combined.current.margin))}
+                                >
+                                  {vendorImpact.combined.current.margin.toFixed(1)}%
+                                </div>
+                              </div>
+                              <div>
+                                <div className="flex justify-between text-xs">
+                                  <span className="text-muted-foreground">Projetado:</span>
+                                  <span>{formatCurrency(vendorImpact.combined.projected.faturamento)}</span>
+                                </div>
+                                <div
+                                  className={cn("text-right text-xs font-medium", getMarginColor(vendorImpact.combined.projected.margin))}
+                                >
+                                  {vendorImpact.combined.projected.margin.toFixed(1)}%
                                 </div>
                               </div>
                             </div>
@@ -1222,7 +1286,7 @@ export default function SimulationPage() {
                             <div className="grid grid-cols-2 gap-4">
                               <div>
                                 <p className="text-xs text-muted-foreground">Fat. Atual</p>
-                                <p className="text-md font-medium">
+                                <p className="text-sm font-medium">
                                   {channelImpact.current.faturamento.toLocaleString('pt-BR', {
                                     style: 'currency',
                                     currency: 'BRL'
@@ -1231,7 +1295,7 @@ export default function SimulationPage() {
                               </div>
                               <div>
                                 <p className="text-xs text-muted-foreground">Fat. Projetado</p>
-                                <p className="text-md font-medium">
+                                <p className="text-sm font-medium">
                                   {channelImpact.projected.faturamento.toLocaleString('pt-BR', {
                                     style: 'currency',
                                     currency: 'BRL'
