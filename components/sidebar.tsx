@@ -80,8 +80,8 @@ const storeLinks = [
         permission: 'tags' as const,
     },
     {
-        href: '/caucaia',
-        label: 'Caucaia',
+        href: '/mozart',
+        label: 'Mozart',
         icon: BarChart2,
         permission: 'tags' as const,
     },

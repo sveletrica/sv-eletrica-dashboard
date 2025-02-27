@@ -46,6 +46,36 @@ interface FilialPerformance {
 // Colors for charts
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658', '#8dd1e1'];
 
+// Meta de faturamento mensal
+const META_FATURAMENTO = 20300000;
+
+// Metas por filial
+const METAS_FILIAIS: Record<string, number> = {
+  "Corporativo": 17380000,
+  "SV WS EXPRESS": 1350000,
+  "SV MARACANAU": 700000
+};
+
+// Lista de feriados 2025
+const FERIADOS = [
+  "2025-01-01", // Ano Novo
+  "2025-03-03", // Segunda de Carnaval
+  "2025-03-04", // Terça de Carnaval
+  "2025-03-19", // São José
+  "2025-03-25", // Data Magna do Ceará
+  "2025-04-18", // Sexta-feira Santa
+  "2025-04-21", // Tiradentes
+  "2025-05-01", // Dia do Trabalho
+  "2025-06-19", // Corpus Christi
+  "2025-08-15", // Nossa Senhora da Assunção
+  "2025-09-07", // Independência do Brasil
+  "2025-10-12", // Nossa Senhora Aparecida
+  "2025-11-02", // Finados
+  "2025-11-15", // Proclamação da República
+  "2025-11-20", // Dia da Consciência Negra
+  "2025-12-25"  // Natal
+];
+
 // Meses para o filtro
 const MESES = [
   { value: 'all', label: 'Todos os Meses' },
@@ -76,10 +106,25 @@ export default function DashboardVendas() {
   const [totalMargem, setTotalMargem] = useState(0)
   const [activeView, setActiveView] = useState('overview')
   
+  // Obter o mês atual (formato '01', '02', etc.)
+  const currentMonth = (new Date().getMonth() + 1).toString().padStart(2, '0')
+  
   // Novos estados para filtros de ano e mês
   const [anos, setAnos] = useState<string[]>([])
-  const [selectedAno, setSelectedAno] = useState<string>('all')
-  const [selectedMes, setSelectedMes] = useState<string>('all')
+  const [selectedAno, setSelectedAno] = useState<string>(new Date().getFullYear().toString())
+  const [selectedMes, setSelectedMes] = useState<string>(currentMonth)
+
+  const [diasUteisInfo, setDiasUteisInfo] = useState<{
+    diasUteisDecorridos: number;
+    diasUteisRestantes: number;
+    mediaPorDiaUtil: number;
+    projecaoFaturamento: number;
+  }>({
+    diasUteisDecorridos: 0,
+    diasUteisRestantes: 0,
+    mediaPorDiaUtil: 0,
+    projecaoFaturamento: 0
+  });
 
   // Fetch branches for filter
   useEffect(() => {
@@ -192,6 +237,12 @@ export default function DashboardVendas() {
         }
       }
       
+      // Agrupar SV FILIAL e SV MATRIZ como "Corporativo"
+      let filialNome = item.nmempresacurtovenda
+      if (filialNome === "SV FILIAL" || filialNome === "SV MATRIZ") {
+        filialNome = "Corporativo"
+      }
+      
       // Update vendedor data
       if (!vendedoresMap.has(item.nmrepresentantevenda)) {
         vendedoresMap.set(item.nmrepresentantevenda, {
@@ -208,8 +259,8 @@ export default function DashboardVendas() {
       const vendedor = vendedoresMap.get(item.nmrepresentantevenda)!
       
       // Add filial data for this vendedor
-      if (!vendedor.filiais[item.nmempresacurtovenda]) {
-        vendedor.filiais[item.nmempresacurtovenda] = {
+      if (!vendedor.filiais[filialNome]) {
+        vendedor.filiais[filialNome] = {
           vlfaturamento: 0,
           vltotalcustoproduto: 0,
           margem: 0
@@ -217,17 +268,17 @@ export default function DashboardVendas() {
       }
       
       // Update filial data with null checks
-      vendedor.filiais[item.nmempresacurtovenda].vlfaturamento += item.vlfaturamento || 0
-      vendedor.filiais[item.nmempresacurtovenda].vltotalcustoproduto += item.vltotalcustoproduto || 0
+      vendedor.filiais[filialNome].vlfaturamento += item.vlfaturamento || 0
+      vendedor.filiais[filialNome].vltotalcustoproduto += item.vltotalcustoproduto || 0
       
       // Update vendedor totals
       vendedor.total.vlfaturamento += item.vlfaturamento || 0
       vendedor.total.vltotalcustoproduto += item.vltotalcustoproduto || 0
       
       // Update filial performance
-      if (!filiaisMap.has(item.nmempresacurtovenda)) {
-        filiaisMap.set(item.nmempresacurtovenda, {
-          nome: item.nmempresacurtovenda,
+      if (!filiaisMap.has(filialNome)) {
+        filiaisMap.set(filialNome, {
+          nome: filialNome,
           vlfaturamento: 0,
           vltotalcustoproduto: 0,
           margem: 0,
@@ -235,7 +286,7 @@ export default function DashboardVendas() {
         })
       }
       
-      const filial = filiaisMap.get(item.nmempresacurtovenda)!
+      const filial = filiaisMap.get(filialNome)!
       filial.vlfaturamento += item.vlfaturamento || 0
       filial.vltotalcustoproduto += item.vltotalcustoproduto || 0
       
@@ -262,11 +313,17 @@ export default function DashboardVendas() {
     data.forEach(item => {
       if (!item.nmempresacurtovenda) return
       
-      if (!vendedoresPorFilial.has(item.nmempresacurtovenda)) {
-        vendedoresPorFilial.set(item.nmempresacurtovenda, new Set())
+      // Agrupar SV FILIAL e SV MATRIZ como "Corporativo"
+      let filialNome = item.nmempresacurtovenda
+      if (filialNome === "SV FILIAL" || filialNome === "SV MATRIZ") {
+        filialNome = "Corporativo"
+      }
+      
+      if (!vendedoresPorFilial.has(filialNome)) {
+        vendedoresPorFilial.set(filialNome, new Set())
       }
       if (item.nmrepresentantevenda) {
-        vendedoresPorFilial.get(item.nmempresacurtovenda)!.add(item.nmrepresentantevenda)
+        vendedoresPorFilial.get(filialNome)!.add(item.nmrepresentantevenda)
       }
     })
     
@@ -312,6 +369,27 @@ export default function DashboardVendas() {
     return 'text-red-600 dark:text-red-400'
   }
 
+  // Get progress color based on percentage
+  const getProgressColor = (percentage: number) => {
+    if (percentage >= 100) return 'text-green-600 dark:text-green-400'
+    if (percentage >= 75) return 'text-blue-600 dark:text-blue-400'
+    if (percentage >= 50) return 'text-yellow-600 dark:text-yellow-400'
+    return 'text-red-600 dark:text-red-400'
+  }
+
+  // Calcular projeção para uma filial específica
+  const calcularProjecaoFilial = (faturamentoAtual: number, filialNome: string, diasUteisInfo: any) => {
+    if (diasUteisInfo.diasUteisDecorridos === 0) return { projecao: 0, percentualMeta: 0 };
+    
+    const mediaPorDiaUtil = faturamentoAtual / diasUteisInfo.diasUteisDecorridos;
+    const projecao = faturamentoAtual + (mediaPorDiaUtil * diasUteisInfo.diasUteisRestantes);
+    
+    const meta = METAS_FILIAIS[filialNome] || 0;
+    const percentualMeta = meta > 0 ? (projecao / meta) * 100 : 0;
+    
+    return { projecao, percentualMeta, meta };
+  };
+
   // Formatar o título do período selecionado
   const getPeriodoTitle = () => {
     let periodo = ''
@@ -330,6 +408,88 @@ export default function DashboardVendas() {
     
     return periodo
   }
+
+  // Função para calcular dias úteis e projeção de faturamento
+  const calcularDiasUteis = (feriados: string[]) => {
+    // Data atual
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    
+    // Primeiro dia do mês atual
+    const primeiroDiaMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+    primeiroDiaMes.setHours(0, 0, 0, 0);
+    
+    // Último dia do mês atual
+    const ultimoDiaMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+    ultimoDiaMes.setHours(0, 0, 0, 0);
+    
+    // Arrays para armazenar os dias
+    const diasUteis = [];
+    const diasUteisDecorridos = [];
+    
+    // Itera do primeiro dia do mês até ontem para dias decorridos
+    const dataIteracaoDecorridos = new Date(primeiroDiaMes);
+    while (dataIteracaoDecorridos < hoje) {
+      const dataFormatada = dataIteracaoDecorridos.toISOString().split('T')[0];
+      
+      // Verifica se é dia útil (não é fim de semana)
+      if (dataIteracaoDecorridos.getDay() !== 0 && dataIteracaoDecorridos.getDay() !== 6) {
+        // Verifica se não é feriado
+        if (!feriados.includes(dataFormatada)) {
+          diasUteisDecorridos.push(dataFormatada);
+        }
+      }
+      
+      // Avança para o próximo dia
+      dataIteracaoDecorridos.setDate(dataIteracaoDecorridos.getDate() + 1);
+    }
+    
+    // Itera para dias restantes (a partir de hoje)
+    const dataIteracao = new Date(hoje);
+    while (dataIteracao <= ultimoDiaMes) {
+      const dataFormatada = dataIteracao.toISOString().split('T')[0];
+      
+      // Verifica se é dia útil (não é fim de semana)
+      if (dataIteracao.getDay() !== 0 && dataIteracao.getDay() !== 6) {
+        // Verifica se não é feriado
+        if (!feriados.includes(dataFormatada)) {
+          diasUteis.push(dataFormatada);
+        }
+      }
+      
+      // Avança para o próximo dia
+      dataIteracao.setDate(dataIteracao.getDate() + 1);
+    }
+    
+    return {
+      diasUteisDecorridos: diasUteisDecorridos.length,
+      diasUteisRestantes: diasUteis.length
+    };
+  };
+
+  // Calcular dias úteis e projeção quando o componente montar
+  useEffect(() => {
+    const diasInfo = calcularDiasUteis(FERIADOS);
+    setDiasUteisInfo({
+      ...diasInfo,
+      mediaPorDiaUtil: 0,
+      projecaoFaturamento: 0
+    });
+  }, []);
+
+  // Atualizar média por dia útil e projeção quando o faturamento mudar
+  useEffect(() => {
+    if (diasUteisInfo.diasUteisDecorridos > 0) {
+      const mediaPorDiaUtil = totalVendas / diasUteisInfo.diasUteisDecorridos;
+      const projecaoFaturamento = totalVendas + (mediaPorDiaUtil * diasUteisInfo.diasUteisRestantes);
+      
+      setDiasUteisInfo(prev => ({
+        ...prev,
+        mediaPorDiaUtil,
+        projecaoFaturamento
+      }));
+    }
+  }, [totalVendas, diasUteisInfo.diasUteisDecorridos, diasUteisInfo.diasUteisRestantes]);
 
   if (isLoading) return <Loading />
 
@@ -445,6 +605,95 @@ export default function DashboardVendas() {
               <div className={`text-sm font-medium ${getMarginTextColor(totalMargem)}`}>
                 Margem: {totalMargem.toFixed(2)}%
               </div>
+              
+              {/* Informação sobre a meta de faturamento */}
+              <div className="mt-2 pt-2 border-t">
+                <div className="flex justify-between text-sm">
+                  <span>Meta mensal:</span>
+                  <span>{META_FATURAMENTO.toLocaleString('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL'
+                  })}</span>
+                </div>
+                
+                {totalVendas < META_FATURAMENTO ? (
+                  <div className="flex justify-between text-sm">
+                    <span>Falta atingir:</span>
+                    <span className="font-medium">{(META_FATURAMENTO - totalVendas).toLocaleString('pt-BR', {
+                      style: 'currency',
+                      currency: 'BRL'
+                    })}</span>
+                  </div>
+                ) : (
+                  <div className="flex justify-between text-sm">
+                    <span>Meta superada:</span>
+                    <span className="font-medium text-green-600 dark:text-green-400">{(totalVendas - META_FATURAMENTO).toLocaleString('pt-BR', {
+                      style: 'currency',
+                      currency: 'BRL'
+                    })}</span>
+                  </div>
+                )}
+                
+                <div className="mt-1">
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                    <div 
+                      className="bg-blue-600 h-2.5 rounded-full" 
+                      style={{ width: `${Math.min(100, (totalVendas / META_FATURAMENTO) * 100)}%` }}
+                    ></div>
+                  </div>
+                  <div className="flex justify-end mt-1">
+                    <span className={`text-xs font-medium ${getProgressColor((totalVendas / META_FATURAMENTO) * 100)}`}>
+                      {((totalVendas / META_FATURAMENTO) * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Informação sobre projeção de faturamento */}
+              <div className="mt-2 pt-2 border-t">
+                <div className="flex justify-between text-sm">
+                  <span>Dias úteis decorridos:</span>
+                  <span>{diasUteisInfo.diasUteisDecorridos}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>Dias úteis restantes:</span>
+                  <span>{diasUteisInfo.diasUteisRestantes}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>Média por dia útil:</span>
+                  <span>{diasUteisInfo.mediaPorDiaUtil.toLocaleString('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL'
+                  })}</span>
+                </div>
+                <div className="flex justify-between text-sm font-medium mt-1">
+                  <span>Projeção mensal:</span>
+                  <span className={diasUteisInfo.projecaoFaturamento >= META_FATURAMENTO ? 
+                    'text-green-600 dark:text-green-400' : 
+                    'text-yellow-600 dark:text-yellow-400'
+                  }>
+                    {diasUteisInfo.projecaoFaturamento.toLocaleString('pt-BR', {
+                      style: 'currency',
+                      currency: 'BRL'
+                    })}
+                  </span>
+                </div>
+                
+                {/* Barra de progresso da projeção */}
+                <div className="mt-1">
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                    <div 
+                      className={`h-2.5 rounded-full ${diasUteisInfo.projecaoFaturamento >= META_FATURAMENTO ? 'bg-green-600' : 'bg-yellow-600'}`}
+                      style={{ width: `${Math.min(100, (diasUteisInfo.projecaoFaturamento / META_FATURAMENTO) * 100)}%` }}
+                    ></div>
+                  </div>
+                  <div className="flex justify-end mt-1">
+                    <span className={`text-xs font-medium ${getProgressColor((diasUteisInfo.projecaoFaturamento / META_FATURAMENTO) * 100)}`}>
+                      {((diasUteisInfo.projecaoFaturamento / META_FATURAMENTO) * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
@@ -470,6 +719,95 @@ export default function DashboardVendas() {
                     {filial.vendedores} vendedores
                   </div>
                 </div>
+                
+                {/* Meta e projeção para a filial */}
+                {METAS_FILIAIS[filial.nome] && (
+                  <div className="mt-2 pt-2 border-t">
+                    <div className="flex justify-between text-sm">
+                      <span>Meta mensal:</span>
+                      <span>{METAS_FILIAIS[filial.nome].toLocaleString('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL'
+                      })}</span>
+                    </div>
+                    
+                    {filial.vlfaturamento < METAS_FILIAIS[filial.nome] ? (
+                      <div className="flex justify-between text-sm">
+                        <span>Falta atingir:</span>
+                        <span className="font-medium">{(METAS_FILIAIS[filial.nome] - filial.vlfaturamento).toLocaleString('pt-BR', {
+                          style: 'currency',
+                          currency: 'BRL'
+                        })}</span>
+                      </div>
+                    ) : (
+                      <div className="flex justify-between text-sm">
+                        <span>Meta superada:</span>
+                        <span className="font-medium text-green-600 dark:text-green-400">{(filial.vlfaturamento - METAS_FILIAIS[filial.nome]).toLocaleString('pt-BR', {
+                          style: 'currency',
+                          currency: 'BRL'
+                        })}</span>
+                      </div>
+                    )}
+                    
+                    <div className="mt-1">
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                        <div 
+                          className="bg-blue-600 h-2.5 rounded-full" 
+                          style={{ width: `${Math.min(100, (filial.vlfaturamento / METAS_FILIAIS[filial.nome]) * 100)}%` }}
+                        ></div>
+                      </div>
+                      <div className="flex justify-end mt-1">
+                        <span className={`text-xs font-medium ${getProgressColor((filial.vlfaturamento / METAS_FILIAIS[filial.nome]) * 100)}`}>
+                          {((filial.vlfaturamento / METAS_FILIAIS[filial.nome]) * 100).toFixed(1)}%
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {/* Projeção para a filial */}
+                    {diasUteisInfo.diasUteisDecorridos > 0 && (
+                      <>
+                        {(() => {
+                          const { projecao, percentualMeta } = calcularProjecaoFilial(
+                            filial.vlfaturamento, 
+                            filial.nome, 
+                            diasUteisInfo
+                          );
+                          
+                          return (
+                            <div className="mt-2 pt-2 border-t">
+                              <div className="flex justify-between text-sm font-medium">
+                                <span>Projeção mensal:</span>
+                                <span className={projecao >= METAS_FILIAIS[filial.nome] ? 
+                                  'text-green-600 dark:text-green-400' : 
+                                  'text-yellow-600 dark:text-yellow-400'
+                                }>
+                                  {projecao.toLocaleString('pt-BR', {
+                                    style: 'currency',
+                                    currency: 'BRL'
+                                  })}
+                                </span>
+                              </div>
+                              
+                              <div className="mt-1">
+                                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                                  <div 
+                                    className={`h-2.5 rounded-full ${projecao >= METAS_FILIAIS[filial.nome] ? 'bg-green-600' : 'bg-yellow-600'}`}
+                                    style={{ width: `${Math.min(100, percentualMeta)}%` }}
+                                  ></div>
+                                </div>
+                                <div className="flex justify-end mt-1">
+                                  <span className={`text-xs font-medium ${getProgressColor(percentualMeta)}`}>
+                                    {percentualMeta.toFixed(1)}%
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}
@@ -701,6 +1039,95 @@ export default function DashboardVendas() {
                         <span>Vendedores:</span>
                         <span>{filial.vendedores}</span>
                       </div>
+                      
+                      {/* Meta e projeção para a filial na visão detalhada */}
+                      {METAS_FILIAIS[filial.nome] && (
+                        <div className="mt-2 pt-2 border-t">
+                          <div className="flex justify-between text-sm">
+                            <span>Meta mensal:</span>
+                            <span>{METAS_FILIAIS[filial.nome].toLocaleString('pt-BR', {
+                              style: 'currency',
+                              currency: 'BRL'
+                            })}</span>
+                          </div>
+                          
+                          {filial.vlfaturamento < METAS_FILIAIS[filial.nome] ? (
+                            <div className="flex justify-between text-sm">
+                              <span>Falta atingir:</span>
+                              <span className="font-medium">{(METAS_FILIAIS[filial.nome] - filial.vlfaturamento).toLocaleString('pt-BR', {
+                                style: 'currency',
+                                currency: 'BRL'
+                              })}</span>
+                            </div>
+                          ) : (
+                            <div className="flex justify-between text-sm">
+                              <span>Meta superada:</span>
+                              <span className="font-medium text-green-600 dark:text-green-400">{(filial.vlfaturamento - METAS_FILIAIS[filial.nome]).toLocaleString('pt-BR', {
+                                style: 'currency',
+                                currency: 'BRL'
+                              })}</span>
+                            </div>
+                          )}
+                          
+                          <div className="mt-1">
+                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                              <div 
+                                className="bg-blue-600 h-2.5 rounded-full" 
+                                style={{ width: `${Math.min(100, (filial.vlfaturamento / METAS_FILIAIS[filial.nome]) * 100)}%` }}
+                              ></div>
+                            </div>
+                            <div className="flex justify-end mt-1">
+                              <span className={`text-xs font-medium ${getProgressColor((filial.vlfaturamento / METAS_FILIAIS[filial.nome]) * 100)}`}>
+                                {((filial.vlfaturamento / METAS_FILIAIS[filial.nome]) * 100).toFixed(1)}%
+                              </span>
+                            </div>
+                          </div>
+                          
+                          {/* Projeção para a filial */}
+                          {diasUteisInfo.diasUteisDecorridos > 0 && (
+                            <>
+                              {(() => {
+                                const { projecao, percentualMeta } = calcularProjecaoFilial(
+                                  filial.vlfaturamento, 
+                                  filial.nome, 
+                                  diasUteisInfo
+                                );
+                                
+                                return (
+                                  <div className="mt-2 pt-2 border-t">
+                                    <div className="flex justify-between text-sm font-medium">
+                                      <span>Projeção mensal:</span>
+                                      <span className={projecao >= METAS_FILIAIS[filial.nome] ? 
+                                        'text-green-600 dark:text-green-400' : 
+                                        'text-yellow-600 dark:text-yellow-400'
+                                      }>
+                                        {projecao.toLocaleString('pt-BR', {
+                                          style: 'currency',
+                                          currency: 'BRL'
+                                        })}
+                                      </span>
+                                    </div>
+                                    
+                                    <div className="mt-1">
+                                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                                        <div 
+                                          className={`h-2.5 rounded-full ${projecao >= METAS_FILIAIS[filial.nome] ? 'bg-green-600' : 'bg-yellow-600'}`}
+                                          style={{ width: `${Math.min(100, percentualMeta)}%` }}
+                                        ></div>
+                                      </div>
+                                      <div className="flex justify-end mt-1">
+                                        <span className={`text-xs font-medium ${getProgressColor(percentualMeta)}`}>
+                                          {percentualMeta.toFixed(1)}%
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })()}
+                            </>
+                          )}
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 ))}
