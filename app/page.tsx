@@ -26,6 +26,15 @@ const sections = [
       { label: "Hoje", value: "R$ 4.2K" },
       { label: "vs Ontem", value: "+5%" },
     ]
+  },
+  {
+    title: "Dashboard de Vendas",
+    description: "Visualize o desempenho de vendas por vendedor e filial com métricas detalhadas.",
+    link: "/dashboard-vendas",
+    metrics: [
+      { label: "Vendedores", value: "Análise" },
+      { label: "Filiais", value: "Comparativo" },
+    ]
   }
 ]
 
@@ -34,7 +43,7 @@ export default function Dashboard() {
     <div className="space-y-6">
       <h1 className="text-3xl font-bold flex justify-center">SV Elétrica Dashboard</h1>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {sections.map((section) => (
           <Card key={section.title} className="h-full hover:bg-accent/50 transition-colors relative group">
             <CardHeader>
