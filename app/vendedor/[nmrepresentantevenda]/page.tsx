@@ -291,7 +291,7 @@ export default function SalesmanDetails() {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ vendorName: salesmanName }),
+                body: JSON.stringify({ vendorName: decodeURIComponent(salesmanName) }),
             })
             
             if (!response.ok) {
