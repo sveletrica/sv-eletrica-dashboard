@@ -274,12 +274,14 @@ const parseClipboardData = (text: string) => {
 interface ImportSQLDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onImport: (items: SimulationItem[], orderNumber?: string) => void
+  onImport: (items: SimulationItem[], orderNumber?: string, vendorName?: string, branchName?: string) => void
 }
 
 function ImportSQLDialog({ open, onOpenChange, onImport }: ImportSQLDialogProps) {
   const [orderNumber, setOrderNumber] = useState('')
   const [loading, setLoading] = useState(false)
+  const [vendorName, setVendorName] = useState('')
+  const [branchName, setBranchName] = useState('')
 
   const handleImport = async () => {
     if (!orderNumber.trim() || loading) return
@@ -304,6 +306,10 @@ function ImportSQLDialog({ open, onOpenChange, onImport }: ImportSQLDialogProps)
         toast.error('Pedido não encontrado, verifique se já foi fechado ou se o número está correto')
         return
       }
+      
+      // Extrair o nome do vendedor, a filial e o número do orçamento do primeiro item
+      const vendorName = data[0]?.NmRepresentanteVenda || ''
+      const branchName = data[0]?.NmEmpresaCurtoVenda || ''
       
       // Transformar os dados do orçamento para o formato SimulationItem
       const items: SimulationItem[] = data.map((item: any) => {
@@ -339,7 +345,7 @@ function ImportSQLDialog({ open, onOpenChange, onImport }: ImportSQLDialogProps)
         return
       }
 
-      onImport(items, orderNumber.trim())
+      onImport(items, orderNumber.trim(), vendorName, branchName)
       onOpenChange(false)
       toast.success(`${items.length} produtos importados do orçamento ${orderNumber.trim()}`)
     } catch (error) {
@@ -388,6 +394,15 @@ function ImportSQLDialog({ open, onOpenChange, onImport }: ImportSQLDialogProps)
   )
 }
 
+// Adicione esta interface para os dados do vendedor
+interface VendorPerformance {
+  nmrepresentantevenda: string
+  nmempresacurtovenda: string
+  vlfaturamento: number
+  vltotalcustoproduto: number
+  margem: string
+}
+
 export default function SimulationPage() {
   const [items, setItems] = useState<SimulationItem[]>([])
   const [originalItems, setOriginalItems] = useState<SimulationItem[]>([])
@@ -400,6 +415,10 @@ export default function SimulationPage() {
   const [editingUnitPrice, setEditingUnitPrice] = useState<{[key: number]: string}>({})
   const [editingTotalPrice, setEditingTotalPrice] = useState<{[key: number]: string}>({})
   const [orderNumber, setOrderNumber] = useState<string>('')
+  const [vendorName, setVendorName] = useState<string>('')
+  const [branchName, setBranchName] = useState<string>('')
+  const [vendorPerformance, setVendorPerformance] = useState<VendorPerformance[]>([])
+  const [loadingVendorData, setLoadingVendorData] = useState(false)
   const { user } = useAuth()
 
   const calculateMargin = (revenue: number, cost: number) => {
@@ -533,21 +552,60 @@ export default function SimulationPage() {
     })))
   }
 
-  const handleImportSQL = (importedItems: SimulationItem[], orderNum?: string) => {
+  const handleImportSQL = (importedItems: SimulationItem[], orderNum?: string, vendor?: string, branch?: string) => {
     setItems(prev => [...prev, ...importedItems])
     setOriginalItems(prev => [...prev, ...importedItems])
     if (orderNum) {
       setOrderNumber(orderNum)
     }
+    if (vendor) {
+      setVendorName(vendor)
+      fetchVendorPerformance(vendor)
+    }
+    if (branch) {
+      setBranchName(branch)
+    }
   }
 
-  // Modify resetValues to use original values
+  // Nova função para buscar o desempenho do vendedor
+  const fetchVendorPerformance = async (vendorName: string) => {
+    if (!vendorName) return
+    
+    setLoadingVendorData(true)
+    try {
+      const response = await fetch('/api/vendedores/performance', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ vendorName }),
+      })
+      
+      if (!response.ok) {
+        throw new Error('Falha ao buscar dados do vendedor')
+      }
+      
+      const data = await response.json()
+      setVendorPerformance(data)
+    } catch (error) {
+      console.error('Erro ao buscar desempenho do vendedor:', error)
+      toast.error('Erro ao carregar dados do vendedor')
+    } finally {
+      setLoadingVendorData(false)
+    }
+  }
+
   const resetValues = () => {
     setItems([...originalItems])
     setGlobalDiscount('')
     setTargetMargin('')
     setTargetValue('')
-    setOrderNumber('')
+    
+    // Não limpar esses valores ao resetar, apenas manter os dados originais
+    // setOrderNumber('')
+    // setVendorName('')
+    // setBranchName('')
+    // setVendorPerformance([])
   }
 
   const clearSimulation = () => {
@@ -557,6 +615,9 @@ export default function SimulationPage() {
     setTargetMargin('')
     setTargetValue('')
     setOrderNumber('')
+    setVendorName('')
+    setBranchName('')
+    setVendorPerformance([])
   }
 
   const handleUnitPriceChange = (index: number, price: number) => {
@@ -600,18 +661,120 @@ export default function SimulationPage() {
     })
   }
 
+  // Função para calcular o impacto da simulação atual no desempenho do vendedor
+  const calculateVendorImpact = () => {
+    if (!vendorPerformance.length || !items.length) return null;
+
+    // Agrupar os dados de desempenho por canal (Corporativo vs Varejo)
+    const corporativoData = vendorPerformance.filter(p => 
+      p.nmempresacurtovenda === 'Corporativo'
+    );
+    
+    const varejoData = vendorPerformance.filter(p => 
+      p.nmempresacurtovenda === 'Varejo'
+    );
+
+    // Determinar se a simulação atual é para Corporativo ou Varejo
+    const isCurrentCorporativo = branchName === 'SV FILIAL' || branchName === 'SV MATRIZ';
+    
+    // Calcular totais atuais por canal
+    const corporativoTotals = {
+      faturamento: corporativoData.length > 0 ? corporativoData[0].vlfaturamento : 0,
+      custo: corporativoData.length > 0 ? parseFloat(corporativoData[0].vltotalcustoproduto) : 0
+    };
+    
+    const varejoTotals = {
+      faturamento: varejoData.length > 0 ? varejoData[0].vlfaturamento : 0,
+      custo: varejoData.length > 0 ? parseFloat(varejoData[0].vltotalcustoproduto) : 0
+    };
+    
+    // Calcular totais da simulação atual
+    const simulationTotals = items.reduce((acc, item) => {
+      const priceAfterDiscount = item.vlprecosugerido * (1 - item.desconto / 100);
+      const totalPrice = priceAfterDiscount * item.quantidade;
+      const totalCost = item.vlprecoreposicao * item.quantidade;
+      
+      return {
+        faturamento: acc.faturamento + totalPrice,
+        custo: acc.custo + totalCost
+      };
+    }, { faturamento: 0, custo: 0 });
+    
+    // Adicionar a simulação atual ao canal apropriado
+    const newCorporativoTotals = {
+      faturamento: corporativoTotals.faturamento + (isCurrentCorporativo ? simulationTotals.faturamento : 0),
+      custo: corporativoTotals.custo + (isCurrentCorporativo ? simulationTotals.custo : 0)
+    };
+    
+    const newVarejoTotals = {
+      faturamento: varejoTotals.faturamento + (!isCurrentCorporativo ? simulationTotals.faturamento : 0),
+      custo: varejoTotals.custo + (!isCurrentCorporativo ? simulationTotals.custo : 0)
+    };
+    
+    // Calcular margens atuais e projetadas
+    const calculateMarginWithTax = (revenue: number, cost: number) => {
+      if (revenue === 0) return 0;
+      return ((revenue - (revenue * 0.268 + cost)) / revenue) * 100;
+    };
+    
+    const currentCorporativoMargin = calculateMarginWithTax(corporativoTotals.faturamento, corporativoTotals.custo);
+    const currentVarejoMargin = calculateMarginWithTax(varejoTotals.faturamento, varejoTotals.custo);
+    
+    const projectedCorporativoMargin = calculateMarginWithTax(newCorporativoTotals.faturamento, newCorporativoTotals.custo);
+    const projectedVarejoMargin = calculateMarginWithTax(newVarejoTotals.faturamento, newVarejoTotals.custo);
+    
+    return {
+      corporativo: {
+        current: {
+          faturamento: corporativoTotals.faturamento,
+          margin: currentCorporativoMargin
+        },
+        projected: {
+          faturamento: newCorporativoTotals.faturamento,
+          margin: projectedCorporativoMargin
+        }
+      },
+      varejo: {
+        current: {
+          faturamento: varejoTotals.faturamento,
+          margin: currentVarejoMargin
+        },
+        projected: {
+          faturamento: newVarejoTotals.faturamento,
+          margin: projectedVarejoMargin
+        }
+      },
+      channel: isCurrentCorporativo ? 'Corporativo' : 'Varejo'
+    };
+  };
+
+  // Calcular o impacto no vendedor
+  const vendorImpact = calculateVendorImpact();
+
   return (
     <PermissionGuard permission="quotations">
       <div className="container py-6 space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 flex-wrap">
               Simulação de Orçamento
-              {orderNumber && (
-                <span className="text-md font-normal bg-muted px-2 py-1 rounded-md ml-2">
-                  #{orderNumber}
-                </span>
-              )}
+              <div className="flex flex-wrap gap-2 items-center">
+                {orderNumber && (
+                  <span className="text-md font-normal bg-muted px-2 py-1 rounded-md">
+                    #{orderNumber}
+                  </span>
+                )}
+                {branchName && (
+                  <span className="text-md font-normal bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 px-2 py-1 rounded-md">
+                    Filial: {branchName}
+                  </span>
+                )}
+                {vendorName && (
+                  <span className="text-md font-normal bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 px-2 py-1 rounded-md">
+                    Vendedor: {vendorName}
+                  </span>
+                )}
+              </div>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -721,7 +884,7 @@ export default function SimulationPage() {
                     </div>
                   </div>
 
-                  <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
+                  <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                     <Card>
                       <CardHeader>
                         <CardTitle className="text-sm">Totais</CardTitle>
@@ -778,6 +941,160 @@ export default function SimulationPage() {
                         </div>
                       </CardContent>
                     </Card>
+
+                    {vendorName && (
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm flex items-center justify-between">
+                            <span>Desempenho do Vendedor (Mês Atual)</span>
+                            {loadingVendorData && (
+                              <span className="text-xs text-muted-foreground">Carregando...</span>
+                            )}
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          {vendorPerformance.length > 0 ? (
+                            <div className="space-y-2">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>Filial</TableHead>
+                                    <TableHead className="text-right">Faturamento</TableHead>
+                                    <TableHead className="text-right">Margem</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {vendorPerformance.map((performance, index) => (
+                                    <TableRow key={index}>
+                                      <TableCell>{performance.nmempresacurtovenda}</TableCell>
+                                      <TableCell className="text-right">
+                                        {performance.vlfaturamento.toLocaleString('pt-BR', {
+                                          style: 'currency',
+                                          currency: 'BRL'
+                                        })}
+                                      </TableCell>
+                                      <TableCell className={cn(
+                                        "text-right",
+                                        parseFloat(performance.margem) >= 5 ? "text-green-600" :
+                                        parseFloat(performance.margem) >= 0 ? "text-yellow-600" : "text-red-600"
+                                      )}>
+                                        {performance.margem}
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                              <div className="pt-2 text-sm text-muted-foreground">
+                                Total: {vendorPerformance.reduce((acc, curr) => acc + curr.vlfaturamento, 0).toLocaleString('pt-BR', {
+                                  style: 'currency',
+                                  currency: 'BRL'
+                                })}
+                              </div>
+                            </div>
+                          ) : !loadingVendorData ? (
+                            <div className="text-sm text-muted-foreground py-2">
+                              Nenhum dado disponível para este vendedor no mês atual.
+                            </div>
+                          ) : null}
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Novo Card de Impacto da Simulação */}
+                    {vendorName && vendorImpact && (
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm">
+                            Impacto da Simulação no Vendedor
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-4">
+                            <div className="text-sm">
+                              <p className="font-medium mb-2">Canal: {vendorImpact.channel}</p>
+                              
+                              {/* Corporativo */}
+                              <div className="mb-3">
+                                <p className="font-medium">Corporativo:</p>
+                                <div className="grid grid-cols-2 gap-2 mt-1">
+                                  <div>
+                                    <p className="text-xs text-muted-foreground">Atual</p>
+                                    <p>
+                                      {vendorImpact.corporativo.current.faturamento.toLocaleString('pt-BR', {
+                                        style: 'currency',
+                                        currency: 'BRL'
+                                      })}
+                                    </p>
+                                    <p className={cn(
+                                      "font-medium",
+                                      vendorImpact.corporativo.current.margin >= 3 ? "text-green-600" :
+                                      vendorImpact.corporativo.current.margin > 0 ? "text-yellow-600" : "text-red-600"
+                                    )}>
+                                      {vendorImpact.corporativo.current.margin.toFixed(2)}%
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-xs text-muted-foreground">Projetado</p>
+                                    <p>
+                                      {vendorImpact.corporativo.projected.faturamento.toLocaleString('pt-BR', {
+                                        style: 'currency',
+                                        currency: 'BRL'
+                                      })}
+                                    </p>
+                                    <p className={cn(
+                                      "font-medium",
+                                      vendorImpact.corporativo.projected.margin >= 3 ? "text-green-600" :
+                                      vendorImpact.corporativo.projected.margin > 0 ? "text-yellow-600" : "text-red-600"
+                                    )}>
+                                      {vendorImpact.corporativo.projected.margin.toFixed(2)}%
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              {/* Varejo */}
+                              <div className="mb-3">
+                                <p className="font-medium">Varejo:</p>
+                                <div className="grid grid-cols-2 gap-2 mt-1">
+                                  <div>
+                                    <p className="text-xs text-muted-foreground">Atual</p>
+                                    <p>
+                                      {vendorImpact.varejo.current.faturamento.toLocaleString('pt-BR', {
+                                        style: 'currency',
+                                        currency: 'BRL'
+                                      })}
+                                    </p>
+                                    <p className={cn(
+                                      "font-medium",
+                                      vendorImpact.varejo.current.margin >= 3 ? "text-green-600" :
+                                      vendorImpact.varejo.current.margin > 0 ? "text-yellow-600" : "text-red-600"
+                                    )}>
+                                      {vendorImpact.varejo.current.margin.toFixed(2)}%
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-xs text-muted-foreground">Projetado</p>
+                                    <p>
+                                      {vendorImpact.varejo.projected.faturamento.toLocaleString('pt-BR', {
+                                        style: 'currency',
+                                        currency: 'BRL'
+                                      })}
+                                    </p>
+                                    <p className={cn(
+                                      "font-medium",
+                                      vendorImpact.varejo.projected.margin >= 3 ? "text-green-600" :
+                                      vendorImpact.varejo.projected.margin > 0 ? "text-yellow-600" : "text-red-600"
+                                    )}>
+                                      {vendorImpact.varejo.projected.margin.toFixed(2)}%
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
                   </div>
 
                   <Table>
