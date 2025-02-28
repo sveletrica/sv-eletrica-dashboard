@@ -2,7 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Chart } from "@/components/ui/chart"
+import { 
+    ChartContainer, 
+    ChartTooltip, 
+    ChartTooltipContent,
+    ChartLegend,
+    ChartLegendContent
+} from "@/components/ui/chart"
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts'
 import { Button } from "@/components/ui/button"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
@@ -372,7 +379,40 @@ export default function Mozart() {
                     <CardTitle>Distribuição de Etiquetas</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <Chart data={chartData} config={chartConfig} />
+                    <div className="h-[300px] w-full">
+                        <ChartContainer config={chartConfig} className="h-full w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={chartData}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="name" />
+                                    <YAxis />
+                                    <ChartTooltip 
+                                        content={<ChartTooltipContent />} 
+                                        cursor={{ fill: 'rgba(0, 0, 0, 0.05)' }}
+                                    />
+                                    <ChartLegend content={<ChartLegendContent />} />
+                                    <Bar 
+                                        dataKey="totalTagged" 
+                                        radius={4} 
+                                        fill="hsl(142, 76%, 36%)"
+                                        name={chartConfig.totalTagged.label}
+                                    />
+                                    <Bar 
+                                        dataKey="tagsUsedTwice" 
+                                        radius={4} 
+                                        fill="hsl(43, 96%, 48%)"
+                                        name={chartConfig.tagsUsedTwice.label}
+                                    />
+                                    <Bar 
+                                        dataKey="taggedNoStock" 
+                                        radius={4} 
+                                        fill="hsl(0, 74%, 51%)"
+                                        name={chartConfig.taggedNoStock.label}
+                                    />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </ChartContainer>
+                    </div>
                 </CardContent>
             </Card>
 
@@ -473,17 +513,17 @@ export default function Mozart() {
 const chartConfig = {
     totalTagged: { 
         label: "Total Etiquetado", 
-        color: "#16a34a",
+        color: "hsl(var(--chart-totalTagged))",
         showValue: true
     },
     tagsUsedTwice: { 
         label: "Etiquetas Duplicadas", 
-        color: "#eab308",
+        color: "hsl(var(--chart-tagsUsedTwice))",
         showValue: true
     },
     taggedNoStock: { 
         label: "Etiquetados sem Estoque", 
-        color: "#dc2626",
+        color: "hsl(var(--chart-taggedNoStock))",
         showValue: true
     },
 } 

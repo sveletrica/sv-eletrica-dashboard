@@ -8,23 +8,23 @@ import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import * as XLSX from 'xlsx'
 
-interface BindSemEstoqueMaracanau {
+interface BindSemEstoqueMozart {
     itemBarCode: string
     itemTitle: string
-    QtEstoque_Empresa13: number | null
+    QtEstoque_Empresa20: number | null
 }
 
-export default function BindSemEstoqueMaracanau() {
+export default function BindSemEstoqueMozart() {
     const [isLoading, setIsLoading] = useState(true)
     const [isRefreshing, setIsRefreshing] = useState(false)
-    const [data, setData] = useState<BindSemEstoqueMaracanau[]>([])
+    const [data, setData] = useState<BindSemEstoqueMozart[]>([])
     const [error, setError] = useState<string | null>(null)
 
     const fetchData = async () => {
         setError(null)
         
         try {
-            const response = await fetch('/api/bind-sem-estoque-maracanau', {
+            const response = await fetch('/api/bind-sem-estoque-mozart', {
                 method: 'GET',
                 headers: {
                     'Accept': 'application/json',
@@ -58,7 +58,7 @@ export default function BindSemEstoqueMaracanau() {
             const exportData = data.map(item => ({
                 'SKU': item.itemBarCode,
                 'Descrição': item.itemTitle,
-                'Estoque': item.QtEstoque_Empresa13 ?? 0
+                'Estoque': item.QtEstoque_Empresa20 ?? 0
             }))
 
             // Create worksheet
@@ -79,7 +79,7 @@ export default function BindSemEstoqueMaracanau() {
 
             // Generate filename with current date
             const date = new Date().toISOString().split('T')[0]
-            const fileName = `MARACANAU_bind_sem_estoque_${date}.xlsx`
+            const fileName = `MOZART_bind_sem_estoque_${date}.xlsx`
 
             // Save file
             XLSX.writeFile(wb, fileName)
@@ -121,7 +121,7 @@ export default function BindSemEstoqueMaracanau() {
                         )} />
                         Atualizar
                     </Button>
-                    <Link href="/maracanau">
+                    <Link href="/mozart">
                         <Button variant="ghost" size="sm">
                             <ArrowLeft className="h-4 w-4 mr-2" />
                             Voltar

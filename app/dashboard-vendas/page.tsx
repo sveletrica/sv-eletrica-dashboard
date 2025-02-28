@@ -3,7 +3,26 @@
 import { useState, useEffect } from 'react'
 import { PermissionGuard } from '@/components/guards/permission-guard'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend, 
+  ResponsiveContainer, 
+  PieChart, 
+  Pie, 
+  Cell 
+} from 'recharts'
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent
+} from "@/components/ui/chart"
 import Loading from '../vendas-dia/loading'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -508,20 +527,49 @@ export default function DashboardVendas() {
   }
 
   // Prepare data for branch performance chart
-  const branchChartData = filiaisPerformance.map(filial => ({
+  const branchChartData = filiaisPerformance.map((filial, index) => ({
     name: filial.nome,
     value: filial.vlfaturamento,
-    margin: filial.margem.toFixed(2)
+    margin: filial.margem.toFixed(2),
+    fill: COLORS[index % COLORS.length]
   }))
 
   // Prepare data for top salespeople chart
   const topSalespeopleData = vendedoresPerformance
     .slice(0, 10)
-    .map(vendedor => ({
+    .map((vendedor, index) => ({
       name: vendedor.nome,
       value: vendedor.total.vlfaturamento,
-      margin: vendedor.total.margem.toFixed(2)
+      margin: vendedor.total.margem.toFixed(2),
+      fill: COLORS[index % COLORS.length]
     }))
+
+  // Create chart configs
+  const branchChartConfig = filiaisPerformance.reduce((acc, filial, index) => {
+    acc[filial.nome] = {
+      label: filial.nome,
+      color: COLORS[index % COLORS.length]
+    };
+    return acc;
+  }, {
+    value: {
+      label: "Faturamento",
+      color: "#2563eb"
+    }
+  } as Record<string, { label: string, color: string }>);
+
+  const topSalespeopleChartConfig = vendedoresPerformance.slice(0, 10).reduce((acc, vendedor, index) => {
+    acc[vendedor.nome] = {
+      label: vendedor.nome,
+      color: COLORS[index % COLORS.length]
+    };
+    return acc;
+  }, {
+    value: {
+      label: "Faturamento",
+      color: "#2563eb"
+    }
+  } as Record<string, { label: string, color: string }>);
 
   return (
     <PermissionGuard permission="sales">
@@ -844,35 +892,39 @@ export default function DashboardVendas() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-[300px]">
+                  <div className="h-[350px] w-full">
                     {branchChartData.length > 0 ? (
                       <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={branchChartData}
-                            cx="50%"
-                            cy="50%"
-                            labelLine={false}
-                            outerRadius={100}
-                            fill="#8884d8"
-                            dataKey="value"
-                            nameKey="name"
-                            label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                          >
-                            {branchChartData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                            ))}
-                          </Pie>
-                          <Tooltip
-                            formatter={(value: number) => [
+                        <PieChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
+                          <Tooltip 
+                            formatter={(value) => [
                               new Intl.NumberFormat('pt-BR', {
                                 style: 'currency',
                                 currency: 'BRL'
-                              }).format(value),
+                              }).format(Number(value)),
                               'Faturamento'
                             ]}
                           />
-                          <Legend />
+                          <Legend 
+                            layout="vertical" 
+                            verticalAlign="middle" 
+                            align="right"
+                          />
+                          <Pie
+                            data={branchChartData}
+                            cx="40%"
+                            cy="50%"
+                            labelLine={true}
+                            outerRadius={80}
+                            fill="#8884d8"
+                            dataKey="value"
+                            nameKey="name"
+                            label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                          >
+                            {branchChartData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.fill} />
+                            ))}
+                          </Pie>
                         </PieChart>
                       </ResponsiveContainer>
                     ) : (
@@ -893,7 +945,10 @@ export default function DashboardVendas() {
                 <CardContent>
                   <div className="h-[300px]">
                     {topSalespeopleData.length > 0 ? (
-                      <ResponsiveContainer width="100%" height="100%">
+                      <ChartContainer 
+                        config={topSalespeopleChartConfig}
+                        className="h-[300px]"
+                      >
                         <BarChart
                           data={topSalespeopleData}
                           layout="vertical"
@@ -916,18 +971,22 @@ export default function DashboardVendas() {
                             width={80}
                             tick={{ fontSize: 12 }}
                           />
-                          <Tooltip
-                            formatter={(value: number) => [
-                              new Intl.NumberFormat('pt-BR', {
-                                style: 'currency',
-                                currency: 'BRL'
-                              }).format(value),
-                              'Faturamento'
-                            ]}
+                          <ChartTooltip 
+                            content={
+                              <ChartTooltipContent 
+                                formatter={(value) => [
+                                  new Intl.NumberFormat('pt-BR', {
+                                    style: 'currency',
+                                    currency: 'BRL'
+                                  }).format(Number(value)),
+                                  'Faturamento'
+                                ]}
+                              />
+                            }
                           />
                           <Bar dataKey="value" fill="#2563eb" />
                         </BarChart>
-                      </ResponsiveContainer>
+                      </ChartContainer>
                     ) : (
                       <div className="flex items-center justify-center h-full">
                         <p className="text-muted-foreground">Nenhum dado disponível para o período selecionado</p>

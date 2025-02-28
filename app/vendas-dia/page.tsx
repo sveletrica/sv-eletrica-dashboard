@@ -2,7 +2,7 @@
 import { PermissionGuard } from '@/components/guards/permission-guard'
 import { Roboto } from 'next/font/google'
 import './styles.css'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -61,6 +61,9 @@ const parseDate = (dateString: string): Date => {
     const [year, month, day] = dateString.split('-').map(Number)
     return new Date(year, month - 1, day, 12, 0, 0)
 }
+
+// Adicionar a definição do tipo DayClickEventHandler
+type DayClickEventHandler = (day: Date, modifiers: any) => void;
 
 interface CachedData {
     data: DailySale[]
@@ -365,7 +368,7 @@ export default function DailySales() {
                 setIsRefreshing(true)
             }
 
-            let queryDate: string
+            let queryDate: string = ''  // Inicializar a variável
             if (dateRange.to) {
                 const startDate = dateRange.from
                 const endDate = dateRange.to
@@ -801,12 +804,27 @@ export default function DailySales() {
     const handleCardsScroll = (e: React.UIEvent<HTMLDivElement>) => {
         const container = e.currentTarget
         const isAtEnd = container.scrollLeft + container.clientWidth >= container.scrollWidth - 10 // 10px threshold
+        const isAtStart = container.scrollLeft <= 10 // 10px threshold
         
         setScrollFade({
             right: !isAtEnd,
-            left: isAtEnd // Only show left fade when we're at the end
+            left: container.scrollLeft > 10 // Only show left fade when we've scrolled a bit
         })
     }
+
+    // Ref for the cards container
+    const cardsContainerRef = useRef<HTMLDivElement>(null)
+
+    // Check initial scroll position on mount
+    useEffect(() => {
+        if (cardsContainerRef.current) {
+            const container = cardsContainerRef.current
+            setScrollFade({
+                right: container.scrollWidth > container.clientWidth,
+                left: container.scrollLeft > 10
+            })
+        }
+    }, [data, companySummaries]) // Re-check when data changes
 
     if (isLoading) {
         return <Loading />
@@ -968,10 +986,11 @@ export default function DailySales() {
                     )}
                     
                     <div 
-                        className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide xl:justify-center py-0.5"
+                        ref={cardsContainerRef}
+                        className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide xl:flex-wrap xl:justify-center py-0.5"
                         onScroll={handleCardsScroll}
                     >
-                        <div className="flex gap-4 px-6">
+                        <div className="flex gap-4 px-6 xl:flex-wrap xl:justify-center">
                             {/* Card Total - Only show if there's data */}
                             {totalSummary.count > 0 && (
                                 <Card
@@ -1061,7 +1080,7 @@ export default function DailySales() {
                                         key={summary.empresa}
                                         className={cn(
                                             "relative overflow-hidden cursor-pointer transition-all duration-200 snap-start shrink-0",
-                                            "w-[calc(40vw-1.5rem)] md:w-[200px]",
+                                            "w-[calc(40vw-1.5rem)] md:w-[150px]",
                                             isSelected
                                                 ? "ring-1 ring-primary hover:ring-primary/70"
                                                 : "hover:ring-1 hover:ring-primary/50 opacity-70 hover:opacity-100",
@@ -1213,25 +1232,48 @@ export default function DailySales() {
                                         <ExpandableRow 
                                             key={row.id}
                                             row={row.original}
-                                            columns={columns.map(col => ({
-                                                header: col.header && typeof col.header === 'string' 
-                                                    ? col.header 
-                                                    : col.accessorKey === 'qtdsku' ? 'Qtd SKUs'
-                                                    : col.accessorKey === 'total_faturamento' ? 'Faturamento'
-                                                    : col.accessorKey === 'total_custo_produto' ? 'Custo'
-                                                    : col.accessorKey === 'margem' ? 'Margem'
-                                                    : String(col.accessorKey),
-                                                accessor: col.accessorKey as keyof DailySale,
-                                                format: col.cell 
-                                                    ? (value: any) => {
-                                                        const rendered = flexRender(col.cell, { 
-                                                            row, 
-                                                            cell: row.getAllCells().find(c => c.column.id === col.accessorKey)
-                                                        })
-                                                        return typeof rendered === 'string' ? rendered : null
-                                                    }
-                                                    : undefined
-                                            }))}
+                                            columns={columns.map(col => {
+                                                // Extrair o accessorKey de forma segura
+                                                const accessorKey = 'accessorKey' in col ? col.accessorKey as string : 
+                                                                   'id' in col ? col.id as string : '';
+                                                
+                                                // Determinar o header de forma segura
+                                                let header = '';
+                                                if (typeof col.header === 'string') {
+                                                    header = col.header;
+                                                } else if (accessorKey === 'qtdsku') {
+                                                    header = 'Qtd SKUs';
+                                                } else if (accessorKey === 'total_faturamento') {
+                                                    header = 'Faturamento';
+                                                } else if (accessorKey === 'total_custo_produto') {
+                                                    header = 'Custo';
+                                                } else if (accessorKey === 'margem') {
+                                                    header = 'Margem';
+                                                } else {
+                                                    header = accessorKey;
+                                                }
+                                                
+                                                return {
+                                                    header,
+                                                    accessor: accessorKey as keyof DailySale,
+                                                    format: col.cell 
+                                                        ? (value: any) => {
+                                                            // Encontrar a célula de forma segura
+                                                            const cell = row.getAllCells().find(c => 
+                                                                c.column.id === accessorKey
+                                                            );
+                                                            
+                                                            if (!cell) return null;
+                                                            
+                                                            const rendered = flexRender(col.cell, { 
+                                                                row, 
+                                                                cell
+                                                            });
+                                                            return typeof rendered === 'string' ? rendered : null;
+                                                        }
+                                                        : undefined
+                                                };
+                                            })}
                                             sorting={sorting}
                                             onSort={(field) => {
                                                 const isDesc = sorting[0]?.id === field && !sorting[0]?.desc
