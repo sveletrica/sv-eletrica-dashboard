@@ -9,7 +9,7 @@ import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { RefreshCw, Download, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { ESLItem } from '@/types/esl'
+import { ESLItem } from '@/types/esl-maracanau'
 import Loading from './loading'
 import * as XLSX from 'xlsx'
 import {

@@ -9,7 +9,7 @@ import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { RefreshCw, Download, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { ESLItem } from '@/types/esl-mozart'
+import { ESLItem } from '@/types/esl-sobral'
 import Loading from './loading'
 import * as XLSX from 'xlsx'
 import {
@@ -23,7 +23,7 @@ import {
 } from '@tanstack/react-table'
 import { HighlightedText } from "@/components/highlighted-text"
 
-const CACHE_KEY = 'eslData_mozart'
+const CACHE_KEY = 'eslData_sobral'
 const CACHE_DURATION = 24 * 60 * 60 * 1000 // 24 hours
 
 type CachedData = {
@@ -101,7 +101,7 @@ export default function ESLItems() {
             },
         },
         {
-            accessorKey: 'QtEstoque_Empresa20',
+            accessorKey: 'QtEstoque_Empresa17',
             header: "Qt. Estoque",
             cell: ({ getValue }) => {
                 const value = getValue() as number
@@ -113,7 +113,7 @@ export default function ESLItems() {
             header: "Preço",
             cell: ({ row }) => {
                 const price = row.getValue('price') as number
-                const vlPreco = row.getValue('VlPreco_Empresa20') as number
+                const vlPreco = row.getValue('VlPreco_Empresa17') as number
                 const isDifferent = price !== vlPreco
 
                 return (
@@ -127,11 +127,11 @@ export default function ESLItems() {
             },
         },
         {
-            accessorKey: 'VlPreco_Empresa20',
+            accessorKey: 'VlPreco_Empresa17',
             header: "Preço Empresa",
             cell: ({ row }) => {
                 const price = row.getValue('price') as number
-                const vlPreco = row.getValue('VlPreco_Empresa20') as number
+                const vlPreco = row.getValue('VlPreco_Empresa17') as number
                 const isDifferent = price !== vlPreco
 
                 return (
@@ -175,7 +175,7 @@ export default function ESLItems() {
                 return
             }
 
-            const response = await fetch('/api/esl-stk-mozart')
+            const response = await fetch('/api/esl-stk-sobral')
             
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}))
@@ -211,7 +211,7 @@ export default function ESLItems() {
         const worksheet = XLSX.utils.json_to_sheet(data)
         const workbook = XLSX.utils.book_new()
         XLSX.utils.book_append_sheet(workbook, worksheet, "Etiquetas em Uso")
-        XLSX.writeFile(workbook, `Mozart-etiquetas-em-uso-${format(new Date(), 'dd-MM-yyyy')}.xlsx`)
+        XLSX.writeFile(workbook, `Sobral-etiquetas-em-uso-${format(new Date(), 'dd-MM-yyyy')}.xlsx`)
     }
 
     useEffect(() => {
@@ -242,7 +242,7 @@ export default function ESLItems() {
 
         // Filter by price difference
         if (showPriceDifference) {
-            filtered = filtered.filter(item => item.price !== item.VlPreco_Empresa20)
+            filtered = filtered.filter(item => item.price !== item.VlPreco_Empresa17)
         }
 
         return filtered

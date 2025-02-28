@@ -250,26 +250,34 @@ export default function Sobral() {
                         </CardContent>
                     </div>
                 </Card>
-                <Card className="stats-card">
+                <Card className="stats-card group">
                     <div className="relative">
                         <div className="absolute top-2 right-2">
                             <Tag className="h-5 w-5 md:h-7 md:w-7 text-muted-foreground" />
                         </div>
-                        <CardHeader className="flex flex-row items-center space-y-0 pb-2 pr-12">
-                            <CardTitle className="text-sm font-medium">Etiquetas em uso</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-3xl font-bold">{safeData.produtosEtiquetados.toLocaleString('pt-BR')}</p>
-                            <div className="space-y-2">
-                                <p className="text-xs md:text-sm text-muted-foreground">
-                                    {calculatePercentage(safeData.produtosEtiquetados, safeData.totalEstoque)}% do total
+                        <Link href="/etiquetas-em-uso-sobral">
+                            <CardHeader className="flex flex-row items-center space-y-0 pb-2 pr-12">
+                                <CardTitle className="text-sm font-medium">Etiquetas em uso</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <p className="text-3xl font-bold">{safeData.produtosEtiquetados.toLocaleString('pt-BR')}</p>
+                                <div className="space-y-2">
+                                    <p className="text-xs md:text-sm text-muted-foreground">
+                                        {calculatePercentage(safeData.produtosEtiquetados, safeData.totalEstoque)}% do total
+                                    </p>
+                                    <Progress 
+                                        value={Number(calculatePercentage(safeData.produtosEtiquetados, safeData.totalEstoque))} 
+                                        className="h-2"
+                                    />
+                                </div>
+                                <p className="text-xs md:text-sm text-muted-foreground mt-2 items-center gap-1 group-hover:text-primary transition-colors hidden md:flex">
+                                    Ver detalhes <ArrowRight className="h-4 w-4" />
                                 </p>
-                                <Progress 
-                                    value={Number(calculatePercentage(safeData.produtosEtiquetados, safeData.totalEstoque))} 
-                                    className="h-2"
-                                />
-                            </div>
-                        </CardContent>
+                            </CardContent>
+                        </Link>
+                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 md:hidden">
+                            <MoreHorizontal className="h-5 w-5 text-muted-foreground" />
+                        </div>
                     </div>
                 </Card>
                 <Card className="stats-card group">
