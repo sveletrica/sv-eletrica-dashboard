@@ -2,7 +2,8 @@
 export const METAS_FATURAMENTO_POR_DATA: Record<string, Record<string, number>> = {
   "2025": {
     "01": 22185000, // Janeiro 2025
-    "02": 20300000  // Fevereiro 2025
+    "02": 20300000,  // Fevereiro 2025
+    "03": 17000000 // Março 2025
   }
 };
 
