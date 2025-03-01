@@ -815,12 +815,12 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-x-4">
                         <CardTitle>Orçamentos Recentes</CardTitle>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2">
                             <Select
                                 value={selectedBranch}
                                 onValueChange={handleBranchChange}
                             >
-                                <SelectTrigger className="w-[200px]">
+                                <SelectTrigger className="w-full sm:w-[200px]">
                                     <SelectValue placeholder="Filtrar por filial" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -837,7 +837,7 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                 value={selectedSeller}
                                 onValueChange={handleSellerChange}
                             >
-                                <SelectTrigger className="w-[200px]">
+                                <SelectTrigger className="w-full sm:w-[200px]">
                                     <SelectValue placeholder="Filtrar por vendedor" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -861,7 +861,7 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                             </div>
                         ) : (
                             <>
-                                <div className="relative rounded-md border">
+                                <div className="relative rounded-md border overflow-x-auto">
                                     <Table>
                                         <TableHeader>
                                             <TableRow>
@@ -948,11 +948,11 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                 </div>
                                 
                                 {recentQuotations.length > 0 && (
-                                    <div className="flex items-center justify-between mt-4">
-                                        <div className="text-sm text-muted-foreground">
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-4 gap-2">
+                                        <div className="text-sm text-muted-foreground text-center sm:text-left">
                                             Mostrando {((currentPage - 1) * pageSize) + 1} a {Math.min(currentPage * pageSize, totalCount)} de {totalCount} orçamentos
                                         </div>
-                                        <div className="flex items-center space-x-2">
+                                        <div className="flex items-center justify-center sm:justify-end space-x-2">
                                             <Button
                                                 variant="outline"
                                                 size="icon"
@@ -1151,104 +1151,102 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                     </div>
                                     
                                     {showGroupDiscounts && (
-                                        <div className="relative rounded-md border">
-                                            <div className="overflow-auto">
-                                                <div className="min-w-[800px]">
-                                                    <Table>
-                                                        <TableHeader>
-                                                            <TableRow>
-                                                                <TableHead className="w-[200px]">Grupo</TableHead>
-                                                                <TableHead className="w-[80px] text-right">Qtd</TableHead>
-                                                                <TableHead className="w-[120px] text-right">Preço Lista</TableHead>
-                                                                <TableHead className="w-[120px] text-right">Preço Final</TableHead>
-                                                                <TableHead className="w-[120px] text-right">Custo</TableHead>
-                                                                <TableHead className="w-[100px] text-right">Margem</TableHead>
-                                                                <TableHead className="w-[120px] text-right">Desconto %</TableHead>
-                                                                <TableHead className="w-[100px]"></TableHead>
-                                                            </TableRow>
-                                                        </TableHeader>
-                                                        <TableBody>
-                                                            {getUniqueProductGroups().map(group => {
-                                                                const totals = calculateGroupTotals()[group]
-                                                                const margin = calculateMargin(totals.precoFinal, totals.custo)
-                                                                const currentDiscount = ((totals.precoLista - totals.precoFinal) / totals.precoLista) * 100
+                                        <div className="relative rounded-md border overflow-x-auto">
+                                            <div className="min-w-[800px]">
+                                                <Table>
+                                                    <TableHeader>
+                                                        <TableRow>
+                                                            <TableHead className="w-[200px]">Grupo</TableHead>
+                                                            <TableHead className="w-[80px] text-right">Qtd</TableHead>
+                                                            <TableHead className="w-[120px] text-right">Preço Lista</TableHead>
+                                                            <TableHead className="w-[120px] text-right">Preço Final</TableHead>
+                                                            <TableHead className="w-[120px] text-right">Custo</TableHead>
+                                                            <TableHead className="w-[100px] text-right">Margem</TableHead>
+                                                            <TableHead className="w-[120px] text-right">Desconto %</TableHead>
+                                                            <TableHead className="w-[100px]"></TableHead>
+                                                        </TableRow>
+                                                    </TableHeader>
+                                                    <TableBody>
+                                                        {getUniqueProductGroups().map(group => {
+                                                            const totals = calculateGroupTotals()[group]
+                                                            const margin = calculateMargin(totals.precoFinal, totals.custo)
+                                                            const currentDiscount = ((totals.precoLista - totals.precoFinal) / totals.precoLista) * 100
 
-                                                                return (
-                                                                    <TableRow key={group}>
-                                                                        <TableCell className="font-medium">
-                                                                            {group}
-                                                                        </TableCell>
-                                                                        <TableCell className="text-right">
-                                                                            {totals.quantidade}
-                                                                        </TableCell>
-                                                                        <TableCell className="text-right">
-                                                                            {totals.precoLista.toLocaleString('pt-BR', {
-                                                                                style: 'currency',
-                                                                                currency: 'BRL'
-                                                                            })}
-                                                                        </TableCell>
-                                                                        <TableCell className="text-right">
-                                                                            {totals.precoFinal.toLocaleString('pt-BR', {
-                                                                                style: 'currency',
-                                                                                currency: 'BRL'
-                                                                            })}
-                                                                        </TableCell>
-                                                                        <TableCell className="text-right">
-                                                                            {totals.custo.toLocaleString('pt-BR', {
-                                                                                style: 'currency',
-                                                                                currency: 'BRL'
-                                                                            })}
-                                                                        </TableCell>
-                                                                        <TableCell className={`text-right ${
-                                                                            margin >= 0 
-                                                                                ? 'text-green-600 dark:text-green-400' 
-                                                                                : 'text-red-600 dark:text-red-400'
-                                                                        }`}>
-                                                                            {margin.toFixed(2)}%
-                                                                        </TableCell>
-                                                                        <TableCell>
-                                                                            <div className="flex items-center gap-2 justify-end">
-                                                                                <Input
-                                                                                    type="number"
-                                                                                    value={groupDiscounts[group] ?? ''}
-                                                                                    onChange={(e) => handleGroupDiscountChange(group, e.target.value)}
-                                                                                    placeholder="Desconto %"
-                                                                                    className="w-24"
-                                                                                    min="0"
-                                                                                    max="100"
-                                                                                    step="0.1"
-                                                                                    onKeyDown={(e) => {
-                                                                                        if (e.key === 'Enter') {
-                                                                                            e.preventDefault()
-                                                                                            const discount = Number(groupDiscounts[group])
-                                                                                            if (!isNaN(discount)) {
-                                                                                                applyGroupDiscount(group, discount)
-                                                                                            }
+                                                            return (
+                                                                <TableRow key={group}>
+                                                                    <TableCell className="font-medium">
+                                                                        {group}
+                                                                    </TableCell>
+                                                                    <TableCell className="text-right">
+                                                                        {totals.quantidade}
+                                                                    </TableCell>
+                                                                    <TableCell className="text-right">
+                                                                        {totals.precoLista.toLocaleString('pt-BR', {
+                                                                            style: 'currency',
+                                                                            currency: 'BRL'
+                                                                        })}
+                                                                    </TableCell>
+                                                                    <TableCell className="text-right">
+                                                                        {totals.precoFinal.toLocaleString('pt-BR', {
+                                                                            style: 'currency',
+                                                                            currency: 'BRL'
+                                                                        })}
+                                                                    </TableCell>
+                                                                    <TableCell className="text-right">
+                                                                        {totals.custo.toLocaleString('pt-BR', {
+                                                                            style: 'currency',
+                                                                            currency: 'BRL'
+                                                                        })}
+                                                                    </TableCell>
+                                                                    <TableCell className={`text-right ${
+                                                                        margin >= 0 
+                                                                            ? 'text-green-600 dark:text-green-400' 
+                                                                            : 'text-red-600 dark:text-red-400'
+                                                                    }`}>
+                                                                        {margin.toFixed(2)}%
+                                                                    </TableCell>
+                                                                    <TableCell>
+                                                                        <div className="flex items-center gap-2 justify-end">
+                                                                            <Input
+                                                                                type="number"
+                                                                                value={groupDiscounts[group] ?? ''}
+                                                                                onChange={(e) => handleGroupDiscountChange(group, e.target.value)}
+                                                                                placeholder="Desconto %"
+                                                                                className="w-24"
+                                                                                min="0"
+                                                                                max="100"
+                                                                                step="0.1"
+                                                                                onKeyDown={(e) => {
+                                                                                    if (e.key === 'Enter') {
+                                                                                        e.preventDefault()
+                                                                                        const discount = Number(groupDiscounts[group])
+                                                                                        if (!isNaN(discount)) {
+                                                                                            applyGroupDiscount(group, discount)
                                                                                         }
-                                                                                    }}
-                                                                                />
-                                                                            </div>
-                                                                        </TableCell>
-                                                                        <TableCell>
-                                                                            <Button
-                                                                                onClick={() => {
-                                                                                    const discount = Number(groupDiscounts[group])
-                                                                                    if (!isNaN(discount)) {
-                                                                                        applyGroupDiscount(group, discount)
                                                                                     }
                                                                                 }}
-                                                                                disabled={groupDiscounts[group] === undefined}
-                                                                                size="sm"
-                                                                            >
-                                                                                Aplicar
-                                                                            </Button>
-                                                                        </TableCell>
-                                                                    </TableRow>
-                                                                )
-                                                            })}
-                                                        </TableBody>
-                                                    </Table>
-                                                </div>
+                                                                            />
+                                                                        </div>
+                                                                    </TableCell>
+                                                                    <TableCell>
+                                                                        <Button
+                                                                            onClick={() => {
+                                                                                const discount = Number(groupDiscounts[group])
+                                                                                if (!isNaN(discount)) {
+                                                                                    applyGroupDiscount(group, discount)
+                                                                                }
+                                                                            }}
+                                                                            disabled={groupDiscounts[group] === undefined}
+                                                                            size="sm"
+                                                                        >
+                                                                            Aplicar
+                                                                        </Button>
+                                                                    </TableCell>
+                                                                </TableRow>
+                                                            )
+                                                        })}
+                                                    </TableBody>
+                                                </Table>
                                             </div>
                                         </div>
                                     )}
@@ -1471,7 +1469,7 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                             <CardTitle>Produtos do Orçamento</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="relative rounded-md border">
+                            <div className="relative rounded-md border overflow-x-auto">
                                 <div className="max-h-[600px] overflow-auto">
                                     <Table>
                                         <TableHeader>
