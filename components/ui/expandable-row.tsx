@@ -53,6 +53,15 @@ export function ExpandableRow({ row, columns, sorting, onSort }: ExpandableRowPr
             {row.cdpedido}
           </Link>
         )
+      case 'nmrepresentantevenda':
+        return (
+          <Link
+            href={`/vendedor/${encodeURIComponent(row.nmrepresentantevenda)}?returnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`}
+            className="text-blue-500 hover:text-blue-700 underline text-xs"
+          >
+            {row.nmrepresentantevenda}
+          </Link>
+        )
       case 'total_faturamento':
       case 'total_custo_produto':
         return value.toLocaleString('pt-BR', {
