@@ -9,6 +9,7 @@ interface StockData {
     QtEstoque_Empresa13?: number;
     QtEstoque_Empresa15?: number;
     QtEstoque_Empresa17?: number;
+    QtEstoque_Empresa20?: number;
     QtEstoque_Empresa59?: number;
     StkTotal: number;
 }
@@ -74,6 +75,7 @@ export function StockPopover({
                                                          filialNumber === '13' ? 'Express Maracanau' :
                                                          filialNumber === '15' ? 'Juazeiro' :
                                                          filialNumber === '17' ? 'Express Sobral' :
+                                                         filialNumber === '20' ? 'Express Mozart' :
                                                          filialNumber === '59' ? 'Express WS' :
                                                          `Filial ${filialNumber}`}
                                                     </span>
