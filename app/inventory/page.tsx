@@ -1100,22 +1100,55 @@ export default function Inventory() {
     // Now we can add the effect that uses the table
     useEffect(() => {
         const loadVisibleImages = async () => {
-            const visibleRows = table.getRowModel().rows;
-            const cdChamadas = visibleRows.map(row => row.getValue('CdChamada') as string);
+            if (!tableContainerRef.current) return;
             
-            // Filter out products that are already in cache
-            const unloadedCdChamadas = cdChamadas.filter(
-                cdChamada => cdChamada && imageCache[cdChamada] === undefined
-            );
+            // Get visible rows
+            const visibleRows = Array.from(tableContainerRef.current.querySelectorAll('tbody tr'));
             
-            // Load images in parallel
-            await Promise.all(
-                unloadedCdChamadas.map(cdChamada => loadProductImage(cdChamada))
-            );
+            // Extract product codes from visible rows
+            const visibleCodes = new Set();
+            visibleRows.forEach(row => {
+                const codeCell = row.querySelector('td[data-column-id="CdChamada"]');
+                if (codeCell) {
+                    const code = codeCell.textContent?.trim();
+                    if (code) visibleCodes.add(code);
+                }
+            });
+            
+            // Load images for visible products that aren't already cached
+            for (const cdChamada of visibleCodes) {
+                if (imageCache[cdChamada] === undefined) {
+                    try {
+                        const imageUrl = await getProductImage(cdChamada);
+                        setImageCache(prev => {
+                            // Only update if the value isn't already set (prevent unnecessary updates)
+                            if (prev[cdChamada] === undefined) {
+                                return {
+                                    ...prev,
+                                    [cdChamada]: imageUrl
+                                };
+                            }
+                            return prev;
+                        });
+                    } catch (error) {
+                        console.error(`Error loading image for ${cdChamada}:`, error);
+                        // Mark as failed to prevent repeated attempts
+                        setImageCache(prev => {
+                            if (prev[cdChamada] === undefined) {
+                                return {
+                                    ...prev,
+                                    [cdChamada]: null
+                                };
+                            }
+                            return prev;
+                        });
+                    }
+                }
+            }
         };
         
         loadVisibleImages();
-    }, [pageIndex, sorting, filteredData]); // Remove table from dependencies, use pageIndex and sorting instead
+    }, [viewMode, isLoading, filteredData]);
 
     // Add this function to handle column reordering
     const handleColumnReorder = useCallback((draggedColumnId: string, targetColumnId: string) => {
@@ -1494,7 +1527,7 @@ export default function Inventory() {
                                             <TableRow 
                                                 key={row.id}
                                                 className={cn(
-                                                    (row.getValue('StkTotal') <= 0) && "text-gray-400 bg-gray-50"
+                                                    (row.original && row.original.StkTotal !== undefined && row.original.StkTotal <= 0) && "text-gray-400 bg-gray-50"
                                                 )}
                                             >
                                                 {row.getVisibleCells().map((cell) => (
@@ -1507,7 +1540,7 @@ export default function Inventory() {
                                                             cell.column.id === 'NmGrupoProduto' && "max-w-[100px] sm:max-w-[120px] truncate",
                                                             cell.column.id === 'NmProduto' && "max-w-[200px] sm:max-w-[600px]",
                                                             cell.column.id === 'NmFornecedorPrincipal' && "max-w-[120px] sm:max-w-[150px] truncate",
-                                                            cell.column.id === 'StkTotal' && row.getValue('StkTotal') <= 0 && "text-gray-400"
+                                                            cell.column.id === 'StkTotal' && row.original && row.original.StkTotal !== undefined && row.original.StkTotal <= 0 && "text-gray-400"
                                                         )}
                                                         style={{
                                                             width: cell.column.getSize(),
