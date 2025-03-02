@@ -861,136 +861,140 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                             </div>
                         ) : (
                             <>
-                                <div className="relative rounded-md border overflow-x-auto">
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Data</TableHead>
-                                                <TableHead>Código</TableHead>
-                                                <TableHead>Cliente</TableHead>
-                                                <TableHead>Filial</TableHead>
-                                                <TableHead>Vendedor</TableHead>
-                                                <TableHead className="text-right">Qtd Produtos</TableHead>
-                                                <TableHead className="text-right">Total</TableHead>
-                                                <TableHead className="text-right">Margem</TableHead>
-                                                <TableHead className="text-right">% Disp</TableHead>
-                                                <TableHead></TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {filteredQuotations.map((quotation) => {
-                                                const margin = ((quotation.total_faturamento - (quotation.total_faturamento * 0.268 + quotation.total_custo_produto)) / quotation.total_faturamento) * 100
-                                                const isFullyAvailable = quotation.percentualdisponivel === 100;
-
-                                                return (
-                                                    <TableRow 
-                                                        key={quotation.cdpedidodevenda}
-                                                        className="cursor-pointer hover:bg-muted/50"
-                                                        onClick={() => router.push(`/orcamento/${quotation.cdpedidodevenda}`)}
-                                                    >
-                                                        <TableCell>
-                                                            {quotation.dtemissao}
-                                                        </TableCell>
-                                                        <TableCell>{quotation.cdpedidodevenda}</TableCell>
-                                                        <TableCell>
-                                                            <a 
-                                                                href={`/cliente/${encodeURIComponent(quotation.nmpessoa)}`}
-                                                                className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:underline"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation(); // Previne que o clique propague para a linha
-                                                                }}
-                                                            >
-                                                                {quotation.nmpessoa}
-                                                            </a>
-                                                        </TableCell>
-                                                        <TableCell>{quotation.nmempresacurtovenda}</TableCell>
-                                                        <TableCell>{quotation.nmrepresentantevenda}</TableCell>
-                                                        <TableCell className="text-right">
-                                                            {quotation.qtd_produtos}
-                                                        </TableCell>
-                                                        <TableCell className="text-right">
-                                                            {quotation.total_faturamento.toLocaleString('pt-BR', {
-                                                                style: 'currency',
-                                                                currency: 'BRL'
-                                                            })}
-                                                        </TableCell>
-                                                        <TableCell className={`text-right ${
-                                                            margin >= 5
-                                                                ? 'text-green-600 dark:text-green-400'
-                                                                : margin >= 0
-                                                                    ? 'text-yellow-600 dark:text-yellow-400'
-                                                                    : 'text-red-600 dark:text-red-400'
-                                                        }`}>
-                                                            {margin.toFixed(2)}%
-                                                        </TableCell>
-                                                        <TableCell className={`text-right ${
-                                                            isFullyAvailable ? 'bg-green-100 dark:bg-green-900/30' : ''
-                                                        }`}>
-                                                            {Math.max(0, quotation.percentualdisponivel || 0).toFixed(2)}%
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation()
-                                                                    router.push(`/orcamento/${quotation.cdpedidodevenda}`)
-                                                                }}
-                                                            >
-                                                                <Search className="h-4 w-4" />
-                                                            </Button>
-                                                        </TableCell>
+                                <div className="rounded-md border">
+                                    <div className="overflow-x-auto">
+                                        <div className="min-w-[800px] max-h-[500px] overflow-y-auto">
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>Data</TableHead>
+                                                        <TableHead>Código</TableHead>
+                                                        <TableHead>Cliente</TableHead>
+                                                        <TableHead>Filial</TableHead>
+                                                        <TableHead>Vendedor</TableHead>
+                                                        <TableHead className="text-right">Qtd Produtos</TableHead>
+                                                        <TableHead className="text-right">Total</TableHead>
+                                                        <TableHead className="text-right">Margem</TableHead>
+                                                        <TableHead className="text-right">% Disp</TableHead>
+                                                        <TableHead></TableHead>
                                                     </TableRow>
-                                                )
-                                            })}
-                                        </TableBody>
-                                    </Table>
-                                </div>
-                                
-                                {recentQuotations.length > 0 && (
-                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-4 gap-2">
-                                        <div className="text-sm text-muted-foreground text-center sm:text-left">
-                                            Mostrando {((currentPage - 1) * pageSize) + 1} a {Math.min(currentPage * pageSize, totalCount)} de {totalCount} orçamentos
-                                        </div>
-                                        <div className="flex items-center justify-center sm:justify-end space-x-2">
-                                            <Button
-                                                variant="outline"
-                                                size="icon"
-                                                onClick={goToFirstPage}
-                                                disabled={currentPage === 1 || loadingRecent}
-                                            >
-                                                <ChevronsLeft className="h-4 w-4" />
-                                            </Button>
-                                            <Button
-                                                variant="outline"
-                                                size="icon"
-                                                onClick={goToPreviousPage}
-                                                disabled={currentPage === 1 || loadingRecent}
-                                            >
-                                                <ChevronLeft className="h-4 w-4" />
-                                            </Button>
-                                            <span className="text-sm">
-                                                Página {currentPage} de {totalPages}
-                                            </span>
-                                            <Button
-                                                variant="outline"
-                                                size="icon"
-                                                onClick={goToNextPage}
-                                                disabled={currentPage === totalPages || loadingRecent}
-                                            >
-                                                <ChevronRight className="h-4 w-4" />
-                                            </Button>
-                                            <Button
-                                                variant="outline"
-                                                size="icon"
-                                                onClick={goToLastPage}
-                                                disabled={currentPage === totalPages || loadingRecent}
-                                            >
-                                                <ChevronsRight className="h-4 w-4" />
-                                            </Button>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {filteredQuotations.map((quotation) => {
+                                                        const margin = ((quotation.total_faturamento - (quotation.total_faturamento * 0.268 + quotation.total_custo_produto)) / quotation.total_faturamento) * 100
+                                                        const isFullyAvailable = quotation.percentualdisponivel === 100;
+
+                                                        return (
+                                                            <TableRow 
+                                                                key={quotation.cdpedidodevenda}
+                                                                className="cursor-pointer hover:bg-muted/50"
+                                                                onClick={() => router.push(`/orcamento/${quotation.cdpedidodevenda}`)}
+                                                            >
+                                                                <TableCell>
+                                                                    {quotation.dtemissao}
+                                                                </TableCell>
+                                                                <TableCell>{quotation.cdpedidodevenda}</TableCell>
+                                                                <TableCell>
+                                                                    <a 
+                                                                        href={`/cliente/${encodeURIComponent(quotation.nmpessoa)}`}
+                                                                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:underline"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation(); // Previne que o clique propague para a linha
+                                                                        }}
+                                                                    >
+                                                                        {quotation.nmpessoa}
+                                                                    </a>
+                                                                </TableCell>
+                                                                <TableCell>{quotation.nmempresacurtovenda}</TableCell>
+                                                                <TableCell>{quotation.nmrepresentantevenda}</TableCell>
+                                                                <TableCell className="text-right">
+                                                                    {quotation.qtd_produtos}
+                                                                </TableCell>
+                                                                <TableCell className="text-right">
+                                                                    {quotation.total_faturamento.toLocaleString('pt-BR', {
+                                                                        style: 'currency',
+                                                                        currency: 'BRL'
+                                                                    })}
+                                                                </TableCell>
+                                                                <TableCell className={`text-right ${
+                                                                    margin >= 5
+                                                                        ? 'text-green-600 dark:text-green-400'
+                                                                        : margin >= 0
+                                                                            ? 'text-yellow-600 dark:text-yellow-400'
+                                                                            : 'text-red-600 dark:text-red-400'
+                                                                }`}>
+                                                                    {margin.toFixed(2)}%
+                                                                </TableCell>
+                                                                <TableCell className={`text-right ${
+                                                                    isFullyAvailable ? 'bg-green-100 dark:bg-green-900/30' : ''
+                                                                }`}>
+                                                                    {Math.max(0, quotation.percentualdisponivel || 0).toFixed(2)}%
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation()
+                                                                            router.push(`/orcamento/${quotation.cdpedidodevenda}`)
+                                                                        }}
+                                                                    >
+                                                                        <Search className="h-4 w-4" />
+                                                                    </Button>
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        )
+                                                    })}
+                                                </TableBody>
+                                            </Table>
                                         </div>
                                     </div>
-                                )}
+                                    
+                                    {recentQuotations.length > 0 && (
+                                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 gap-2 border-t">
+                                            <div className="text-sm text-muted-foreground text-center sm:text-left">
+                                                Mostrando {((currentPage - 1) * pageSize) + 1} a {Math.min(currentPage * pageSize, totalCount)} de {totalCount} orçamentos
+                                            </div>
+                                            <div className="flex items-center justify-center sm:justify-end space-x-2">
+                                                <Button
+                                                    variant="outline"
+                                                    size="icon"
+                                                    onClick={goToFirstPage}
+                                                    disabled={currentPage === 1 || loadingRecent}
+                                                >
+                                                    <ChevronsLeft className="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    size="icon"
+                                                    onClick={goToPreviousPage}
+                                                    disabled={currentPage === 1 || loadingRecent}
+                                                >
+                                                    <ChevronLeft className="h-4 w-4" />
+                                                </Button>
+                                                <span className="text-sm">
+                                                    Página {currentPage} de {totalPages}
+                                                </span>
+                                                <Button
+                                                    variant="outline"
+                                                    size="icon"
+                                                    onClick={goToNextPage}
+                                                    disabled={currentPage === totalPages || loadingRecent}
+                                                >
+                                                    <ChevronRight className="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    size="icon"
+                                                    onClick={goToLastPage}
+                                                    disabled={currentPage === totalPages || loadingRecent}
+                                                >
+                                                    <ChevronsRight className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             </>
                         )}
                     </CardContent>
@@ -1469,148 +1473,150 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                             <CardTitle>Produtos do Orçamento</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="relative rounded-md border overflow-x-auto">
-                                <div className="max-h-[600px] overflow-auto">
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Código</TableHead>
-                                                <TableHead>Produto</TableHead>
-                                                <TableHead className="text-right">Estoque</TableHead>
-                                                <TableHead className="text-right">Solicitado</TableHead>
-                                                <TableHead className="text-right">Qtd</TableHead>
-                                                <TableHead className="text-right">Preço Lista</TableHead>
-                                                <TableHead className="text-right">Desconto</TableHead>
-                                                <TableHead className="text-right">Preço Final</TableHead>
-                                                <TableHead className="text-right">Custo</TableHead>
-                                                <TableHead className="text-right">Margem</TableHead>
-                                                <TableHead>Grupo</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody className={roboto.className}>
-                                            {data.map((item, index) => {
-                                                const currentDiscount = calculateDiscount(
-                                                    item.vlprecovendainformado,
-                                                    item.vlfaturamento
-                                                )
-                                                const simulatedDiscount = simulatedDiscounts[item.cdproduto]
-                                                const margin = isSimulating && simulatedDiscount !== undefined
-                                                    ? calculateMarginWithDiscount(
+                            <div className="rounded-md border">
+                                <div className="overflow-x-auto">
+                                    <div className="min-w-[800px] max-h-[500px] overflow-y-auto">
+                                        <Table>
+                                            <TableHeader className="sticky top-0 bg-background z-10">
+                                                <TableRow>
+                                                    <TableHead>Código</TableHead>
+                                                    <TableHead>Produto</TableHead>
+                                                    <TableHead className="text-right">Estoque</TableHead>
+                                                    <TableHead className="text-right">Solicitado</TableHead>
+                                                    <TableHead className="text-right">Qtd</TableHead>
+                                                    <TableHead className="text-right">Preço Lista</TableHead>
+                                                    <TableHead className="text-right">Desconto</TableHead>
+                                                    <TableHead className="text-right">Preço Final</TableHead>
+                                                    <TableHead className="text-right">Custo</TableHead>
+                                                    <TableHead className="text-right">Margem</TableHead>
+                                                    <TableHead>Grupo</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody className={roboto.className}>
+                                                {data.map((item, index) => {
+                                                    const currentDiscount = calculateDiscount(
                                                         item.vlprecovendainformado,
-                                                        item.vltotalcustoproduto,
-                                                        simulatedDiscount
+                                                        item.vlfaturamento
                                                     )
-                                                    : calculateMargin(item.vlfaturamento, item.vltotalcustoproduto)
-                                                
-                                                const simulatedPrice = isSimulating && simulatedDiscount !== undefined
-                                                    ? item.vlprecovendainformado * (1 - simulatedDiscount / 100)
-                                                    : item.vlfaturamento
+                                                    const simulatedDiscount = simulatedDiscounts[item.cdproduto]
+                                                    const margin = isSimulating && simulatedDiscount !== undefined
+                                                        ? calculateMarginWithDiscount(
+                                                            item.vlprecovendainformado,
+                                                            item.vltotalcustoproduto,
+                                                            simulatedDiscount
+                                                        )
+                                                        : calculateMargin(item.vlfaturamento, item.vltotalcustoproduto)
+                                                    
+                                                    const simulatedPrice = isSimulating && simulatedDiscount !== undefined
+                                                        ? item.vlprecovendainformado * (1 - simulatedDiscount / 100)
+                                                        : item.vlfaturamento
 
-                                                return (
-                                                    <TableRow 
-                                                        key={index}
-                                                        className={cn(
-                                                            "transition-colors",
-                                                            margin < -0.01 && "animate-pulseRow bg-red-500/50"
-                                                        )}
-                                                    >
-                                                        <TableCell>
-                                                            <a 
-                                                                href={`https://app.sveletrica.com/produto/${item.cdproduto}`}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:underline"
-                                                            >
-                                                                {item.cdproduto}
-                                                            </a>
-                                                        </TableCell>
-                                                        <TableCell>{item.nmproduto}</TableCell>
-                                                        <TableCell className="text-right">
-                                                            <StockPopover 
-                                                                stockData={stockData[item.cdproduto] || null}
-                                                                open={openPopoverId === item.cdproduto}
-                                                                onOpenChange={(open) => {
-                                                                    setOpenPopoverId(open ? item.cdproduto : null)
-                                                                    if (open && !stockData[item.cdproduto] && !loadingStock[item.cdproduto]) {
-                                                                        fetchStockData(item.cdproduto)
-                                                                    }
-                                                                }}
-                                                                loading={loadingStock[item.cdproduto]}
-                                                            >
-                                                                <button 
-                                                                    className="cursor-pointer hover:underline"
-                                                                    type="button"
+                                                    return (
+                                                        <TableRow 
+                                                            key={index}
+                                                            className={cn(
+                                                                "transition-colors",
+                                                                margin < -0.01 && "animate-pulseRow bg-red-500/50"
+                                                            )}
+                                                        >
+                                                            <TableCell>
+                                                                <a 
+                                                                    href={`https://app.sveletrica.com/produto/${item.cdproduto}`}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:underline"
                                                                 >
-                                                                    {stockData[item.cdproduto]?.StkTotal || item.qtestoqueatualempresa}
-                                                                </button>
-                                                            </StockPopover>
-                                                        </TableCell>
-                                                        <TableCell className="text-right">{item.qtcomprada}</TableCell>
-                                                        <TableCell className="text-right">
-                                                            <div className="flex items-center justify-end gap-1">
-                                                                {item.qtpedida}
-                                                                {(stockData[item.cdproduto]?.StkTotal || item.qtestoqueatualempresa) >= item.qtpedida ? (
-                                                                    <Check className="h-4 w-4 text-green-500" />
-                                                                ) : (
-                                                                    <X className="h-4 w-4 text-red-500" />
-                                                                )}
-                                                            </div>
-                                                        </TableCell>
-                                                        <TableCell className="text-right">
-                                                            {item.vlprecovendainformado.toLocaleString('pt-BR', {
-                                                                style: 'currency',
-                                                                currency: 'BRL'
-                                                            })}
-                                                        </TableCell>
-                                                        <TableCell className="text-right">
-                                                            {isSimulating ? (
-                                                                <Input
-                                                                    type="number"
-                                                                    value={simulatedDiscounts[item.cdproduto] ?? currentDiscount.toFixed(2)}
-                                                                    onChange={(e) => handleSimulatedDiscountChange(item.cdproduto, e.target.value)}
-                                                                    className="w-20 text-right"
-                                                                    min="0"
-                                                                    max="100"
-                                                                    step="0.1"
-                                                                    onKeyDown={(e) => {
-                                                                        if (e.key === 'Enter') {
-                                                                            e.preventDefault()
-                                                                            const discount = parseFloat(e.currentTarget.value)
-                                                                            if (!isNaN(discount)) {
-                                                                                handleSimulatedDiscountChange(item.cdproduto, e.currentTarget.value)
-                                                                            }
+                                                                    {item.cdproduto}
+                                                                </a>
+                                                            </TableCell>
+                                                            <TableCell>{item.nmproduto}</TableCell>
+                                                            <TableCell className="text-right">
+                                                                <StockPopover 
+                                                                    stockData={stockData[item.cdproduto] || null}
+                                                                    open={openPopoverId === item.cdproduto}
+                                                                    onOpenChange={(open) => {
+                                                                        setOpenPopoverId(open ? item.cdproduto : null)
+                                                                        if (open && !stockData[item.cdproduto] && !loadingStock[item.cdproduto]) {
+                                                                            fetchStockData(item.cdproduto)
                                                                         }
                                                                     }}
-                                                                />
-                                                            ) : (
-                                                                `${currentDiscount.toFixed(2)}%`
-                                                            )}
-                                                        </TableCell>
-                                                        <TableCell className="text-right">
-                                                            {simulatedPrice.toLocaleString('pt-BR', {
-                                                                style: 'currency',
-                                                                currency: 'BRL'
-                                                            })}
-                                                        </TableCell>
-                                                        <TableCell className="text-right">
-                                                            {item.vltotalcustoproduto.toLocaleString('pt-BR', {
-                                                                style: 'currency',
-                                                                currency: 'BRL'
-                                                            })}
-                                                        </TableCell>
-                                                        <TableCell className={`text-right ${
-                                                            margin >= 0 
-                                                                ? 'text-green-600 dark:text-green-400' 
-                                                                : 'text-red-600 dark:text-red-400'
-                                                        }`}>
-                                                            {margin.toFixed(2)}%
-                                                        </TableCell>
-                                                        <TableCell>{item.nmgrupoproduto}</TableCell>
-                                                    </TableRow>
-                                                )
-                                            })}
-                                        </TableBody>
-                                    </Table>
+                                                                    loading={loadingStock[item.cdproduto]}
+                                                                >
+                                                                    <button 
+                                                                        className="cursor-pointer hover:underline"
+                                                                        type="button"
+                                                                    >
+                                                                        {stockData[item.cdproduto]?.StkTotal || item.qtestoqueatualempresa}
+                                                                    </button>
+                                                                </StockPopover>
+                                                            </TableCell>
+                                                            <TableCell className="text-right">{item.qtcomprada}</TableCell>
+                                                            <TableCell className="text-right">
+                                                                <div className="flex items-center justify-end gap-1">
+                                                                    {item.qtpedida}
+                                                                    {(stockData[item.cdproduto]?.StkTotal || item.qtestoqueatualempresa) >= item.qtpedida ? (
+                                                                        <Check className="h-4 w-4 text-green-500" />
+                                                                    ) : (
+                                                                        <X className="h-4 w-4 text-red-500" />
+                                                                    )}
+                                                                </div>
+                                                            </TableCell>
+                                                            <TableCell className="text-right">
+                                                                {item.vlprecovendainformado.toLocaleString('pt-BR', {
+                                                                    style: 'currency',
+                                                                    currency: 'BRL'
+                                                                })}
+                                                            </TableCell>
+                                                            <TableCell className="text-right">
+                                                                {isSimulating ? (
+                                                                    <Input
+                                                                        type="number"
+                                                                        value={simulatedDiscounts[item.cdproduto] ?? currentDiscount.toFixed(2)}
+                                                                        onChange={(e) => handleSimulatedDiscountChange(item.cdproduto, e.target.value)}
+                                                                        className="w-20 text-right"
+                                                                        min="0"
+                                                                        max="100"
+                                                                        step="0.1"
+                                                                        onKeyDown={(e) => {
+                                                                            if (e.key === 'Enter') {
+                                                                                e.preventDefault()
+                                                                                const discount = parseFloat(e.currentTarget.value)
+                                                                                if (!isNaN(discount)) {
+                                                                                    handleSimulatedDiscountChange(item.cdproduto, e.currentTarget.value)
+                                                                                }
+                                                                            }
+                                                                        }}
+                                                                    />
+                                                                ) : (
+                                                                    `${currentDiscount.toFixed(2)}%`
+                                                                )}
+                                                            </TableCell>
+                                                            <TableCell className="text-right">
+                                                                {simulatedPrice.toLocaleString('pt-BR', {
+                                                                    style: 'currency',
+                                                                    currency: 'BRL'
+                                                                })}
+                                                            </TableCell>
+                                                            <TableCell className="text-right">
+                                                                {item.vltotalcustoproduto.toLocaleString('pt-BR', {
+                                                                    style: 'currency',
+                                                                    currency: 'BRL'
+                                                                })}
+                                                            </TableCell>
+                                                            <TableCell className={`text-right ${
+                                                                margin >= 0 
+                                                                    ? 'text-green-600 dark:text-green-400' 
+                                                                    : 'text-red-600 dark:text-red-400'
+                                                            }`}>
+                                                                {margin.toFixed(2)}%
+                                                            </TableCell>
+                                                            <TableCell>{item.nmgrupoproduto}</TableCell>
+                                                        </TableRow>
+                                                    )
+                                                })}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
                                 </div>
                             </div>
                         </CardContent>
