@@ -73,6 +73,7 @@ interface StockData {
     QtEstoque_Empresa13?: number;
     QtEstoque_Empresa15?: number;
     QtEstoque_Empresa17?: number;
+    QtEstoque_Empresa20?: number;
     QtEstoque_Empresa59?: number;
     StkTotal: number;
     NmProduto: string;

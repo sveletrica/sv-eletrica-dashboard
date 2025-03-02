@@ -841,7 +841,7 @@ export default function Inventory() {
             case 'CdChamada':
                 return 70;
             case 'NmProduto':
-                return isMobile ? 150 : 400;
+                return isMobile ? 150 : 300;
             case 'NmGrupoProduto':
                 return isMobile ? 100 : 120;
             case 'NmFamiliaProduto':
@@ -863,6 +863,8 @@ export default function Inventory() {
             case 'QtEstoque_Empresa13':
             case 'QtEstoque_Empresa15':
             case 'QtEstoque_Empresa17':
+            case 'QtEstoque_Empresa20':
+                return 110;
             case 'CdSigla':
                 return 40;
             case 'StkTotal':
@@ -1010,7 +1012,10 @@ export default function Inventory() {
                         columnId === 'PrecoPromo' ||
                         columnId === 'PrecoDe'
                     ) {
-                        return (a as number) > (b as number) ? 1 : -1
+                        // Ensure we're comparing numbers, with null/undefined treated as 0
+                        const numA = a === null || a === undefined ? 0 : Number(a);
+                        const numB = b === null || b === undefined ? 0 : Number(b);
+                        return numA > numB ? 1 : numA < numB ? -1 : 0;
                     }
 
                     if (
@@ -1023,7 +1028,10 @@ export default function Inventory() {
                         return dateA.getTime() - dateB.getTime()
                     }
 
-                    return (a as string).localeCompare(b as string, 'pt-BR')
+                    // For string comparison, handle null/undefined values
+                    const strA = a === null || a === undefined ? '' : String(a);
+                    const strB = b === null || b === undefined ? '' : String(b);
+                    return strA.localeCompare(strB, 'pt-BR')
                 },
                 size: getColumnSize(columnId),
                 minSize: columnId === 'NmProduto' ? 150 : 80,

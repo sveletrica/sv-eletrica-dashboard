@@ -7,6 +7,7 @@ interface StockData {
     QtEstoque_Empresa13?: number
     QtEstoque_Empresa15?: number
     QtEstoque_Empresa17?: number
+    QtEstoque_Empresa20?: number
     QtEstoque_Empresa59?: number
     StkTotal: number
 }
@@ -18,6 +19,7 @@ const companyNames: Record<string, string> = {
     'QtEstoque_Empresa13': 'Express Maracanau',
     'QtEstoque_Empresa15': 'Juazeiro',
     'QtEstoque_Empresa17': 'Express Sobral',
+    'QtEstoque_Empresa20': 'Mozart',
     'QtEstoque_Empresa59': 'Express WS',
 }
 
@@ -33,7 +35,7 @@ export function ProductStockCard({ stockData }: { stockData: StockData }) {
                         .filter(([key]) => key.startsWith('QtEstoque_'))
                         .map(([key, value]) => (
                             <div key={key} className="flex flex-col">
-                                <span className="text-sm font-medium">{companyNames[key]}</span>
+                                <span className="text-sm font-medium">{companyNames[key] || key.replace('QtEstoque_Empresa', 'Empresa ')}</span>
                                 <span className="text-2xl font-bold">{value}</span>
                             </div>
                         ))}

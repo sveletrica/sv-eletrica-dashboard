@@ -15,22 +15,41 @@ import { useAuth } from '@/components/providers/auth-provider'
 import { Building2, ShoppingBag, TrendingUp, TrendingDown, ArrowRight } from 'lucide-react'
 
 interface Product {
-  cdchamada: string
+  cdproduto: string
   nmproduto: string
   nmgrupoproduto: string
-  vlprecosugerido: number
-  vlprecoreposicao: number
+  nmfamiliaproduto: string
+  nmfornecedorprincipal: string
   qtestoque_empresa1: number
   qtestoque_empresa4: number
   qtestoque_empresa12: number
   qtestoque_empresa13: number
   qtestoque_empresa15: number
   qtestoque_empresa17: number
+  qtestoque_empresa20: number
   qtestoque_empresa59: number
-  stktotal: number
+  sktotal: number
+  vlprecosugerido: number
+  vlprecoreposicao: number
 }
 
-interface SimulationItem extends Product {
+interface SimulationItem {
+  cdproduto: string
+  nmproduto: string
+  nmgrupoproduto: string
+  nmfamiliaproduto: string
+  nmfornecedorprincipal: string
+  qtestoque_empresa1: number
+  qtestoque_empresa4: number
+  qtestoque_empresa12: number
+  qtestoque_empresa13: number
+  qtestoque_empresa15: number
+  qtestoque_empresa17: number
+  qtestoque_empresa20: number
+  qtestoque_empresa59: number
+  sktotal: number
+  vlprecosugerido: number
+  vlprecoreposicao: number
   quantidade: number
   desconto: number
 }
@@ -99,11 +118,11 @@ function AddProductDialog({ open, onOpenChange, onProductSelect }: AddProductDia
               </TableHeader>
               <TableBody>
                 {products.map((product) => (
-                  <TableRow key={product.cdchamada}>
-                    <TableCell>{product.cdchamada}</TableCell>
+                  <TableRow key={product.cdproduto}>
+                    <TableCell>{product.cdproduto}</TableCell>
                     <TableCell>{product.nmproduto}</TableCell>
                     <TableCell>{product.nmgrupoproduto}</TableCell>
-                    <TableCell className="text-right">{product.stktotal}</TableCell>
+                    <TableCell className="text-right">{product.sktotal}</TableCell>
                     <TableCell className="text-right">
                       {product.vlprecosugerido.toLocaleString('pt-BR', {
                         style: 'currency',
@@ -322,21 +341,24 @@ function ImportSQLDialog({ open, onOpenChange, onImport }: ImportSQLDialogProps)
         const desconto = ((item.VlPrecoVendaInformado - item.VlFaturamento) / item.VlPrecoVendaInformado) * 100
         
         return {
-          cdchamada: item.CdProduto,
+          cdproduto: item.CdProduto,
           nmproduto: item.NmProduto,
           nmgrupoproduto: '', // Não disponível na API
-          vlprecosugerido: item.VlPrecoVendaInformado / item.QtPedida,
-          vlprecoreposicao: item.VlPrecoCustoInformado / item.QtPedida,
-          quantidade: item.QtPedida,
-          desconto: parseFloat(desconto.toFixed(2)),
+          nmfamiliaproduto: '', // Não disponível na API
+          nmfornecedorprincipal: '', // Não disponível na API
           qtestoque_empresa1: 0, // Valores default já que não temos o estoque por empresa
           qtestoque_empresa4: 0,
           qtestoque_empresa12: 0,
           qtestoque_empresa13: 0,
           qtestoque_empresa15: 0,
           qtestoque_empresa17: 0,
+          qtestoque_empresa20: 0,
           qtestoque_empresa59: 0,
-          stktotal: item.QtEstoqueAtualEmpresa
+          sktotal: item.QtEstoqueAtualEmpresa,
+          vlprecosugerido: item.VlPrecoVendaInformado / item.QtPedida,
+          vlprecoreposicao: item.VlPrecoCustoInformado / item.QtPedida,
+          quantidade: item.QtPedida,
+          desconto: parseFloat(desconto.toFixed(2)),
         }
       }).filter(Boolean)
       
@@ -495,7 +517,7 @@ export default function SimulationPage() {
         if (!response.ok) continue
         
         const data = await response.json()
-        const product = data.find((p: Product) => p.cdchamada.trim() === item.codigo)
+        const product = data.find((p: Product) => p.cdproduto.trim() === item.codigo)
         
         if (product) {
           const desconto = ((product.vlprecosugerido - item.precoFinal) / product.vlprecosugerido) * 100
@@ -538,11 +560,11 @@ export default function SimulationPage() {
         item.vlprecoreposicao,
         marginValue
       )
-      newDiscounts[item.cdchamada] = parseFloat(targetMarginDiscount.toFixed(2))
+      newDiscounts[item.cdproduto] = parseFloat(targetMarginDiscount.toFixed(2))
     })
     setItems(prev => prev.map(item => ({
       ...item,
-      desconto: newDiscounts[item.cdchamada]
+      desconto: newDiscounts[item.cdproduto]
     })))
   }
 
@@ -555,11 +577,11 @@ export default function SimulationPage() {
 
     const newDiscounts: Record<string, number> = {}
     items.forEach(item => {
-      newDiscounts[item.cdchamada] = parseFloat(globalDiscountNeeded.toFixed(2))
+      newDiscounts[item.cdproduto] = parseFloat(globalDiscountNeeded.toFixed(2))
     })
     setItems(prev => prev.map(item => ({
       ...item,
-      desconto: newDiscounts[item.cdchamada]
+      desconto: newDiscounts[item.cdproduto]
     })))
   }
 
@@ -1391,9 +1413,9 @@ export default function SimulationPage() {
 
                           return (
                             <TableRow key={index}>
-                              <TableCell>{item.cdchamada}</TableCell>
+                              <TableCell>{item.cdproduto}</TableCell>
                               <TableCell>{item.nmproduto}</TableCell>
-                              <TableCell className="text-right">{item.stktotal}</TableCell>
+                              <TableCell className="text-right">{item.sktotal}</TableCell>
                               <TableCell>
                                 <Input
                                   type="number"

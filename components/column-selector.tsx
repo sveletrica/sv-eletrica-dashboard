@@ -18,6 +18,20 @@ interface ColumnSelectorProps {
 }
 
 export function ColumnSelector({ visibleColumns, onColumnChange }: ColumnSelectorProps) {
+  // Organize columns by category for better UX
+  const stockColumns = Object.entries(columnDefinitions)
+    .filter(([id]) => id.startsWith('QtEstoque_') || id === 'StkTotal')
+    .sort() as [ColumnId, { label: string }][];
+  
+  const priceColumns = Object.entries(columnDefinitions)
+    .filter(([id]) => id.startsWith('VlPreco') || id === 'PrecoPromo' || id === 'PrecoDe')
+    .sort() as [ColumnId, { label: string }][];
+  
+  const otherColumns = Object.entries(columnDefinitions)
+    .filter(([id]) => !id.startsWith('QtEstoque_') && !id.startsWith('VlPreco') && 
+                      id !== 'StkTotal' && id !== 'PrecoPromo' && id !== 'PrecoDe')
+    .sort() as [ColumnId, { label: string }][];
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -26,10 +40,40 @@ export function ColumnSelector({ visibleColumns, onColumnChange }: ColumnSelecto
           Colunas
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[200px]">
+      <DropdownMenuContent align="end" className="w-[200px] max-h-[400px] overflow-y-auto">
         <DropdownMenuLabel>Colunas Visíveis</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {(Object.entries(columnDefinitions) as [ColumnId, { label: string }][]).map(
+        
+        <DropdownMenuLabel className="text-xs text-muted-foreground">Informações</DropdownMenuLabel>
+        {otherColumns.map(
+          ([id, { label }]) => (
+            <DropdownMenuCheckboxItem
+              key={id}
+              checked={visibleColumns.has(id)}
+              onCheckedChange={() => onColumnChange(id)}
+            >
+              {label}
+            </DropdownMenuCheckboxItem>
+          )
+        )}
+        
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel className="text-xs text-muted-foreground">Estoque</DropdownMenuLabel>
+        {stockColumns.map(
+          ([id, { label }]) => (
+            <DropdownMenuCheckboxItem
+              key={id}
+              checked={visibleColumns.has(id)}
+              onCheckedChange={() => onColumnChange(id)}
+            >
+              {label}
+            </DropdownMenuCheckboxItem>
+          )
+        )}
+        
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel className="text-xs text-muted-foreground">Preços</DropdownMenuLabel>
+        {priceColumns.map(
           ([id, { label }]) => (
             <DropdownMenuCheckboxItem
               key={id}

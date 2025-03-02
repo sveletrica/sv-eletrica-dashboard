@@ -62,6 +62,7 @@ interface StockData {
     QtEstoque_Empresa13?: number;
     QtEstoque_Empresa15?: number;
     QtEstoque_Empresa17?: number;
+    QtEstoque_Empresa20?: number;
     QtEstoque_Empresa59?: number;
     StkTotal: number;
 }
@@ -419,6 +420,7 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                     QtEstoque_Empresa13: data.stock[0].QtEstoque_Empresa13 || data.stock[0].qtestoque_empresa13 || 0,
                     QtEstoque_Empresa15: data.stock[0].QtEstoque_Empresa15 || data.stock[0].qtestoque_empresa15 || 0,
                     QtEstoque_Empresa17: data.stock[0].QtEstoque_Empresa17 || data.stock[0].qtestoque_empresa17 || 0,
+                    QtEstoque_Empresa20: data.stock[0].QtEstoque_Empresa20 || data.stock[0].qtestoque_empresa20 || 0,
                     QtEstoque_Empresa59: data.stock[0].QtEstoque_Empresa59 || data.stock[0].qtestoque_empresa59 || 0,
                     StkTotal: data.stock[0].StkTotal || data.stock[0].sktotal || 
                         (data.stock[0].QtEstoque_Empresa1 || data.stock[0].qtestoque_empresa1 || 0) +
@@ -427,6 +429,7 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                         (data.stock[0].QtEstoque_Empresa13 || data.stock[0].qtestoque_empresa13 || 0) +
                         (data.stock[0].QtEstoque_Empresa15 || data.stock[0].qtestoque_empresa15 || 0) +
                         (data.stock[0].QtEstoque_Empresa17 || data.stock[0].qtestoque_empresa17 || 0) +
+                        (data.stock[0].QtEstoque_Empresa20 || data.stock[0].qtestoque_empresa20 || 0) +
                         (data.stock[0].QtEstoque_Empresa59 || data.stock[0].qtestoque_empresa59 || 0)
                 }
                 setStockData(prev => ({
@@ -865,19 +868,19 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                 <div className="rounded-md border">
                                     <div className="overflow-x-auto">
                                         <div className="min-w-[800px] max-h-[500px] overflow-y-auto">
-                                            <Table>
+                                            <Table className="text-xs md:text-sm">
                                                 <TableHeader>
                                                     <TableRow>
-                                                        <TableHead>Data</TableHead>
-                                                        <TableHead>Código</TableHead>
-                                                        <TableHead>Cliente</TableHead>
-                                                        <TableHead>Filial</TableHead>
-                                                        <TableHead>Vendedor</TableHead>
-                                                        <TableHead className="text-right">Qtd Produtos</TableHead>
-                                                        <TableHead className="text-right">Total</TableHead>
-                                                        <TableHead className="text-right">Margem</TableHead>
-                                                        <TableHead className="text-right">% Disp</TableHead>
-                                                        <TableHead></TableHead>
+                                                        <TableHead className="text-xs md:text-sm font-medium">Data</TableHead>
+                                                        <TableHead className="text-xs md:text-sm font-medium">Código</TableHead>
+                                                        <TableHead className="text-xs md:text-sm font-medium">Cliente</TableHead>
+                                                        <TableHead className="text-xs md:text-sm font-medium">Filial</TableHead>
+                                                        <TableHead className="text-xs md:text-sm font-medium">Vendedor</TableHead>
+                                                        <TableHead className="text-xs md:text-sm font-medium text-right">Qtd Produtos</TableHead>
+                                                        <TableHead className="text-xs md:text-sm font-medium text-right">Total</TableHead>
+                                                        <TableHead className="text-xs md:text-sm font-medium text-right">Margem</TableHead>
+                                                        <TableHead className="text-xs md:text-sm font-medium text-right">% Disp</TableHead>
+                                                        <TableHead className="text-xs md:text-sm font-medium"></TableHead>
                                                     </TableRow>
                                                 </TableHeader>
                                                 <TableBody>
@@ -891,11 +894,11 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                                                 className="cursor-pointer hover:bg-muted/50"
                                                                 onClick={() => router.push(`/orcamento/${quotation.cdpedidodevenda}`)}
                                                             >
-                                                                <TableCell>
+                                                                <TableCell className="py-2 md:py-4">
                                                                     {quotation.dtemissao}
                                                                 </TableCell>
-                                                                <TableCell>{quotation.cdpedidodevenda}</TableCell>
-                                                                <TableCell>
+                                                                <TableCell className="py-2 md:py-4">{quotation.cdpedidodevenda}</TableCell>
+                                                                <TableCell className="py-2 md:py-4">
                                                                     <a 
                                                                         href={`/cliente/${encodeURIComponent(quotation.nmpessoa)}`}
                                                                         className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:underline"
@@ -906,8 +909,8 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                                                         {quotation.nmpessoa}
                                                                     </a>
                                                                 </TableCell>
-                                                                <TableCell>{quotation.nmempresacurtovenda}</TableCell>
-                                                                <TableCell>
+                                                                <TableCell className="py-2 md:py-4">{quotation.nmempresacurtovenda}</TableCell>
+                                                                <TableCell className="py-2 md:py-4">
                                                                     <Link
                                                                         href={`/vendedor/${encodeURIComponent(quotation.nmrepresentantevenda)}?returnUrl=${encodeURIComponent(window.location.pathname)}`}
                                                                         className="text-blue-500 hover:text-blue-700 underline"

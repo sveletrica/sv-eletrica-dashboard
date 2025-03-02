@@ -38,6 +38,7 @@ export async function GET(
                 QtEstoque_Empresa13: 0,
                 QtEstoque_Empresa15: 0,
                 QtEstoque_Empresa17: 0,
+                QtEstoque_Empresa20: 0,
                 QtEstoque_Empresa59: 0,
                 StkTotal: 0
             })
@@ -51,6 +52,7 @@ export async function GET(
             QtEstoque_Empresa13: data[0].qtestoque_empresa13 || 0,
             QtEstoque_Empresa15: data[0].qtestoque_empresa15 || 0,
             QtEstoque_Empresa17: data[0].qtestoque_empresa17 || 0,
+            QtEstoque_Empresa20: data[0].qtestoque_empresa20 || 0,
             QtEstoque_Empresa59: data[0].qtestoque_empresa59 || 0,
             StkTotal: data[0].sktotal || 0,
             NmProduto: data[0].nmproduto || '',

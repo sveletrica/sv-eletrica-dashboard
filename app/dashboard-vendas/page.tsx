@@ -1146,7 +1146,7 @@ export default function DashboardVendas() {
                         {Object.entries(vendedor.filiais)
                           .sort(([, a], [, b]) => b.vlfaturamento - a.vlfaturamento)
                           .map(([filialNome, filialData]) => (
-                            <div key={filialNome} className="flex justify-between text-xs">
+                            <div key={filialNome} className="flex justify-between text-sm font-bold">
                               <span className="truncate" title={filialNome}>{filialNome}:</span>
                               <span className={getMarginTextColor(filialData.margem)}>
                                 {new Intl.NumberFormat('pt-BR', {

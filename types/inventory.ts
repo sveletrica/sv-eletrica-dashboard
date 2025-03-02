@@ -11,6 +11,7 @@ export interface InventoryItem {
   QtEstoque_Empresa13: number;
   QtEstoque_Empresa15: number;
   QtEstoque_Empresa17: number;
+  QtEstoque_Empresa20: number;
   StkTotal: number;
   VlPreco_Empresa59: number;
   Atualizacao: string;
@@ -34,7 +35,8 @@ export const columnDefinitions = {
   QtEstoque_Empresa59: { label: 'Stk WS', show: true },
   QtEstoque_Empresa13: { label: 'Stk MA', show: false },
   QtEstoque_Empresa15: { label: 'Stk JU', show: false },
-  QtEstoque_Empresa17: { label: 'Stk Sobral', show: true },
+  QtEstoque_Empresa17: { label: 'Stk Sobral', show: false },
+  QtEstoque_Empresa20: { label: 'Stk Mozart', show: true },
   StkTotal: { label: 'Stk Total', show: true },
   VlPreco_Empresa59: { label: 'Preço', show: true },
   Atualizacao: { label: 'Última Atualização', show: false },

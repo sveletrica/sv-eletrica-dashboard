@@ -75,7 +75,7 @@ export function StockPopover({
                                                          filialNumber === '13' ? 'Express Maracanau' :
                                                          filialNumber === '15' ? 'Juazeiro' :
                                                          filialNumber === '17' ? 'Express Sobral' :
-                                                         filialNumber === '20' ? 'Express Mozart' :
+                                                         filialNumber === '20' ? 'Mozart' :
                                                          filialNumber === '59' ? 'Express WS' :
                                                          `Filial ${filialNumber}`}
                                                     </span>
