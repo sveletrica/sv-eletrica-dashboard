@@ -785,7 +785,7 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
     if (!initialCode && data.length === 0) {
         return (
             <PermissionGuard permission="quotations">
-            <div className="h-full p-4 space-y-4">
+            <div className="h-full p-2 sm:p-4 space-y-4">
                 <Card className="w-full max-w-2xl mx-auto">
                     <CardHeader>
                         <CardTitle className="text-center text-2xl font-bold">
