@@ -377,7 +377,7 @@ export default function ClientDetails() {
 
     const PaginationControls = () => (
         <div className="flex items-center justify-between px-2 py-4">
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs md:text-sm text-muted-foreground">
                 Mostrando {((currentPage - 1) * ITEMS_PER_PAGE) + 1} até {Math.min(currentPage * ITEMS_PER_PAGE, sortedData.length)} de {sortedData.length} resultados
             </p>
             <div className="flex items-center space-x-2">
@@ -388,9 +388,9 @@ export default function ClientDetails() {
                     disabled={currentPage === 1}
                 >
                     <ChevronLeft className="h-4 w-4" />
-                    Anterior
+                    Ant.
                 </Button>
-                <div className="text-sm font-medium">
+                <div className="text-xs md:text-sm font-medium">
                     Página {currentPage} de {totalPages}
                 </div>
                 <Button
@@ -399,7 +399,7 @@ export default function ClientDetails() {
                     onClick={() => setCurrentPage(page => Math.min(totalPages, page + 1))}
                     disabled={currentPage === totalPages}
                 >
-                    Próxima
+                    Próx
                     <ChevronRight className="h-4 w-4" />
                 </Button>
             </div>
@@ -669,14 +669,14 @@ export default function ClientDetails() {
                                 <Table>
                                     <TableHeader>
                                         <TableRow className="hover:bg-transparent">
-                                            <TableHead className="py-1 text-sm">Data</TableHead>
-                                            <TableHead className="py-1 text-sm">Código</TableHead>
-                                            <TableHead className="py-1 text-sm">Filial</TableHead>
-                                            <TableHead className="py-1 text-sm">Vendedor</TableHead>
-                                            <TableHead className="py-1 text-sm text-right">Qtd Skus.</TableHead>
-                                            <TableHead className="py-1 text-sm text-right">Total</TableHead>
-                                            <TableHead className="py-1 text-sm text-right">Margem</TableHead>
-                                            <TableHead className="py-1 text-sm text-right">% Disp</TableHead>
+                                            <TableHead className="py-1 text-xs md:text-sm">Data</TableHead>
+                                            <TableHead className="py-1 text-xs md:text-sm">Código</TableHead>
+                                            <TableHead className="py-1 text-xs md:text-sm">Filial</TableHead>
+                                            <TableHead className="py-1 text-xs md:text-sm">Vendedor</TableHead>
+                                            <TableHead className="py-1 text-xs md:text-sm text-right">Qtd Skus.</TableHead>
+                                            <TableHead className="py-1 text-xs md:text-sm text-right">Total</TableHead>
+                                            <TableHead className="py-1 text-xs md:text-sm text-right">Margem</TableHead>
+                                            <TableHead className="py-1 text-xs md:text-sm text-right">% Disp</TableHead>
                                             <TableHead className="py-1 w-8"></TableHead>
                                         </TableRow>
                                     </TableHeader>
@@ -691,28 +691,28 @@ export default function ClientDetails() {
                                                     className="cursor-pointer hover:bg-muted/50"
                                                     onClick={() => router.push(`/orcamento/${quotation.cdpedidodevenda}`)}
                                                 >
-                                                    <TableCell className="py-1 text-sm">
+                                                    <TableCell className="py-1 text-xs md:text-sm">
                                                         {quotation.dtemissao}
                                                     </TableCell>
-                                                    <TableCell className="py-1 text-sm">
+                                                    <TableCell className="py-1 text-xs md:text-sm">
                                                         {quotation.cdpedidodevenda}
                                                     </TableCell>
-                                                    <TableCell className="py-1 text-sm">
+                                                    <TableCell className="py-1 text-xs md:text-sm">
                                                         {quotation.nmempresacurtovenda}
                                                     </TableCell>
-                                                    <TableCell className="py-1 text-sm">
+                                                    <TableCell className="py-1 text-xs md:text-sm">
                                                         {quotation.nmrepresentantevenda}
                                                     </TableCell>
-                                                    <TableCell className="py-1 text-sm text-right">
+                                                    <TableCell className="py-1 text-xs md:text-sm text-right">
                                                         {quotation.qtd_produtos}
                                                     </TableCell>
-                                                    <TableCell className="py-1 text-sm text-right whitespace-nowrap">
+                                                    <TableCell className="py-1 text-xs md:text-sm text-right whitespace-nowrap">
                                                         {quotation.total_faturamento.toLocaleString('pt-BR', {
                                                             style: 'currency',
                                                             currency: 'BRL'
                                                         })}
                                                     </TableCell>
-                                                    <TableCell className={`py-1 text-sm text-right ${
+                                                    <TableCell className={`py-1 text-xs md:text-sm text-right ${
                                                         margin >= 5
                                                             ? 'text-green-600 dark:text-green-400'
                                                             : margin >= 0
@@ -721,7 +721,7 @@ export default function ClientDetails() {
                                                     }`}>
                                                         {margin.toFixed(2)}%
                                                     </TableCell>
-                                                    <TableCell className={`py-1 text-sm text-right ${
+                                                    <TableCell className={`py-1 text-xs md:text-sm text-right ${
                                                         isFullyAvailable ? 'bg-green-100 dark:bg-green-900/30' : ''
                                                     }`}>
                                                         {Math.max(0, quotation.percentualdisponivel || 0).toFixed(2)}%
