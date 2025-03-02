@@ -1147,7 +1147,23 @@ export default function Inventory() {
             }
         };
         
-        loadVisibleImages();
+        // Set up image loading for visible rows
+        if (viewMode === 'table' && !isLoading) {
+            loadVisibleImages();
+            
+            // Set up scroll listener for lazy loading
+            const tableContainer = tableContainerRef.current;
+            if (tableContainer) {
+                const handleScroll = debounce(() => {
+                    loadVisibleImages();
+                }, 200);
+                
+                tableContainer.addEventListener('scroll', handleScroll);
+                return () => {
+                    tableContainer.removeEventListener('scroll', handleScroll);
+                };
+            }
+        }
     }, [viewMode, isLoading, filteredData]);
 
     // Add this function to handle column reordering
