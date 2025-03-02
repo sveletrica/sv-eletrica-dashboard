@@ -25,6 +25,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
+import Link from 'next/link'
 
 const roboto = Roboto({
     weight: ['400', '500', '700'],
@@ -906,7 +907,14 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                                                     </a>
                                                                 </TableCell>
                                                                 <TableCell>{quotation.nmempresacurtovenda}</TableCell>
-                                                                <TableCell>{quotation.nmrepresentantevenda}</TableCell>
+                                                                <TableCell>
+                                                                    <Link
+                                                                        href={`/vendedor/${encodeURIComponent(quotation.nmrepresentantevenda)}?returnUrl=${encodeURIComponent(window.location.pathname)}`}
+                                                                        className="text-blue-500 hover:text-blue-700 underline"
+                                                                    >
+                                                                        {quotation.nmrepresentantevenda}
+                                                                    </Link>
+                                                                </TableCell>
                                                                 <TableCell className="text-right">
                                                                     {quotation.qtd_produtos}
                                                                 </TableCell>
