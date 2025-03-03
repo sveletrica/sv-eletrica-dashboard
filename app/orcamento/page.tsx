@@ -912,7 +912,7 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                                                 <TableCell className="py-2 md:py-4">{quotation.nmempresacurtovenda}</TableCell>
                                                                 <TableCell className="py-2 md:py-4">
                                                                     <Link
-                                                                        href={`/vendedor/${encodeURIComponent(quotation.nmrepresentantevenda)}?returnUrl=${encodeURIComponent(window.location.pathname)}`}
+                                                                        href={`/vendedor/${encodeURIComponent(quotation.nmrepresentantevenda)}`}
                                                                         className="text-blue-500 hover:text-blue-700 underline"
                                                                     >
                                                                         {quotation.nmrepresentantevenda}
@@ -1403,10 +1403,24 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                             </CardHeader>
                             <CardContent>
                                 <div className="space-y-2">
-                                    <p className="text-xs"><span className="font-bold">Cliente:</span> {data[0].nmpessoa}</p>
+                                    <p className="text-xs"><span className="font-bold">Cliente:</span> 
+                                        <Link 
+                                            href={`/cliente/${encodeURIComponent(data[0].nmpessoa)}`} 
+                                            className="text-blue-600 hover:underline ml-1"
+                                        >
+                                            {data[0].nmpessoa}
+                                        </Link>
+                                    </p>
                                     <p className="text-xs"><span className="font-bold">Cidade:</span> {data[0].nmcidade}</p>
                                     <p className="text-xs"><span className="font-bold">Filial:</span> {data[0].nmempresacurtovenda}</p>
-                                    <p className="text-xs"><span className="font-bold">Vendedor:</span> {data[0].nmrepresentantevenda}</p>
+                                    <p className="text-xs"><span className="font-bold">Vendedor:</span> 
+                                        <Link 
+                                            href={`/vendedor/${encodeURIComponent(data[0].nmrepresentantevenda)}`} 
+                                            className="text-blue-600 hover:underline ml-1"
+                                        >
+                                            {data[0].nmrepresentantevenda}
+                                        </Link>
+                                    </p>
                                 </div>
                             </CardContent>
                         </Card>

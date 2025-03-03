@@ -692,25 +692,26 @@ export default function ClientDetails() {
                                                     onClick={() => router.push(`/orcamento/${quotation.cdpedidodevenda}`)}
                                                 >
                                                     <TableCell className="py-1 text-xs md:text-sm">
-                                                        {quotation.dtemissao}
+                                                        {new Date(quotation.dtemissao).toLocaleDateString('pt-BR')}
                                                     </TableCell>
                                                     <TableCell className="py-1 text-xs md:text-sm">
-                                                        {quotation.cdpedidodevenda}
+                                                        <Link href={`/orcamento/${quotation.cdpedidodevenda}`} className="text-blue-600 hover:underline">
+                                                            {quotation.cdpedidodevenda}
+                                                        </Link>
                                                     </TableCell>
+                                                    <TableCell className="py-1 text-xs md:text-sm">{quotation.nmempresacurtovenda}</TableCell>
                                                     <TableCell className="py-1 text-xs md:text-sm">
-                                                        {quotation.nmempresacurtovenda}
+                                                        <Link 
+                                                            href={`/vendedor/${encodeURIComponent(quotation.nmrepresentantevenda)}`} 
+                                                            className="text-blue-600 hover:underline"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        >
+                                                            {quotation.nmrepresentantevenda}
+                                                        </Link>
                                                     </TableCell>
-                                                    <TableCell className="py-1 text-xs md:text-sm">
-                                                        {quotation.nmrepresentantevenda}
-                                                    </TableCell>
-                                                    <TableCell className="py-1 text-xs md:text-sm text-right">
-                                                        {quotation.qtd_produtos}
-                                                    </TableCell>
+                                                    <TableCell className="py-1 text-xs md:text-sm text-right">{quotation.qtd_produtos}</TableCell>
                                                     <TableCell className="py-1 text-xs md:text-sm text-right whitespace-nowrap">
-                                                        {quotation.total_faturamento.toLocaleString('pt-BR', {
-                                                            style: 'currency',
-                                                            currency: 'BRL'
-                                                        })}
+                                                        R$ {quotation.total_preco_venda.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                                     </TableCell>
                                                     <TableCell className={`py-1 text-xs md:text-sm text-right ${
                                                         margin >= 5
