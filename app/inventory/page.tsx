@@ -1004,6 +1004,15 @@ export default function Inventory() {
                         }
                     }
                     
+                    // Truncate supplier name with ellipsis
+                    if (columnId === 'NmFornecedorPrincipal' && typeof formattedValue === 'string') {
+                        return (
+                            <div className="truncate max-w-[150px]" title={formattedValue}>
+                                {formattedValue}
+                            </div>
+                        );
+                    }
+                    
                     if (searchTerm && typeof formattedValue === 'string') {
                         return (
                             <HighlightedText 
@@ -1541,19 +1550,13 @@ export default function Inventory() {
                                                     <TableCell 
                                                         key={cell.id}
                                                         className={cn(
-                                                            "px-2 first:pl-4 last:pr-4",
-                                                            roboto.className,
-                                                            "text-xs sm:text-sm",
-                                                            cell.column.id === 'NmGrupoProduto' && "max-w-[100px] sm:max-w-[120px] truncate",
+                                                            "px-4 py-2",
+                                                            cell.column.id === 'imagem' && "w-[60px]",
                                                             cell.column.id === 'NmProduto' && "max-w-[200px] sm:max-w-[600px]",
-                                                            cell.column.id === 'NmFornecedorPrincipal' && "max-w-[120px] sm:max-w-[150px] truncate",
-                                                            cell.column.id === 'StkTotal' && row.original && row.original.StkTotal !== undefined && row.original.StkTotal <= 0 && "text-gray-400"
+                                                            cell.column.id === 'StkTotal' && row.original && row.original.StkTotal <= 0 && "text-gray-400"
                                                         )}
                                                         style={{
                                                             width: cell.column.getSize(),
-                                                            maxWidth: cell.column.getSize(),
-                                                            whiteSpace: cell.column.id === 'NmGrupoProduto' ? 'nowrap' : 'normal',
-                                                            wordBreak: cell.column.id === 'NmGrupoProduto' ? 'normal' : 'break-word'
                                                         }}
                                                     >
                                                         {flexRender(
