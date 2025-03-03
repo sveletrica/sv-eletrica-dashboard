@@ -192,7 +192,21 @@ export default function Inventory() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const pathname = usePathname()
+    const tableContainerRef = useRef<HTMLDivElement>(null);
     
+    // Add debounce utility function
+    const debounce = (func: Function, wait: number) => {
+        let timeout: NodeJS.Timeout;
+        return function executedFunction(...args: any[]) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    };
+
     const [isLoading, setIsLoading] = useState(true)
     const [isRefreshing, setIsRefreshing] = useState(false)
     const [searchTerm, setSearchTerm] = useState(searchParams.get('q') || '')
@@ -1097,74 +1111,51 @@ export default function Inventory() {
     // Initialize the table
     const table = useReactTable(tableConfig);
 
-    // Now we can add the effect that uses the table
+    // Update the loadVisibleImages function
     useEffect(() => {
         const loadVisibleImages = async () => {
-            if (!tableContainerRef.current) return;
+            // Get only the rows that are currently visible in the paginated view
+            const visibleRows = table.getRowModel().rows.slice(
+                pageIndex * pageSize,
+                (pageIndex + 1) * pageSize
+            );
             
-            // Get visible rows
-            const visibleRows = Array.from(tableContainerRef.current.querySelectorAll('tbody tr'));
-            
-            // Extract product codes from visible rows
-            const visibleCodes = new Set();
-            visibleRows.forEach(row => {
-                const codeCell = row.querySelector('td[data-column-id="CdChamada"]');
-                if (codeCell) {
-                    const code = codeCell.textContent?.trim();
-                    if (code) visibleCodes.add(code);
-                }
-            });
-            
-            // Load images for visible products that aren't already cached
-            for (const cdChamada of visibleCodes) {
-                if (imageCache[cdChamada] === undefined) {
+            // Create a batch of promises for all uncached images
+            const imagePromises = visibleRows
+                .map(row => row.getValue('CdChamada') as string)
+                .filter(cdChamada => cdChamada && imageCache[cdChamada] === undefined)
+                .map(async cdChamada => {
                     try {
                         const imageUrl = await getProductImage(cdChamada);
-                        setImageCache(prev => {
-                            // Only update if the value isn't already set (prevent unnecessary updates)
-                            if (prev[cdChamada] === undefined) {
-                                return {
-                                    ...prev,
-                                    [cdChamada]: imageUrl
-                                };
-                            }
-                            return prev;
-                        });
-                    } catch (error) {
-                        console.error(`Error loading image for ${cdChamada}:`, error);
-                        // Mark as failed to prevent repeated attempts
-                        setImageCache(prev => {
-                            if (prev[cdChamada] === undefined) {
-                                return {
-                                    ...prev,
-                                    [cdChamada]: null
-                                };
-                            }
-                            return prev;
-                        });
+                        return { cdChamada, imageUrl, error: null };
+                    } catch (error: any) {
+                        return { 
+                            cdChamada, 
+                            imageUrl: null, 
+                            error: error?.message?.includes('contains 0 rows') ? 'no_image' : error 
+                        };
                     }
-                }
-            }
-        };
-        
-        // Set up image loading for visible rows
-        if (viewMode === 'table' && !isLoading) {
-            loadVisibleImages();
+                });
+
+            if (imagePromises.length === 0) return;
+
+            // Process all images in parallel and update cache once
+            const results = await Promise.all(imagePromises);
             
-            // Set up scroll listener for lazy loading
-            const tableContainer = tableContainerRef.current;
-            if (tableContainer) {
-                const handleScroll = debounce(() => {
-                    loadVisibleImages();
-                }, 200);
-                
-                tableContainer.addEventListener('scroll', handleScroll);
-                return () => {
-                    tableContainer.removeEventListener('scroll', handleScroll);
-                };
-            }
+            setImageCache(prev => {
+                const updates = results.reduce((acc, { cdChamada, imageUrl }) => {
+                    acc[cdChamada] = imageUrl;
+                    return acc;
+                }, {} as Record<string, string | null>);
+
+                return { ...prev, ...updates };
+            });
+        };
+
+        if (!isLoading) {
+            loadVisibleImages();
         }
-    }, [viewMode, isLoading, filteredData]);
+    }, [table, pageIndex, pageSize, isLoading]); // Removed imageCache from dependencies
 
     // Add this function to handle column reordering
     const handleColumnReorder = useCallback((draggedColumnId: string, targetColumnId: string) => {
@@ -1448,7 +1439,7 @@ export default function Inventory() {
                     </CardHeader>
                     <CardContent>
                         {viewMode === 'table' ? (
-                            <div className="relative overflow-x-auto">
+                            <div className="relative overflow-x-auto" ref={tableContainerRef}>
                                 <Table style={TABLE_STYLES}>
                                     <TableHeader>
                                         <TableRow>
