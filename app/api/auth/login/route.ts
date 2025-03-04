@@ -1,12 +1,10 @@
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { cookies } from 'next/headers'
+import { createAdminClient } from '@/lib/supabase-client'
 
-const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL as string,
-    process.env.SUPABASE_SERVICE_ROLE_KEY as string
-)
+// Create a new admin client for this API route
+const supabase = createAdminClient()
 
 export async function POST(request: Request) {
     try {
@@ -49,8 +47,8 @@ export async function POST(request: Request) {
         const { password: _, ...userWithoutPassword } = user
 
         // Set session cookie
-        const cookieStore = cookies()
-        cookieStore.set('session', JSON.stringify(userWithoutPassword), {
+        const cookieStore = await cookies()
+        await cookieStore.set('session', JSON.stringify(userWithoutPassword), {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',

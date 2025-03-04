@@ -7,13 +7,14 @@
     right: 0;
     top: 0;
     height: 100%;
-    width: 4px;
+    width: 5px; /* Increased width for easier targeting */
     background: rgba(0, 0, 0, 0.5);
     cursor: col-resize;
     user-select: none;
     touch-action: none;
     opacity: 0;
     transition: opacity 0.2s;
+    z-index: 10; /* Ensure it's above other elements */
 }
 
 .resizer.isResizing {
@@ -22,7 +23,7 @@
 }
 
 *:hover > .resizer {
-    opacity: 1;
+    opacity: 1 !important;
 }
 
 .resize-handle {

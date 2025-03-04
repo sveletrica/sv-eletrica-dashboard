@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 
 export async function GET() {
-    const cookieStore = cookies()
-    const sessionCookie = cookieStore.get('session')
+    const cookieStore = await cookies()
+    const sessionCookie = await cookieStore.get('session')
     
     if (!sessionCookie?.value) {
         return NextResponse.json(

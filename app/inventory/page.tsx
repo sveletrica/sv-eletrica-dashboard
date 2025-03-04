@@ -1456,7 +1456,7 @@ export default function Inventory() {
                                                 <TableHead 
                                                     key={header.id}
                                                     className={cn(
-                                                        "whitespace-nowrap px-2 first:pl-4 last:pr-4 relative select-none group",
+                                                        "whitespace-nowrap px-2 first:pl-4 last:pr-4 relative select-none group text-xs font-medium",
                                                         header.column.getCanResize() && "resize-handle"
                                                     )}
                                                     style={{
@@ -1529,8 +1529,9 @@ export default function Inventory() {
                                                             onMouseDown={header.getResizeHandler()}
                                                             onTouchStart={header.getResizeHandler()}
                                                             className={cn(
-                                                                "absolute right-0 top-0 h-full w-1 cursor-col-resize select-none touch-none",
-                                                                "opacity-0 group-hover:opacity-100 bg-gray-200 hover:bg-gray-400"
+                                                                "resizer",
+                                                                header.column.getIsResizing() ? "isResizing" : "",
+                                                                "opacity-0 group-hover:opacity-100"
                                                             )}
                                                         />
                                                     )}
@@ -1550,7 +1551,7 @@ export default function Inventory() {
                                                     <TableCell 
                                                         key={cell.id}
                                                         className={cn(
-                                                            "px-4 py-2",
+                                                            "px-4 py-2 text-xs",
                                                             cell.column.id === 'imagem' && "w-[60px]",
                                                             cell.column.id === 'NmProduto' && "max-w-[200px] sm:max-w-[600px]",
                                                             cell.column.id === 'StkTotal' && row.original && row.original.StkTotal <= 0 && "text-gray-400"
