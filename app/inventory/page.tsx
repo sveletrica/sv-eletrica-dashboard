@@ -1121,50 +1121,76 @@ export default function Inventory() {
     const table = useReactTable(tableConfig);
 
     // Update the loadVisibleImages function
+    // Effect for loading images when page changes
     useEffect(() => {
+        let mounted = true;
+        let controller = new AbortController();
+        
         const loadVisibleImages = async () => {
-            // Get only the rows that are currently visible in the paginated view
-            const visibleRows = table.getRowModel().rows.slice(
-                pageIndex * pageSize,
-                (pageIndex + 1) * pageSize
-            );
+            if (!mounted) return;
             
-            // Create a batch of promises for all uncached images
-            const imagePromises = visibleRows
+            // Get paginated data directly from the current page
+            const paginatedData = table.getPaginationRowModel().rows;
+            
+            if (!paginatedData.length) return;
+            
+            // Create a batch of promises for all uncached images on this page
+            const uncachedProducts = paginatedData
                 .map(row => row.getValue('CdChamada') as string)
-                .filter(cdChamada => cdChamada && imageCache[cdChamada] === undefined)
-                .map(async cdChamada => {
-                    try {
-                        const imageUrl = await getProductImage(cdChamada);
-                        return { cdChamada, imageUrl, error: null };
-                    } catch (error: any) {
-                        return { 
-                            cdChamada, 
-                            imageUrl: null, 
-                            error: error?.message?.includes('contains 0 rows') ? 'no_image' : error 
-                        };
-                    }
-                });
-
-            if (imagePromises.length === 0) return;
-
-            // Process all images in parallel and update cache once
-            const results = await Promise.all(imagePromises);
+                .filter(cdChamada => cdChamada && imageCache[cdChamada] === undefined);
+                
+            if (uncachedProducts.length === 0) return;
             
-            setImageCache(prev => {
-                const updates = results.reduce((acc, { cdChamada, imageUrl }) => {
-                    acc[cdChamada] = imageUrl;
-                    return acc;
-                }, {} as Record<string, string | null>);
-
-                return { ...prev, ...updates };
-            });
+            console.log(`Loading ${uncachedProducts.length} images for page ${pageIndex+1}`);
+            
+            try {    
+                // Process images in batches to avoid overwhelming the network
+                const batchSize = 5;
+                let updatedImages = {} as Record<string, string | null>;
+                
+                for (let i = 0; i < uncachedProducts.length; i += batchSize) {
+                    if (!mounted) break;
+                    
+                    const batch = uncachedProducts.slice(i, i + batchSize);
+                    const batchPromises = batch.map(async cdChamada => {
+                        try {
+                            const imageUrl = await getProductImage(cdChamada);
+                            return { cdChamada, imageUrl, error: null };
+                        } catch (error: any) {
+                            return { 
+                                cdChamada, 
+                                imageUrl: null, 
+                                error: error?.message?.includes('contains 0 rows') ? 'no_image' : error 
+                            };
+                        }
+                    });
+                    
+                    const batchResults = await Promise.all(batchPromises);
+                    
+                    // Update cache after each batch for better UX
+                    batchResults.forEach(({ cdChamada, imageUrl }) => {
+                        updatedImages[cdChamada] = imageUrl;
+                    });
+                    
+                    if (mounted) {
+                        setImageCache(prev => ({ ...prev, ...updatedImages }));
+                    }
+                }
+            } catch (error) {
+                console.error("Error loading product images:", error);
+            }
         };
 
         if (!isLoading) {
             loadVisibleImages();
         }
-    }, [table, pageIndex, pageSize, isLoading]); // Removed imageCache from dependencies
+        
+        // Cleanup function to prevent memory leaks
+        return () => {
+            mounted = false;
+            controller.abort();
+        };
+    }, [table, pageIndex, isLoading]); // pageSize and imageCache handled by table
 
     // Add this function to handle column reordering
     const handleColumnReorder = useCallback((draggedColumnId: string, targetColumnId: string) => {

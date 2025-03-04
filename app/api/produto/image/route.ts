@@ -1,10 +1,7 @@
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { createAdminClient } from '@/lib/supabase-client'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-
-const supabase = createClient(supabaseUrl, supabaseKey)
+const supabase = createAdminClient()
 
 export async function GET(request: Request) {
     try {
@@ -15,19 +12,22 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: 'Missing cdChamada parameter' }, { status: 400 })
         }
 
+        // Use maybeSingle instead of single to avoid errors when no rows exist
         const { data, error } = await supabase
             .from('produtos_imagem')
             .select('imagem_url')
             .eq('cd_chamada', cdChamada)
             .limit(1)
-            .single()
+            .maybeSingle()
 
-        if (error) {
+        // Handle no rows case without error - just return null for imageUrl
+        if (error && error.code !== 'PGRST116') {
+            // Only log non-PGRST116 errors (real errors, not just "no rows")
             console.error('Supabase error:', error)
             return NextResponse.json({ error: 'Failed to fetch image' }, { status: 500 })
         }
 
-        return NextResponse.json({ imageUrl: data?.imagem_url || null })
+        return NextResponse.json({ imageUrl: data?.imagem_url || null }, { status: 200 })
     } catch (error) {
         console.error('Error:', error)
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
