@@ -11,7 +11,6 @@ const supabase = createClient(
 export async function POST(request: Request) {
     try {
         const { email, password } = await request.json()
-        console.log('Login attempt for email:', email) // For debugging
 
         if (!email || !password) {
             return NextResponse.json(
@@ -28,32 +27,18 @@ export async function POST(request: Request) {
             .single()
 
         if (error || !user) {
-            console.error('User not found:', error)
+            console.error('Login failed: Invalid credentials')
             return NextResponse.json(
                 { error: 'Invalid credentials' },
                 { status: 401 }
             )
         }
 
-        console.log('Found user:', { ...user, password: '[REDACTED]' }) // For debugging
-
-        // Update the logging in the login route
-        console.log('Login attempt:', {
-            email,
-            providedPassword: password,
-            storedHash: user.password,
-        })
-
         // Verify password
         const isValidPassword = await bcrypt.compare(password, user.password)
-        console.log('Password comparison:', { 
-            providedPassword: password,
-            storedHash: user.password,
-            isValid: isValidPassword 
-        })
 
         if (!isValidPassword) {
-            console.error('Invalid password')
+            console.error('Login failed: Invalid credentials')
             return NextResponse.json(
                 { error: 'Invalid credentials' },
                 { status: 401 }
@@ -74,7 +59,7 @@ export async function POST(request: Request) {
 
         return NextResponse.json(userWithoutPassword)
     } catch (error) {
-        console.error('Login error:', error)
+        console.error('Login error occurred')
         return NextResponse.json(
             { error: 'Failed to login' },
             { status: 500 }
