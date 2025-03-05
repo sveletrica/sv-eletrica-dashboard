@@ -1,6 +1,6 @@
 # SV Elétrica Dashboard
 
-Um dashboard desenvolvido em Next.js para gerenciamento de inventário e operações da SV Elétrica por Diogo Elias.
+Um dashboard desenvolvido em Next.js para gerenciamento de inventário, etiquetas eletrônicas e operações da SV Elétrica.
 
 ## Funcionalidades Principais
 
@@ -11,105 +11,132 @@ Um dashboard desenvolvido em Next.js para gerenciamento de inventário e operaç
   - Colunas redimensionáveis e reordenáveis
   - Cache local para melhor performance
 
-- **Produtos Sem Etiqueta**
-  - Lista de produtos que precisam de etiquetagem
-  - Exportação para Excel
-  - Atualização em tempo real
+- **Gerenciamento de Etiquetas Eletrônicas**
+  - Monitoramento de etiquetas em uso
+  - Identificação de produtos sem etiqueta
+  - Detecção de etiquetas duplicadas
+  - Função "flash" para localizar etiquetas fisicamente
 
-## Arquitetura do Projeto
+- **Analytics de Vendas**
+  - Dashboard com métricas diárias e mensais
+  - Visualização por vendedor e filial
+  - Gráficos de performance
+  - Comparativo com metas
 
-### Core Components
+## Páginas e Funcionalidades
 
-#### Layout Principal
-- **RootLayout** (`app/layout.tsx`)
-  - Theme provider
-  - Auth provider
-  - Sidebar
-  - Font configurations (Sora e Roboto)
+### Dashboard Principal (/)
+Página inicial que apresenta uma visão geral das principais métricas do negócio, incluindo:
+- Resumo das vendas do dia
+- Performance mensal comparada com metas
+- Indicadores de estoque crítico
+- Visualização rápida do status de etiquetas eletrônicas
 
-#### Sidebar (`components/sidebar.tsx`)
-- Logo
-- Theme toggle
-- Links de navegação para:
-  - Dashboard
-  - Inventário
-  - Vendas Diárias
-  - Vendas Mensais
-  - Produtos
-  - Lojas (Sobral, Maracanau, Caucaia)
+### Inventário (/inventory)
+Sistema completo de gestão de inventário com:
+- Tabela interativa com todos os produtos em estoque
+- Filtros por grupo, categoria e disponibilidade
+- Busca por código, nome ou características
+- Visualização detalhada das quantidades por filial
+- Gerenciamento de imagens dos produtos
+- Exportação de relatórios
 
-### Componentes UI
+### Etiquetas Eletrônicas
+Conjunto de páginas para gerenciamento de etiquetas eletrônicas (ESL):
 
-#### Componentes Base
-- **Card** (`components/ui/card.tsx`)
-  - CardHeader
-  - CardContent
-  - CardTitle
-  - CardDescription
-  - CardFooter
+#### Mozart (/mozart)
+- Dashboard específico da loja Mozart
+- Visualização de etiquetas em uso vs. produtos sem etiqueta
+- Estatísticas de produtos etiquetados e estoque
+- Função de atualização remota das etiquetas
 
-#### Componentes de Dados
-- **Chart** (`components/ui/chart.tsx`)
-  - Gráficos de barra
-  - Tooltips customizados
-  - Container responsivo
+#### Etiquetas em Uso - Mozart (/etiquetas-em-uso-mozart)
+- Lista detalhada de todos os produtos com etiquetas ativas
+- Informações sobre preço, estoque e localização
+- Status da última atualização de cada etiqueta
 
-#### Outros Componentes UI
-- `context-menu.tsx` - Menu de contexto personalizado
-- `dropdown-menu.tsx` - Menu dropdown reutilizável
-- `input.tsx` - Componente de input estilizado
-- `select.tsx` - Componente de select customizado
-- `skeleton.tsx` - Componente de loading skeleton
-- `theme-toggle.tsx` - Alternador de tema claro/escuro
+#### Sem Etiqueta - Mozart (/sem-etiqueta-mozart)
+- Produtos que necessitam de etiquetas na loja Mozart
+- Priorização por disponibilidade e vendas
+- Ferramentas para impressão de relatórios
 
-## Estrutura de Rotas
+#### Páginas similares para Maracanau e Sobral
+- /maracanau e /sobral - Dashboards específicos de cada loja
+- /etiquetas-em-uso-maracanau e /etiquetas-em-uso-sobral - Etiquetas ativas
+- /sem-etiqueta-maracanau e /sem-etiqueta-sobral - Produtos sem etiqueta
 
-### Autenticação
-- `/login` - Página de login com proteção por senha
-- `middleware.ts` - Gerenciamento de autenticação e redirecionamentos
+### Vendas
 
-### Páginas Principais
-- **/** - Dashboard
-  - Estatísticas de inventário
-  - Métricas de vendas mensais
-  - Visão geral de vendas diárias
+#### Vendas Diárias (/vendas-dia)
+- Visualização detalhada das vendas do dia atual
+- Filtros por vendedor, filial e categoria de produto
+- Detalhamento de pedidos e itens
+- Comparativo com dias anteriores
 
-### Gestão de Inventário
-- `/inventory` - Gerenciamento principal do inventário
-- `/sem-etiqueta` - Página de itens sem etiqueta
+#### Vendas Mensais (/vendas-mes)
+- Análise de performance mensal
+- Gráficos de tendência e sazonalidade
+- Comparativo entre filiais
+- Acompanhamento de metas e projeções
 
-### Análise de Vendas
-- `/vendas-dia`
-  - Dados detalhados de vendas
-  - Opções de filtro
-  - Seleção de data
-- `/vendas-mes`
-  - Gráficos e comparativos
-  - Métricas de performance por loja
+#### Vendedor (/vendedor/[nmrepresentantevenda])
+- Dashboard específico por vendedor
+- Histórico de vendas e performance
+- Rankings e comparativo com equipe
+- Análise de produtos mais vendidos
 
-### Rotas por Loja
-- `/sobral` - Analytics da loja Sobral
-- `/maracanau` - Analytics da loja Maracanau
-- `/caucaia` - Analytics da loja Caucaia
+### Produto (/produto/[cdproduto])
+- Visualização detalhada de um produto específico
+- Histórico de preços e estoque
+- Gerenciamento de imagens
+- Informações de fornecedores e categorias
+
+### Orçamentos (/orcamento)
+- Sistema de cotações e simulações
+- Geração de pedidos de compra
+- Cálculo de preços e descontos
+- Histórico de cotações por cliente
+
+### Usuários (/users)
+- Gerenciamento de usuários do sistema
+- Controle de permissões e acesso
+- Funções administrativas
 
 ## Tecnologias Utilizadas
 
-- [Next.js 14](https://nextjs.org/)
-- [React](https://reactjs.org/)
-- [TypeScript](https://www.typescriptlang.org/)
-- [Tailwind CSS](https://tailwindcss.com/)
-- [shadcn/ui](https://ui.shadcn.com/)
-- [TanStack Table](https://tanstack.com/table/v8)
-- [date-fns](https://date-fns.org/)
-- [Fuse.js](https://fusejs.io/)
+- [Next.js 15](https://nextjs.org/) - Framework React com App Router
+- [React 18](https://reactjs.org/) - Biblioteca JavaScript para interfaces
+- [TypeScript](https://www.typescriptlang.org/) - Tipagem estática
+- [Tailwind CSS](https://tailwindcss.com/) - Framework CSS utilitário
+- [ShadCN UI](https://ui.shadcn.com/) - Componentes de UI
+- [TanStack Table](https://tanstack.com/table/v8) - Gerenciamento avançado de tabelas
+- [Recharts](https://recharts.org/) - Biblioteca de gráficos e visualizações
+- [Supabase](https://supabase.com/) - Backend e autenticação
+- [SWR](https://swr.vercel.app/) - Estratégias de atualização de dados
 
 ## Começando
 
 ### Pré-requisitos
 
 - Node.js 18.17 ou superior
-- npm ou pnpm
+- npm
 
 ### Instalação
 
 1. Clone o repositório
+2. Instale as dependências: `npm install`
+3. Configure as variáveis de ambiente seguindo o exemplo em `.env.example`
+4. Execute o servidor de desenvolvimento: `npm run dev`
+5. Acesse http://localhost:3000
+
+### Comandos Principais
+
+- `npm run dev` - Iniciar servidor de desenvolvimento
+- `npm run build` - Construir versão de produção
+- `npm run start` - Iniciar servidor de produção
+- `npm run lint` - Executar verificação de código com ESLint
+- `npm run lint:fix` - Corrigir problemas detectados pelo ESLint
+
+## Desenvolvimento
+
+Consulte o arquivo [CLAUDE.md](./CLAUDE.md) para orientações detalhadas sobre o estilo de código e boas práticas adotadas neste projeto.
