@@ -16,13 +16,37 @@ const nextConfig = {
         NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     },
     images: {
-        domains: [
-            'kinftxezwizaoyrcbfqc.supabase.co', // Supabase storage domain
-            'images.google.com',                 // For Google image search results
-            'encrypted-tbn0.gstatic.com',        // Google image thumbnails
-            'encrypted-tbn1.gstatic.com',
-            'encrypted-tbn2.gstatic.com',
-            'encrypted-tbn3.gstatic.com',
+        remotePatterns: [
+            {
+                protocol: 'https',
+                hostname: 'kinftxezwizaoyrcbfqc.supabase.co',
+                pathname: '**',
+            },
+            {
+                protocol: 'https',
+                hostname: 'images.google.com',
+                pathname: '**',
+            },
+            {
+                protocol: 'https',
+                hostname: 'encrypted-tbn0.gstatic.com',
+                pathname: '**',
+            },
+            {
+                protocol: 'https',
+                hostname: 'encrypted-tbn1.gstatic.com',
+                pathname: '**',
+            },
+            {
+                protocol: 'https',
+                hostname: 'encrypted-tbn2.gstatic.com',
+                pathname: '**',
+            },
+            {
+                protocol: 'https',
+                hostname: 'encrypted-tbn3.gstatic.com',
+                pathname: '**',
+            },
         ],
     },
     typescript: {
