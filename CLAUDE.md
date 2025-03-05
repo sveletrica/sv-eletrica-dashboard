@@ -1,7 +1,7 @@
 # SV Elétrica Dashboard - Developer Guidelines
 
 ## Commands
-- `npm run dev` - Start development server
+- `npm run dev` - Start development server on http://localhost:3000
 - `npm run build` - Build production version
 - `npm run start` - Start production server
 - `npm run lint` - Run ESLint static code analysis
@@ -11,12 +11,12 @@
 - **Imports**: Group by 1) React/Next, 2) UI components, 3) utilities, 4) types, 5) assets
 - **Formatting**: Use TypeScript with strict typing; prefix unused variables with underscore
 - **Naming**: Use PascalCase for components, camelCase for variables/functions
-- **Component Structure**: Group state at top, effects in middle, handlers/helpers before return
-- **Error Handling**: Use try/catch in API routes with NextResponse for error returns
-- **File Structure**: Group by feature in app directory, common components in components/
-- **API Routes**: Validate inputs and sanitize outputs, return JSON with appropriate status codes
-- **Authentication**: Use Supabase auth in API routes with cookie-based sessions
-- **Performance**: Use SWR for data fetching, React.memo for expensive renders
-- **CSS**: Use Tailwind with className composition via cn() utility
+- **Components**: Function components with hooks; group state at top, effects in middle, handlers before return
+- **Error Handling**: Use try/catch in API routes with NextResponse; provide meaningful error messages
+- **API Routes**: Always validate inputs, sanitize outputs, return consistent JSON structure with status codes
+- **Authentication**: Use Supabase with createAdminClient() for server routes; never expose service key
+- **UI Components**: Use ShadCN UI components with cn() utility for className composition
+- **Data Fetching**: Use SWR for client-side data fetching with proper error handling
+- **Images**: Use Next.js Image component with proper sizing; configure remotePatterns in next.config.mjs
 
-Always validate user inputs, handle asynchronous operations properly, and maintain consistent error handling patterns across API routes.
+Always test on mobile and desktop viewports, prioritize accessibility, and follow React 18+ best practices.
