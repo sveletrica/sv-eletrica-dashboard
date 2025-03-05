@@ -1,6 +1,7 @@
-import Link from "next/link"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { MonthlySalesMetrics } from "@/components/monthly-sales-metrics"
+import Link from "next/link";
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { MonthlySalesMetrics } from "../components/monthly-sales-metrics";
+import React from "react";
 
 const sections = [
   {
@@ -36,7 +37,7 @@ const sections = [
       { label: "Filiais", value: "Comparativo" },
     ]
   }
-]
+];
 
 export default function Dashboard() {
   return (
@@ -86,5 +87,5 @@ export default function Dashboard() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

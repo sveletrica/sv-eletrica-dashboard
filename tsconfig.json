@@ -18,6 +18,9 @@
     "paths": {
       "@/*": [
         "./*"
+      ],
+      "@/components/*": [
+        "./components/*"
       ]
     },
     "allowJs": true,
@@ -25,6 +28,9 @@
     "incremental": true,
     "isolatedModules": true,
     "jsx": "preserve",
+    "types": [
+      "react/jsx-runtime"
+    ],
     "plugins": [
       {
         "name": "next"
@@ -33,7 +39,9 @@
   },
   "include": [
     "**/*.ts",
-    ".next/types/**/*.ts"
+    "src/**/*.tsx",
+    ".next/types/**/*.ts",
+    "src/**/*"
   ],
   "exclude": [
     "node_modules"

@@ -1,37 +1,38 @@
-'use client'
-import { PermissionGuard } from '@/components/guards/permission-guard'
-import { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Search, Calculator, Info, Check, X, Copy, Share2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
-import Loading from './loading'
-import { Roboto } from 'next/font/google'
-import { useRouter } from 'next/navigation'
-import { StockPopover } from "@/components/stock-popover"
-import { cn } from "@/lib/utils"
-import './styles.css'
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { Textarea } from "@/components/ui/textarea"
-import { toast } from "sonner"
-import { CountdownTimer, TIMER_CONFIG } from "@/components/countdown-timer"
-import { useAuth } from '@/components/providers/auth-provider'
+'use client';
+
+import { PermissionGuard } from "@/components/guards/permission-guard";
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Search, Calculator, Info, Check, X, Copy, Share2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import Loading from './loading';
+import { Roboto } from 'next/font/google';
+import { useRouter } from 'next/navigation';
+import { StockPopover } from "@/components/stock-popover";
+import { cn } from "@/lib/utils";
+import './styles.css';
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
+import { CountdownTimer, TIMER_CONFIG } from "@/components/countdown-timer";
+import { useAuth } from '@/components/providers/auth-provider';
 import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
     SelectValue,
-} from "@/components/ui/select"
-import Link from 'next/link'
+} from "@/components/ui/select";
+import Link from 'next/link';
 
 const roboto = Roboto({
     weight: ['400', '500', '700'],
     subsets: ['latin'],
     display: 'swap',
-})
+});
 
 interface QuotationItem {
     tipopedido: string
@@ -115,52 +116,52 @@ interface PaginatedResponse<T> {
 
 const getMarginStyle = (margin: number) => {
     if (margin > 5) {
-        return "bg-gradient-to-br from-green-50 to-green-200 dark:from-green-900/20 dark:to-green-900/10"
+        return "bg-gradient-to-br from-green-50 to-green-200 dark:from-green-900/20 dark:to-green-900/10";
     } else if (margin >= 0) {
-        return "bg-gradient-to-br from-yellow-50 to-yellow-200 dark:from-yellow-900/20 dark:to-yellow-900/10"
+        return "bg-gradient-to-br from-yellow-50 to-yellow-200 dark:from-yellow-900/20 dark:to-yellow-900/10";
     } else {
-        return "bg-gradient-to-br from-red-50 to-red-200 dark:from-red-900/20 dark:to-red-900/10"
+        return "bg-gradient-to-br from-red-50 to-red-200 dark:from-red-900/20 dark:to-red-900/10";
     }
-}
+};
 
 interface QuotationDetailsProps {
     initialCode?: string
 }
 
 function SaveSimulationDialog({ open, onOpenChange, onSave }: SaveSimulationDialogProps) {
-  const [notes, setNotes] = useState('')
-  const [isSaving, setIsSaving] = useState(false)
-  const [shareUrl, setShareUrl] = useState<string | null>(null)
+  const [notes, setNotes] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
 
   const handleSave = async () => {
-    setIsSaving(true)
+    setIsSaving(true);
     try {
-      const result = await onSave(notes)
+      const result = await onSave(notes);
       if (result?.shareUrl) {
-        setShareUrl(result.shareUrl)
+        setShareUrl(result.shareUrl);
       }
     } catch (error) {
-      console.error('Error saving simulation:', error)
+      console.error('Error saving simulation:', error);
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   const copyShareUrl = async () => {
     if (shareUrl) {
-      const fullUrl = `${window.location.origin}${shareUrl}`
-      await navigator.clipboard.writeText(fullUrl)
-      toast.success('Link copiado para a área de transferência!')
+      const fullUrl = `${window.location.origin}${shareUrl}`;
+      await navigator.clipboard.writeText(fullUrl);
+      toast.success('Link copiado para a área de transferência!');
     }
-  }
+  };
 
   return (
     <Dialog open={open} onOpenChange={(newOpen) => {
       if (!newOpen) {
-        setShareUrl(null)
-        setNotes('')
+        setShareUrl(null);
+        setNotes('');
       }
-      onOpenChange(newOpen)
+      onOpenChange(newOpen);
     }}>
       <DialogContent>
         <DialogHeader>
@@ -213,7 +214,7 @@ function SaveSimulationDialog({ open, onOpenChange, onSave }: SaveSimulationDial
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
 
 // Keep the interfaces outside
@@ -227,80 +228,80 @@ interface GroupTotals {
 const formatBrazilianDate = (dateStr: string) => {
     // Se já estiver no formato dd/mm/aaaa, retorna direto
     if (dateStr.includes('/')) {
-        return dateStr
+        return dateStr;
     }
     
     // Se não, tenta converter
     try {
-        const [day, month, year] = dateStr.split('/')
-        return `${day}/${month}/${year}`
+        const [day, month, year] = dateStr.split('/');
+        return `${day}/${month}/${year}`;
     } catch (error) {
-        return dateStr // Em caso de erro, retorna a string original
+        return dateStr; // Em caso de erro, retorna a string original
     }
-}
+};
 
 export default function QuotationDetails({ initialCode }: QuotationDetailsProps = {}) {
-    const router = useRouter()
-    const [quotationCode, setQuotationCode] = useState(initialCode || '')
-    const [data, setData] = useState<QuotationItem[]>([])
-    const [isLoading, setIsLoading] = useState(false)
-    const [error, setError] = useState<string | null>(null)
-    const [simulatedDiscounts, setSimulatedDiscounts] = useState<Record<string, number>>({})
-    const [isSimulating, setIsSimulating] = useState(false)
-    const [globalDiscount, setGlobalDiscount] = useState<string>('')
-    const [stockData, setStockData] = useState<Record<string, StockData>>({})
-    const [loadingStock, setLoadingStock] = useState<Record<string, boolean>>({})
-    const [openPopoverId, setOpenPopoverId] = useState<string | null>(null)
-    const [saveDialogOpen, setSaveDialogOpen] = useState(false)
-    const [savedSimulations, setSavedSimulations] = useState<SavedSimulation[]>([])
-    const [loadingSimulations, setLoadingSimulations] = useState(false)
-    const [targetMargin, setTargetMargin] = useState<string>('')
-    const [groupDiscounts, setGroupDiscounts] = useState<Record<string, number>>({})
-    const [showGroupDiscounts, setShowGroupDiscounts] = useState(false)
-    const [lastExtraction, setLastExtraction] = useState<string | null>(null)
-    const [timeLeftMinutes, setTimeLeftMinutes] = useState<number | null>(null)
-    const [targetValue, setTargetValue] = useState<string>('')
-    const [recentQuotations, setRecentQuotations] = useState<QuotationSummary[]>([])
-    const [loadingRecent, setLoadingRecent] = useState(false)
-    const [selectedBranch, setSelectedBranch] = useState<string>('all')
-    const [selectedSeller, setSelectedSeller] = useState<string>('all')
-    const { user } = useAuth()
-    const [currentPage, setCurrentPage] = useState(1)
-    const [totalPages, setTotalPages] = useState(1)
-    const [pageSize] = useState(25)
-    const [totalCount, setTotalCount] = useState(0)
+    const router = useRouter();
+    const [quotationCode, setQuotationCode] = useState(initialCode || '');
+    const [data, setData] = useState<QuotationItem[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [simulatedDiscounts, setSimulatedDiscounts] = useState<Record<string, number>>({});
+    const [isSimulating, setIsSimulating] = useState(false);
+    const [globalDiscount, setGlobalDiscount] = useState<string>('');
+    const [stockData, setStockData] = useState<Record<string, StockData>>({});
+    const [loadingStock, setLoadingStock] = useState<Record<string, boolean>>({});
+    const [openPopoverId, setOpenPopoverId] = useState<string | null>(null);
+    const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+    const [savedSimulations, setSavedSimulations] = useState<SavedSimulation[]>([]);
+    const [loadingSimulations, setLoadingSimulations] = useState(false);
+    const [targetMargin, setTargetMargin] = useState<string>('');
+    const [groupDiscounts, setGroupDiscounts] = useState<Record<string, number>>({});
+    const [showGroupDiscounts, setShowGroupDiscounts] = useState(false);
+    const [lastExtraction, setLastExtraction] = useState<string | null>(null);
+    const [timeLeftMinutes, setTimeLeftMinutes] = useState<number | null>(null);
+    const [targetValue, setTargetValue] = useState<string>('');
+    const [recentQuotations, setRecentQuotations] = useState<QuotationSummary[]>([]);
+    const [loadingRecent, setLoadingRecent] = useState(false);
+    const [selectedBranch, setSelectedBranch] = useState<string>('all');
+    const [selectedSeller, setSelectedSeller] = useState<string>('all');
+    const { user } = useAuth();
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [pageSize] = useState(25);
+    const [totalCount, setTotalCount] = useState(0);
 
     const calculateMargin = (revenue: number, cost: number) => {
-        return ((revenue - (revenue * 0.268 + cost)) / revenue) * 100
-    }
+        return ((revenue - (revenue * 0.268 + cost)) / revenue) * 100;
+    };
 
     const calculateDiscount = (listPrice: number, salePrice: number) => {
-        return ((listPrice - salePrice) / listPrice) * 100
-    }
+        return ((listPrice - salePrice) / listPrice) * 100;
+    };
 
     const calculateMarginWithDiscount = (listPrice: number, cost: number, discountPercentage: number) => {
-        const priceAfterDiscount = listPrice * (1 - discountPercentage / 100)
-        return ((priceAfterDiscount - (priceAfterDiscount * 0.268 + cost)) / priceAfterDiscount) * 100
-    }
+        const priceAfterDiscount = listPrice * (1 - discountPercentage / 100);
+        return ((priceAfterDiscount - (priceAfterDiscount * 0.268 + cost)) / priceAfterDiscount) * 100;
+    };
 
     const handleSimulatedDiscountChange = (productCode: string, discount: string) => {
-        const numericDiscount = parseFloat(discount) || 0
+        const numericDiscount = parseFloat(discount) || 0;
         setSimulatedDiscounts(prev => ({
             ...prev,
             [productCode]: numericDiscount
-        }))
-    }
+        }));
+    };
 
     const fetchQuotation = async () => {
-        if (!quotationCode.trim()) return
+        if (!quotationCode.trim()) return;
 
         if (!initialCode) {
-            router.push(`/orcamento/${quotationCode}`)
-            return
+            router.push(`/orcamento/${quotationCode}`);
+            return;
         }
 
-        setIsLoading(true)
-        setError(null)
+        setIsLoading(true);
+        setError(null);
 
         try {
             const response = await fetch(
@@ -310,107 +311,107 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                         'apikey': process.env.SUPABASE_SERVICE_ROLE_KEY || '',
                     }
                 }
-            )
+            );
 
             if (!response.ok) {
-                throw new Error('Failed to fetch quotation data')
+                throw new Error('Failed to fetch quotation data');
             }
 
-            const quotationData = await response.json()
+            const quotationData = await response.json();
             if (quotationData.length === 0) {
-                setError('Nenhum orçamento encontrado com este código')
-                setData([])
+                setError('Nenhum orçamento encontrado com este código');
+                setData([]);
             } else {
-                setData(quotationData)
+                setData(quotationData);
             }
         } catch (err) {
-            setError('Erro ao buscar dados do orçamento')
-            console.error('Error fetching quotation:', err)
+            setError('Erro ao buscar dados do orçamento');
+            console.error('Error fetching quotation:', err);
         } finally {
-            setIsLoading(false)
+            setIsLoading(false);
         }
-    }
+    };
 
     useEffect(() => {
         if (initialCode) {
-            fetchQuotation()
+            fetchQuotation();
         }
-    }, [initialCode])
+    }, [initialCode]);
 
     // Calculate totals including simulated values
     const totals = data.reduce((acc, item) => {
-        const simulatedDiscount = simulatedDiscounts[item.cdproduto]
+        const simulatedDiscount = simulatedDiscounts[item.cdproduto];
         const currentPrice = isSimulating && simulatedDiscount !== undefined
             ? item.vlprecovendainformado * (1 - simulatedDiscount / 100)
-            : item.vlfaturamento
+            : item.vlfaturamento;
 
         return {
             faturamento: acc.faturamento + currentPrice,
             custo: acc.custo + item.vltotalcustoproduto,
             quantidade: acc.quantidade + item.qtpedida,
             precoLista: acc.precoLista + item.vlprecovendainformado
-        }
-    }, { faturamento: 0, custo: 0, quantidade: 0, precoLista: 0 })
+        };
+    }, { faturamento: 0, custo: 0, quantidade: 0, precoLista: 0 });
 
     const marginTotal = data.length > 0 
         ? calculateMargin(totals.faturamento, totals.custo)
-        : 0
+        : 0;
 
     const discountTotal = data.length > 0
         ? calculateDiscount(totals.precoLista, totals.faturamento)
-        : 0
+        : 0;
 
     // Add function to apply global discount
     const updateDiscountsAndGroupDiscounts = (newDiscounts: Record<string, number>) => {
-        setSimulatedDiscounts(newDiscounts)
+        setSimulatedDiscounts(newDiscounts);
         
         // Calculate and update group discounts
-        const newGroupDiscounts: Record<string, number> = {}
+        const newGroupDiscounts: Record<string, number> = {};
         getUniqueProductGroups().forEach(group => {
-            const groupProducts = data.filter(item => item.nmgrupoproduto === group)
+            const groupProducts = data.filter(item => item.nmgrupoproduto === group);
             const groupDiscount = groupProducts.reduce((sum, item) => {
-                return sum + (newDiscounts[item.cdproduto] || 0)
-            }, 0) / groupProducts.length
+                return sum + (newDiscounts[item.cdproduto] || 0);
+            }, 0) / groupProducts.length;
             
-            newGroupDiscounts[group] = parseFloat(groupDiscount.toFixed(2))
-        })
+            newGroupDiscounts[group] = parseFloat(groupDiscount.toFixed(2));
+        });
         
-        setGroupDiscounts(newGroupDiscounts)
-    }
+        setGroupDiscounts(newGroupDiscounts);
+    };
 
     const applyGlobalDiscount = () => {
-        const discount = parseFloat(globalDiscount)
-        if (isNaN(discount)) return
+        const discount = parseFloat(globalDiscount);
+        if (isNaN(discount)) return;
 
-        const newDiscounts: Record<string, number> = {}
+        const newDiscounts: Record<string, number> = {};
         data.forEach(item => {
-            newDiscounts[item.cdproduto] = discount
-        })
-        updateDiscountsAndGroupDiscounts(newDiscounts)
-    }
+            newDiscounts[item.cdproduto] = discount;
+        });
+        updateDiscountsAndGroupDiscounts(newDiscounts);
+    };
 
     const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
-            fetchQuotation()
+            fetchQuotation();
         }
-    }
+    };
 
     const handleDiscountKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
-            e.preventDefault()
-            applyGlobalDiscount()
+            e.preventDefault();
+            applyGlobalDiscount();
         }
-    }
+    };
 
     const fetchStockData = async (cdproduto: string) => {
         try {
-            setLoadingStock(prev => ({ ...prev, [cdproduto]: true }))
-            const response = await fetch(`/api/produto/${cdproduto}`)
+            setLoadingStock(prev => ({ ...prev, [cdproduto]: true }));
+            const response = await fetch(`/api/produto/${cdproduto}`);
             if (!response.ok) {
-                const errorData = await response.json()
-                throw new Error(errorData.error || 'Failed to fetch stock data')
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to fetch stock data');
             }
-            const data = await response.json()
+            const data = await response.json();
             
             if (data.stock && data.stock[0]) {
                 const stockData = {
@@ -431,18 +432,18 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                         (data.stock[0].QtEstoque_Empresa17 || data.stock[0].qtestoque_empresa17 || 0) +
                         (data.stock[0].QtEstoque_Empresa20 || data.stock[0].qtestoque_empresa20 || 0) +
                         (data.stock[0].QtEstoque_Empresa59 || data.stock[0].qtestoque_empresa59 || 0)
-                }
+                };
                 setStockData(prev => ({
                     ...prev,
                     [cdproduto]: stockData
-                }))
+                }));
             }
         } catch (error) {
-            console.error('Error fetching stock data:', error)
+            console.error('Error fetching stock data:', error);
         } finally {
-            setLoadingStock(prev => ({ ...prev, [cdproduto]: false }))
+            setLoadingStock(prev => ({ ...prev, [cdproduto]: false }));
         }
-    }
+    };
 
     // Add this function after other calculation functions
     const calculateDiscountForZeroMargin = (listPrice: number, cost: number) => {
@@ -450,23 +451,23 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
         // Where x is the discount percentage we want to find
         // Simplified: price * (1 - x) * (1 - 0.268) = cost
         // Therefore: x = 1 - (cost / (price * (1 - 0.268)))
-        const taxRate = 0.268
-        const discountDecimal = 1 - (cost / (listPrice * (1 - taxRate)))
-        return Math.max(Math.min(discountDecimal * 100, 100), 0) // Ensure discount is between 0 and 100
-    }
+        const taxRate = 0.268;
+        const discountDecimal = 1 - (cost / (listPrice * (1 - taxRate)));
+        return Math.max(Math.min(discountDecimal * 100, 100), 0); // Ensure discount is between 0 and 100
+    };
 
     // Update the applyZeroMarginDiscounts function
     const applyZeroMarginDiscounts = () => {
-        const newDiscounts: Record<string, number> = {}
+        const newDiscounts: Record<string, number> = {};
         data.forEach(item => {
             const zeroMarginDiscount = calculateDiscountForZeroMargin(
                 item.vlprecovendainformado,
                 item.vltotalcustoproduto
-            )
-            newDiscounts[item.cdproduto] = parseFloat(zeroMarginDiscount.toFixed(2))
-        })
-        updateDiscountsAndGroupDiscounts(newDiscounts)
-    }
+            );
+            newDiscounts[item.cdproduto] = parseFloat(zeroMarginDiscount.toFixed(2));
+        });
+        updateDiscountsAndGroupDiscounts(newDiscounts);
+    };
 
     const calculateDiscountForTargetMargin = (listPrice: number, cost: number, targetMarginPercent: number) => {
         // We need to solve: (price * (1 - x) - (price * (1 - x) * 0.268 + cost)) / (price * (1 - x)) = targetMargin/100
@@ -474,52 +475,52 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
         // Simplified: price * (1 - x) * (1 - 0.268 - targetMargin/100) = cost
         // Therefore: price * (1 - x) * (1 - 0.268 - targetMargin/100) = cost
         // x = 1 - (cost / (price * (1 - 0.268 - targetMargin/100)))
-        const taxRate = 0.268
-        const discountDecimal = 1 - (cost / (listPrice * (1 - taxRate - targetMarginPercent/100)))
-        return Math.max(Math.min(discountDecimal * 100, 100), 0) // Ensure discount is between 0 and 100
-    }
+        const taxRate = 0.268;
+        const discountDecimal = 1 - (cost / (listPrice * (1 - taxRate - targetMarginPercent/100)));
+        return Math.max(Math.min(discountDecimal * 100, 100), 0); // Ensure discount is between 0 and 100
+    };
 
     // Update the applyTargetMarginDiscounts function
     const applyTargetMarginDiscounts = () => {
-        const marginValue = parseFloat(targetMargin)
-        if (isNaN(marginValue)) return
+        const marginValue = parseFloat(targetMargin);
+        if (isNaN(marginValue)) return;
 
-        const newDiscounts: Record<string, number> = {}
+        const newDiscounts: Record<string, number> = {};
         data.forEach(item => {
             const targetMarginDiscount = calculateDiscountForTargetMargin(
                 item.vlprecovendainformado,
                 item.vltotalcustoproduto,
                 marginValue
-            )
-            newDiscounts[item.cdproduto] = parseFloat(targetMarginDiscount.toFixed(2))
-        })
-        updateDiscountsAndGroupDiscounts(newDiscounts)
-    }
+            );
+            newDiscounts[item.cdproduto] = parseFloat(targetMarginDiscount.toFixed(2));
+        });
+        updateDiscountsAndGroupDiscounts(newDiscounts);
+    };
 
     const applyTargetValue = () => {
-        const desiredTotal = parseFloat(targetValue)
-        if (isNaN(desiredTotal) || desiredTotal <= 0) return
+        const desiredTotal = parseFloat(targetValue);
+        if (isNaN(desiredTotal) || desiredTotal <= 0) return;
 
-        const currentTotal = totals.precoLista
-        const globalDiscountNeeded = ((currentTotal - desiredTotal) / currentTotal) * 100
+        const currentTotal = totals.precoLista;
+        const globalDiscountNeeded = ((currentTotal - desiredTotal) / currentTotal) * 100;
 
         // Removendo a limitação de 0 a 100 para permitir acréscimos (descontos negativos)
-        const newDiscounts: Record<string, number> = {}
+        const newDiscounts: Record<string, number> = {};
         data.forEach(item => {
-            newDiscounts[item.cdproduto] = parseFloat(globalDiscountNeeded.toFixed(2))
-        })
-        updateDiscountsAndGroupDiscounts(newDiscounts)
-    }
+            newDiscounts[item.cdproduto] = parseFloat(globalDiscountNeeded.toFixed(2));
+        });
+        updateDiscountsAndGroupDiscounts(newDiscounts);
+    };
 
     const saveSimulation = async (notes: string) => {
         if (!user?.email) {
-            console.error('No user email available:', user)
-            toast.error('Erro: Email do usuário não encontrado')
-            return
+            console.error('No user email available:', user);
+            toast.error('Erro: Email do usuário não encontrado');
+            return;
         }
 
         try {
-            console.log('Saving simulation with user:', user) // Debug log
+            console.log('Saving simulation with user:', user); // Debug log
             
             const response = await fetch('/api/simulations', {
                 method: 'POST',
@@ -532,49 +533,49 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                     notes,
                     created_by_email: user.email,
                 }),
-            })
+            });
 
-            const data = await response.json()
+            const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.error || 'Failed to save simulation')
+                throw new Error(data.error || 'Failed to save simulation');
             }
 
-            toast.success('Simulação salva com sucesso!')
-            loadSavedSimulations()
-            return data
+            toast.success('Simulação salva com sucesso!');
+            loadSavedSimulations();
+            return data;
         } catch (error) {
-            console.error('Error saving simulation:', error)
-            toast.error(error instanceof Error ? error.message : 'Erro ao salvar simulação')
+            console.error('Error saving simulation:', error);
+            toast.error(error instanceof Error ? error.message : 'Erro ao salvar simulação');
         }
-    }
+    };
 
     const loadSavedSimulations = async () => {
-        if (!quotationCode) return
+        if (!quotationCode) return;
 
-        setLoadingSimulations(true)
+        setLoadingSimulations(true);
         try {
-            const response = await fetch(`/api/simulations/${quotationCode}`)
-            const data = await response.json()
+            const response = await fetch(`/api/simulations/${quotationCode}`);
+            const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.error || 'Failed to load simulations')
+                throw new Error(data.error || 'Failed to load simulations');
             }
 
-            setSavedSimulations(data)
+            setSavedSimulations(data);
         } catch (error) {
-            console.error('Error loading simulations:', error)
-            toast.error(error instanceof Error ? error.message : 'Erro ao carregar simulações salvas')
+            console.error('Error loading simulations:', error);
+            toast.error(error instanceof Error ? error.message : 'Erro ao carregar simulações salvas');
         } finally {
-            setLoadingSimulations(false)
+            setLoadingSimulations(false);
         }
-    }
+    };
 
     useEffect(() => {
         if (initialCode) {
-            loadSavedSimulations()
+            loadSavedSimulations();
         }
-    }, [initialCode])
+    }, [initialCode]);
 
     const deleteSimulation = async (simulationId: string) => {
         try {
@@ -583,55 +584,55 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                 {
                     method: 'DELETE',
                 }
-            )
+            );
 
-            const data = await response.json()
+            const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.error || 'Failed to delete simulation')
+                throw new Error(data.error || 'Failed to delete simulation');
             }
 
-            toast.success('Simulação excluída com sucesso!')
-            loadSavedSimulations()
+            toast.success('Simulação excluída com sucesso!');
+            loadSavedSimulations();
         } catch (error) {
-            console.error('Error deleting simulation:', error)
-            toast.error(error instanceof Error ? error.message : 'Erro ao excluir simulação')
+            console.error('Error deleting simulation:', error);
+            toast.error(error instanceof Error ? error.message : 'Erro ao excluir simulação');
         }
-    }
+    };
 
     const getUniqueProductGroups = () => {
-        const groups = new Set(data.map(item => item.nmgrupoproduto))
-        return Array.from(groups).sort()
-    }
+        const groups = new Set(data.map(item => item.nmgrupoproduto));
+        return Array.from(groups).sort();
+    };
 
     const applyGroupDiscount = (group: string, discount: number) => {
-        const newDiscounts = { ...simulatedDiscounts }
+        const newDiscounts = { ...simulatedDiscounts };
         data.forEach(item => {
             if (item.nmgrupoproduto === group) {
-                newDiscounts[item.cdproduto] = discount
+                newDiscounts[item.cdproduto] = discount;
             }
-        })
-        updateDiscountsAndGroupDiscounts(newDiscounts)
-    }
+        });
+        updateDiscountsAndGroupDiscounts(newDiscounts);
+    };
 
     // Update the clearSimulation function to ensure group discounts are cleared
     const clearSimulation = () => {
-        updateDiscountsAndGroupDiscounts({})
-        setGlobalDiscount('')
-        setTargetMargin('')
-        setTargetValue('')
-    }
+        updateDiscountsAndGroupDiscounts({});
+        setGlobalDiscount('');
+        setTargetMargin('');
+        setTargetValue('');
+    };
 
     // Move calculateGroupTotals inside the component
     const calculateGroupTotals = () => {
-        const groupTotals: Record<string, GroupTotals> = {}
+        const groupTotals: Record<string, GroupTotals> = {};
         
         data.forEach((item: QuotationItem) => {
-            const group = item.nmgrupoproduto
-            const simulatedDiscount = simulatedDiscounts[item.cdproduto]
+            const group = item.nmgrupoproduto;
+            const simulatedDiscount = simulatedDiscounts[item.cdproduto];
             const currentPrice = isSimulating && simulatedDiscount !== undefined
                 ? item.vlprecovendainformado * (1 - simulatedDiscount / 100)
-                : item.vlfaturamento
+                : item.vlfaturamento;
 
             if (!groupTotals[group]) {
                 groupTotals[group] = {
@@ -639,38 +640,38 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                     precoFinal: 0,
                     custo: 0,
                     quantidade: 0
-                }
+                };
             }
 
-            groupTotals[group].precoLista += item.vlprecovendainformado
-            groupTotals[group].precoFinal += currentPrice
-            groupTotals[group].custo += item.vltotalcustoproduto
-            groupTotals[group].quantidade += item.qtpedida
-        })
+            groupTotals[group].precoLista += item.vlprecovendainformado;
+            groupTotals[group].precoFinal += currentPrice;
+            groupTotals[group].custo += item.vltotalcustoproduto;
+            groupTotals[group].quantidade += item.qtpedida;
+        });
 
-        return groupTotals
-    }
+        return groupTotals;
+    };
 
     // Fix the groupDiscounts state handling
     const handleGroupDiscountChange = (group: string, value: string) => {
         setGroupDiscounts(prev => ({
             ...prev,
             [group]: value ? Number(value) : undefined
-        }) as Record<string, number>)
-    }
+        }) as Record<string, number>);
+    };
 
     const fetchLastExtraction = async () => {
         try {
-            const response = await fetch('/api/quotations/extraction-date')
+            const response = await fetch('/api/quotations/extraction-date');
             if (!response.ok) {
-                throw new Error('Failed to fetch extraction date')
+                throw new Error('Failed to fetch extraction date');
             }
-            const data = await response.json()
-            setLastExtraction(data.dataextracao)
+            const data = await response.json();
+            setLastExtraction(data.dataextracao);
         } catch (error) {
-            console.error('Error fetching extraction date:', error)
+            console.error('Error fetching extraction date:', error);
         }
-    }
+    };
 
     useEffect(() => {
         fetchLastExtraction();
@@ -678,109 +679,109 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
 
     useEffect(() => {
         if (initialCode) {
-            const searchParams = new URLSearchParams(window.location.search)
-            const simId = searchParams.get('sim')
+            const searchParams = new URLSearchParams(window.location.search);
+            const simId = searchParams.get('sim');
             
             if (simId) {
                 const loadSimulation = async () => {
                     try {
-                        const response = await fetch(`/api/simulations/${initialCode}`)
-                        const simulations = await response.json()
+                        const response = await fetch(`/api/simulations/${initialCode}`);
+                        const simulations = await response.json();
                         
-                        const simulation = simulations.find((sim: SavedSimulation) => sim.share_id === simId)
+                        const simulation = simulations.find((sim: SavedSimulation) => sim.share_id === simId);
                         if (simulation) {
-                            updateDiscountsAndGroupDiscounts(simulation.discounts)
-                            setIsSimulating(true)
+                            updateDiscountsAndGroupDiscounts(simulation.discounts);
+                            setIsSimulating(true);
                         }
                     } catch (error) {
-                        console.error('Error loading shared simulation:', error)
+                        console.error('Error loading shared simulation:', error);
                     }
-                }
+                };
                 
-                loadSimulation()
+                loadSimulation();
             }
         }
-    }, [initialCode])
+    }, [initialCode]);
 
     useEffect(() => {
-        console.log('Current auth user:', user) // Debug log
-    }, [user])
+        console.log('Current auth user:', user); // Debug log
+    }, [user]);
 
     const fetchRecentQuotations = async (branch = selectedBranch, seller = selectedSeller, page = currentPage) => {
-        setLoadingRecent(true)
+        setLoadingRecent(true);
         try {
-            const params = new URLSearchParams()
-            if (branch !== 'all') params.append('branch', branch)
-            if (seller !== 'all') params.append('seller', seller)
-            params.append('page', page.toString())
-            params.append('pageSize', pageSize.toString())
+            const params = new URLSearchParams();
+            if (branch !== 'all') params.append('branch', branch);
+            if (seller !== 'all') params.append('seller', seller);
+            params.append('page', page.toString());
+            params.append('pageSize', pageSize.toString());
 
-            const response = await fetch(`/api/quotations/recent?${params}`)
+            const response = await fetch(`/api/quotations/recent?${params}`);
             if (!response.ok) {
-                throw new Error('Failed to fetch recent quotations')
+                throw new Error('Failed to fetch recent quotations');
             }
-            const result: PaginatedResponse<QuotationSummary> = await response.json()
-            setRecentQuotations(result.data)
-            setCurrentPage(result.pagination.page)
-            setTotalPages(result.pagination.totalPages)
-            setTotalCount(result.pagination.totalCount)
+            const result: PaginatedResponse<QuotationSummary> = await response.json();
+            setRecentQuotations(result.data);
+            setCurrentPage(result.pagination.page);
+            setTotalPages(result.pagination.totalPages);
+            setTotalCount(result.pagination.totalCount);
         } catch (error) {
-            console.error('Error fetching recent quotations:', error)
-            toast.error('Erro ao carregar orçamentos recentes')
+            console.error('Error fetching recent quotations:', error);
+            toast.error('Erro ao carregar orçamentos recentes');
         } finally {
-            setLoadingRecent(false)
+            setLoadingRecent(false);
         }
-    }
+    };
 
     // Adicione funções para navegação de páginas
     const goToPage = (page: number) => {
-        if (page < 1 || page > totalPages) return
-        setCurrentPage(page)
-        fetchRecentQuotations(selectedBranch, selectedSeller, page)
-    }
+        if (page < 1 || page > totalPages) return;
+        setCurrentPage(page);
+        fetchRecentQuotations(selectedBranch, selectedSeller, page);
+    };
 
-    const goToFirstPage = () => goToPage(1)
-    const goToPreviousPage = () => goToPage(currentPage - 1)
-    const goToNextPage = () => goToPage(currentPage + 1)
-    const goToLastPage = () => goToPage(totalPages)
+    const goToFirstPage = () => goToPage(1);
+    const goToPreviousPage = () => goToPage(currentPage - 1);
+    const goToNextPage = () => goToPage(currentPage + 1);
+    const goToLastPage = () => goToPage(totalPages);
 
     // Atualize os handlers dos filtros para resetar a paginação
     const handleBranchChange = (value: string) => {
-        setSelectedBranch(value)
-        fetchRecentQuotations(value, selectedSeller, 1)
-    }
+        setSelectedBranch(value);
+        fetchRecentQuotations(value, selectedSeller, 1);
+    };
 
     const handleSellerChange = (value: string) => {
-        setSelectedSeller(value)
-        fetchRecentQuotations(selectedBranch, value, 1)
-    }
+        setSelectedSeller(value);
+        fetchRecentQuotations(selectedBranch, value, 1);
+    };
 
     // Função para obter filiais únicas
     const getUniqueBranches = (quotations: QuotationSummary[]) => {
-        const branches = new Set(quotations.map(q => q.nmempresacurtovenda))
-        return Array.from(branches).sort()
-    }
+        const branches = new Set(quotations.map(q => q.nmempresacurtovenda));
+        return Array.from(branches).sort();
+    };
 
     // Função para obter vendedores únicos
     const getUniqueSellers = (quotations: QuotationSummary[]) => {
-        const sellers = new Set(quotations.map(q => q.nmrepresentantevenda))
-        return Array.from(sellers).sort()
-    }
+        const sellers = new Set(quotations.map(q => q.nmrepresentantevenda));
+        return Array.from(sellers).sort();
+    };
 
     // Atualizar a função de filtro para incluir vendedor
     const filteredQuotations = recentQuotations.filter(quotation => 
         (selectedBranch === 'all' || quotation.nmempresacurtovenda === selectedBranch) &&
         (selectedSeller === 'all' || quotation.nmrepresentantevenda === selectedSeller)
-    )
+    );
 
     // Adicionar o useEffect para o fetch inicial
     useEffect(() => {
         if (!initialCode) {
-            fetchRecentQuotations()
+            fetchRecentQuotations();
         }
-    }, []) // Executar apenas uma vez ao montar o componente
+    }, []); // Executar apenas uma vez ao montar o componente
 
-    if (isLoading) return <Loading />
+    if (isLoading) return <Loading />;
 
     if (!initialCode && data.length === 0) {
         return (
@@ -885,7 +886,7 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                                 </TableHeader>
                                                 <TableBody>
                                                     {filteredQuotations.map((quotation) => {
-                                                        const margin = ((quotation.total_faturamento - (quotation.total_faturamento * 0.268 + quotation.total_custo_produto)) / quotation.total_faturamento) * 100
+                                                        const margin = ((quotation.total_faturamento - (quotation.total_faturamento * 0.268 + quotation.total_custo_produto)) / quotation.total_faturamento) * 100;
                                                         const isFullyAvailable = quotation.percentualdisponivel === 100;
 
                                                         return (
@@ -946,15 +947,15 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                                                         variant="ghost"
                                                                         size="icon"
                                                                         onClick={(e) => {
-                                                                            e.stopPropagation()
-                                                                            router.push(`/orcamento/${quotation.cdpedidodevenda}`)
+                                                                            e.stopPropagation();
+                                                                            router.push(`/orcamento/${quotation.cdpedidodevenda}`);
                                                                         }}
                                                                     >
                                                                         <Search className="h-4 w-4" />
                                                                     </Button>
                                                                 </TableCell>
                                                             </TableRow>
-                                                        )
+                                                        );
                                                     })}
                                                 </TableBody>
                                             </Table>
@@ -1024,7 +1025,7 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                 )}
             </div>
             </PermissionGuard>
-        )
+        );
     }
 
     return (
@@ -1046,10 +1047,10 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                     <Button
                         variant={isSimulating ? "secondary" : "outline"}
                         onClick={() => {
-                            setIsSimulating(!isSimulating)
+                            setIsSimulating(!isSimulating);
                             if (!isSimulating) {
-                                setGlobalDiscount('')
-                                setSimulatedDiscounts({})
+                                setGlobalDiscount('');
+                                setSimulatedDiscounts({});
                             }
                         }}
                     >
@@ -1080,8 +1081,8 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                             step="0.1"
                                             onKeyDown={(e) => {
                                                 if (e.key === 'Enter') {
-                                                    e.preventDefault()
-                                                    applyGlobalDiscount()
+                                                    e.preventDefault();
+                                                    applyGlobalDiscount();
                                                 }
                                             }}
                                         />
@@ -1110,8 +1111,8 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                             step="0.1"
                                             onKeyDown={(e) => {
                                                 if (e.key === 'Enter') {
-                                                    e.preventDefault()
-                                                    applyTargetMarginDiscounts()
+                                                    e.preventDefault();
+                                                    applyTargetMarginDiscounts();
                                                 }
                                             }}
                                         />
@@ -1138,8 +1139,8 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                             step="0.01"
                                             onKeyDown={(e) => {
                                                 if (e.key === 'Enter') {
-                                                    e.preventDefault()
-                                                    applyTargetValue()
+                                                    e.preventDefault();
+                                                    applyTargetValue();
                                                 }
                                             }}
                                         />
@@ -1183,9 +1184,9 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                                     </TableHeader>
                                                     <TableBody>
                                                         {getUniqueProductGroups().map(group => {
-                                                            const totals = calculateGroupTotals()[group]
-                                                            const margin = calculateMargin(totals.precoFinal, totals.custo)
-                                                            const currentDiscount = ((totals.precoLista - totals.precoFinal) / totals.precoLista) * 100
+                                                            const totals = calculateGroupTotals()[group];
+                                                            const margin = calculateMargin(totals.precoFinal, totals.custo);
+                                                            const currentDiscount = ((totals.precoLista - totals.precoFinal) / totals.precoLista) * 100;
 
                                                             return (
                                                                 <TableRow key={group}>
@@ -1233,10 +1234,10 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                                                                 step="0.1"
                                                                                 onKeyDown={(e) => {
                                                                                     if (e.key === 'Enter') {
-                                                                                        e.preventDefault()
-                                                                                        const discount = Number(groupDiscounts[group])
+                                                                                        e.preventDefault();
+                                                                                        const discount = Number(groupDiscounts[group]);
                                                                                         if (!isNaN(discount)) {
-                                                                                            applyGroupDiscount(group, discount)
+                                                                                            applyGroupDiscount(group, discount);
                                                                                         }
                                                                                     }
                                                                                 }}
@@ -1246,9 +1247,9 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                                                     <TableCell>
                                                                         <Button
                                                                             onClick={() => {
-                                                                                const discount = Number(groupDiscounts[group])
+                                                                                const discount = Number(groupDiscounts[group]);
                                                                                 if (!isNaN(discount)) {
-                                                                                    applyGroupDiscount(group, discount)
+                                                                                    applyGroupDiscount(group, discount);
                                                                                 }
                                                                             }}
                                                                             disabled={groupDiscounts[group] === undefined}
@@ -1258,7 +1259,7 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                                                         </Button>
                                                                     </TableCell>
                                                                 </TableRow>
-                                                            )
+                                                            );
                                                         })}
                                                     </TableBody>
                                                 </Table>
@@ -1334,9 +1335,9 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                                                 variant="ghost"
                                                                 size="icon"
                                                                 onClick={async () => {
-                                                                    const shareUrl = `${window.location.origin}/orcamento/${sim.cdpedidodevenda}?sim=${sim.share_id}`
-                                                                    await navigator.clipboard.writeText(shareUrl)
-                                                                    toast.success('Link copiado para a área de transferência!')
+                                                                    const shareUrl = `${window.location.origin}/orcamento/${sim.cdpedidodevenda}?sim=${sim.share_id}`;
+                                                                    await navigator.clipboard.writeText(shareUrl);
+                                                                    toast.success('Link copiado para a área de transferência!');
                                                                 }}
                                                                 className="h-8 w-8"
                                                                 title="Copiar link"
@@ -1350,7 +1351,7 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                                             className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
                                                             onClick={() => {
                                                                 if (window.confirm('Tem certeza que deseja excluir esta simulação?')) {
-                                                                    deleteSimulation(sim.id)
+                                                                    deleteSimulation(sim.id);
                                                                 }
                                                             }}
                                                             title="Excluir"
@@ -1522,19 +1523,19 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                                     const currentDiscount = calculateDiscount(
                                                         item.vlprecovendainformado,
                                                         item.vlfaturamento
-                                                    )
-                                                    const simulatedDiscount = simulatedDiscounts[item.cdproduto]
+                                                    );
+                                                    const simulatedDiscount = simulatedDiscounts[item.cdproduto];
                                                     const margin = isSimulating && simulatedDiscount !== undefined
                                                         ? calculateMarginWithDiscount(
                                                             item.vlprecovendainformado,
                                                             item.vltotalcustoproduto,
                                                             simulatedDiscount
                                                         )
-                                                        : calculateMargin(item.vlfaturamento, item.vltotalcustoproduto)
+                                                        : calculateMargin(item.vlfaturamento, item.vltotalcustoproduto);
                                                     
                                                     const simulatedPrice = isSimulating && simulatedDiscount !== undefined
                                                         ? item.vlprecovendainformado * (1 - simulatedDiscount / 100)
-                                                        : item.vlfaturamento
+                                                        : item.vlfaturamento;
 
                                                     return (
                                                         <TableRow 
@@ -1560,9 +1561,9 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                                                     stockData={stockData[item.cdproduto] || null}
                                                                     open={openPopoverId === item.cdproduto}
                                                                     onOpenChange={(open) => {
-                                                                        setOpenPopoverId(open ? item.cdproduto : null)
+                                                                        setOpenPopoverId(open ? item.cdproduto : null);
                                                                         if (open && !stockData[item.cdproduto] && !loadingStock[item.cdproduto]) {
-                                                                            fetchStockData(item.cdproduto)
+                                                                            fetchStockData(item.cdproduto);
                                                                         }
                                                                     }}
                                                                     loading={loadingStock[item.cdproduto]}
@@ -1604,10 +1605,10 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                                                         step="0.1"
                                                                         onKeyDown={(e) => {
                                                                             if (e.key === 'Enter') {
-                                                                                e.preventDefault()
-                                                                                const discount = parseFloat(e.currentTarget.value)
+                                                                                e.preventDefault();
+                                                                                const discount = parseFloat(e.currentTarget.value);
                                                                                 if (!isNaN(discount)) {
-                                                                                    handleSimulatedDiscountChange(item.cdproduto, e.currentTarget.value)
+                                                                                    handleSimulatedDiscountChange(item.cdproduto, e.currentTarget.value);
                                                                                 }
                                                                             }
                                                                         }}
@@ -1637,7 +1638,7 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
                                                             </TableCell>
                                                             <TableCell>{item.nmgrupoproduto}</TableCell>
                                                         </TableRow>
-                                                    )
+                                                    );
                                                 })}
                                             </TableBody>
                                         </Table>
@@ -1677,5 +1678,5 @@ export default function QuotationDetails({ initialCode }: QuotationDetailsProps 
             />
         </div>
         </PermissionGuard>
-    )
+    );
 }

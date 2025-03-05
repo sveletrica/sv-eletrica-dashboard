@@ -1,8 +1,8 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { PermissionGuard } from '@/components/guards/permission-guard'
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState, useEffect } from 'react';
+import { PermissionGuard } from '@/components/guards/permission-guard';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   BarChart, 
   Bar, 
@@ -15,23 +15,23 @@ import {
   PieChart, 
   Pie, 
   Cell 
-} from 'recharts'
+} from 'recharts';
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
   ChartLegend,
   ChartLegendContent
-} from "@/components/ui/chart"
-import Loading from '../vendas-dia/loading'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { ExternalLink } from 'lucide-react'
-import { FERIADOS } from '@/app/config/feriados'
+} from "@/components/ui/chart";
+import Loading from '../vendas-dia/loading';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { ExternalLink } from 'lucide-react';
+import { FERIADOS } from '@/app/config/feriados';
 import { 
   getMetaGeral, 
   getMetaFilial 
-} from '@/app/config/metas'
+} from '@/app/config/metas';
 
 // Define interfaces for the data
 interface VendedorMensal {
@@ -88,25 +88,25 @@ const MESES = [
 ];
 
 export default function DashboardVendas() {
-  const router = useRouter()
-  const [data, setData] = useState<VendedorMensal[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [filiais, setFiliais] = useState<string[]>([])
-  const [selectedFilial, setSelectedFilial] = useState<string>('all')
-  const [vendedoresPerformance, setVendedoresPerformance] = useState<VendedorPerformance[]>([])
-  const [filiaisPerformance, setFiliaisPerformance] = useState<FilialPerformance[]>([])
-  const [totalVendas, setTotalVendas] = useState(0)
-  const [totalMargem, setTotalMargem] = useState(0)
-  const [activeView, setActiveView] = useState('overview')
+  const router = useRouter();
+  const [data, setData] = useState<VendedorMensal[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [filiais, setFiliais] = useState<string[]>([]);
+  const [selectedFilial, setSelectedFilial] = useState<string>('all');
+  const [vendedoresPerformance, setVendedoresPerformance] = useState<VendedorPerformance[]>([]);
+  const [filiaisPerformance, setFiliaisPerformance] = useState<FilialPerformance[]>([]);
+  const [totalVendas, setTotalVendas] = useState(0);
+  const [totalMargem, setTotalMargem] = useState(0);
+  const [activeView, setActiveView] = useState('overview');
   
   // Obter o mês atual (formato '01', '02', etc.)
-  const currentMonth = (new Date().getMonth() + 1).toString().padStart(2, '0')
+  const currentMonth = (new Date().getMonth() + 1).toString().padStart(2, '0');
   
   // Novos estados para filtros de ano e mês
-  const [anos, setAnos] = useState<string[]>([])
-  const [selectedAno, setSelectedAno] = useState<string>(new Date().getFullYear().toString())
-  const [selectedMes, setSelectedMes] = useState<string>(currentMonth)
+  const [anos, setAnos] = useState<string[]>([]);
+  const [selectedAno, setSelectedAno] = useState<string>(new Date().getFullYear().toString());
+  const [selectedMes, setSelectedMes] = useState<string>(currentMonth);
 
   const [diasUteisInfo, setDiasUteisInfo] = useState<{
     diasUteisTotais: number;
@@ -126,117 +126,117 @@ export default function DashboardVendas() {
   useEffect(() => {
     const fetchFiliais = async () => {
       try {
-        const response = await fetch('/api/vendedores/filiais')
+        const response = await fetch('/api/vendedores/filiais');
         if (!response.ok) {
-          throw new Error('Failed to fetch branches')
+          throw new Error('Failed to fetch branches');
         }
-        const data = await response.json()
-        setFiliais(data)
+        const data = await response.json();
+        setFiliais(data);
       } catch (error) {
-        console.error('Error fetching branches:', error)
-        setError('Erro ao carregar filiais')
+        console.error('Error fetching branches:', error);
+        setError('Erro ao carregar filiais');
       }
-    }
+    };
 
-    fetchFiliais()
-  }, [])
+    fetchFiliais();
+  }, []);
 
   // Fetch anos disponíveis
   useEffect(() => {
     const fetchAnos = async () => {
       try {
-        const response = await fetch('/api/vendedores/anos')
+        const response = await fetch('/api/vendedores/anos');
         if (!response.ok) {
-          throw new Error('Failed to fetch years')
+          throw new Error('Failed to fetch years');
         }
-        const data = await response.json()
+        const data = await response.json();
         
         // Ordenar anos em ordem decrescente
-        const sortedAnos = [...data].sort((a, b) => b.localeCompare(a))
-        setAnos(sortedAnos)
+        const sortedAnos = [...data].sort((a, b) => b.localeCompare(a));
+        setAnos(sortedAnos);
         
         // Definir o ano atual como padrão se disponível
-        const currentYear = new Date().getFullYear().toString()
+        const currentYear = new Date().getFullYear().toString();
         if (sortedAnos.includes(currentYear)) {
-          setSelectedAno(currentYear)
+          setSelectedAno(currentYear);
         } else if (sortedAnos.length > 0) {
-          setSelectedAno(sortedAnos[0]) // Selecionar o ano mais recente
+          setSelectedAno(sortedAnos[0]); // Selecionar o ano mais recente
         }
       } catch (error) {
-        console.error('Error fetching years:', error)
+        console.error('Error fetching years:', error);
       }
-    }
+    };
 
-    fetchAnos()
-  }, [])
+    fetchAnos();
+  }, []);
 
   // Fetch sales data
   useEffect(() => {
     const fetchData = async () => {
-      setIsLoading(true)
+      setIsLoading(true);
       try {
         // Construir URL com todos os filtros
-        let url = `/api/vendedores/mensal?`
+        let url = `/api/vendedores/mensal?`;
         
-        const params = new URLSearchParams()
+        const params = new URLSearchParams();
         if (selectedFilial !== 'all') {
-          params.append('branch', selectedFilial)
+          params.append('branch', selectedFilial);
         }
         if (selectedAno !== 'all') {
-          params.append('year', selectedAno)
+          params.append('year', selectedAno);
         }
         if (selectedMes !== 'all') {
-          params.append('month', selectedMes)
+          params.append('month', selectedMes);
         }
         
-        url += params.toString()
+        url += params.toString();
         
-        const response = await fetch(url)
+        const response = await fetch(url);
         
         if (!response.ok) {
-          throw new Error('Failed to fetch sales data')
+          throw new Error('Failed to fetch sales data');
         }
         
-        const responseData = await response.json()
-        setData(responseData)
-        processData(responseData)
+        const responseData = await response.json();
+        setData(responseData);
+        processData(responseData);
       } catch (error) {
-        console.error('Error fetching data:', error)
-        setError('Erro ao carregar dados de vendas')
+        console.error('Error fetching data:', error);
+        setError('Erro ao carregar dados de vendas');
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
-    }
+    };
 
-    fetchData()
-  }, [selectedFilial, selectedAno, selectedMes])
+    fetchData();
+  }, [selectedFilial, selectedAno, selectedMes]);
 
   // Process the data to get performance metrics
   const processData = (data: VendedorMensal[]) => {
     // Process vendedores performance
-    const vendedoresMap = new Map<string, VendedorPerformance>()
-    const filiaisMap = new Map<string, FilialPerformance>()
-    let totalVendas = 0
-    let totalCusto = 0
+    const vendedoresMap = new Map<string, VendedorPerformance>();
+    const filiaisMap = new Map<string, FilialPerformance>();
+    let totalVendas = 0;
+    let totalCusto = 0;
 
     data.forEach(item => {
       // Skip invalid data
-      if (!item.nmrepresentantevenda || !item.nmempresacurtovenda) return
+      if (!item.nmrepresentantevenda || !item.nmempresacurtovenda) return;
       
       // Parse margem from string (e.g., "1,14%" to 1.14) with null check
-      let margemValue = 0
+      let margemValue = 0;
       if (item.margem) {
         try {
-          margemValue = parseFloat(item.margem.replace('%', '').replace(',', '.'))
+          margemValue = parseFloat(item.margem.replace('%', '').replace(',', '.'));
         } catch (e) {
-          console.warn('Error parsing margem:', item.margem)
+          console.warn('Error parsing margem:', item.margem);
         }
       }
       
       // Agrupar SV FILIAL e SV MATRIZ como "Corporativo"
-      let filialNome = item.nmempresacurtovenda
+      let filialNome = item.nmempresacurtovenda;
       if (filialNome === "SV FILIAL" || filialNome === "SV MATRIZ") {
-        filialNome = "Corporativo"
+        filialNome = "Corporativo";
       }
       
       // Update vendedor data
@@ -249,10 +249,10 @@ export default function DashboardVendas() {
             vltotalcustoproduto: 0,
             margem: 0
           }
-        })
+        });
       }
       
-      const vendedor = vendedoresMap.get(item.nmrepresentantevenda)!
+      const vendedor = vendedoresMap.get(item.nmrepresentantevenda)!;
       
       // Add filial data for this vendedor
       if (!vendedor.filiais[filialNome]) {
@@ -260,16 +260,16 @@ export default function DashboardVendas() {
           vlfaturamento: 0,
           vltotalcustoproduto: 0,
           margem: 0
-        }
+        };
       }
       
       // Update filial data with null checks
-      vendedor.filiais[filialNome].vlfaturamento += item.vlfaturamento || 0
-      vendedor.filiais[filialNome].vltotalcustoproduto += item.vltotalcustoproduto || 0
+      vendedor.filiais[filialNome].vlfaturamento += item.vlfaturamento || 0;
+      vendedor.filiais[filialNome].vltotalcustoproduto += item.vltotalcustoproduto || 0;
       
       // Update vendedor totals
-      vendedor.total.vlfaturamento += item.vlfaturamento || 0
-      vendedor.total.vltotalcustoproduto += item.vltotalcustoproduto || 0
+      vendedor.total.vlfaturamento += item.vlfaturamento || 0;
+      vendedor.total.vltotalcustoproduto += item.vltotalcustoproduto || 0;
       
       // Update filial performance
       if (!filiaisMap.has(filialNome)) {
@@ -279,99 +279,99 @@ export default function DashboardVendas() {
           vltotalcustoproduto: 0,
           margem: 0,
           vendedores: 0
-        })
+        });
       }
       
-      const filial = filiaisMap.get(filialNome)!
-      filial.vlfaturamento += item.vlfaturamento || 0
-      filial.vltotalcustoproduto += item.vltotalcustoproduto || 0
+      const filial = filiaisMap.get(filialNome)!;
+      filial.vlfaturamento += item.vlfaturamento || 0;
+      filial.vltotalcustoproduto += item.vltotalcustoproduto || 0;
       
       // Update global totals
-      totalVendas += item.vlfaturamento || 0
-      totalCusto += item.vltotalcustoproduto || 0
-    })
+      totalVendas += item.vlfaturamento || 0;
+      totalCusto += item.vltotalcustoproduto || 0;
+    });
     
     // Calculate margins for vendedores
     vendedoresMap.forEach(vendedor => {
       // Calculate margin for each filial
       Object.keys(vendedor.filiais).forEach(filialNome => {
-        const filial = vendedor.filiais[filialNome]
-        filial.margem = calculateMargem(filial.vlfaturamento, filial.vltotalcustoproduto)
-      })
+        const filial = vendedor.filiais[filialNome];
+        filial.margem = calculateMargem(filial.vlfaturamento, filial.vltotalcustoproduto);
+      });
       
       // Calculate total margin
-      vendedor.total.margem = calculateMargem(vendedor.total.vlfaturamento, vendedor.total.vltotalcustoproduto)
-    })
+      vendedor.total.margem = calculateMargem(vendedor.total.vlfaturamento, vendedor.total.vltotalcustoproduto);
+    });
     
     // Calculate margins for filiais and count unique vendedores
-    const vendedoresPorFilial = new Map<string, Set<string>>()
+    const vendedoresPorFilial = new Map<string, Set<string>>();
     
     data.forEach(item => {
-      if (!item.nmempresacurtovenda) return
+      if (!item.nmempresacurtovenda) return;
       
       // Agrupar SV FILIAL e SV MATRIZ como "Corporativo"
-      let filialNome = item.nmempresacurtovenda
+      let filialNome = item.nmempresacurtovenda;
       if (filialNome === "SV FILIAL" || filialNome === "SV MATRIZ") {
-        filialNome = "Corporativo"
+        filialNome = "Corporativo";
       }
       
       if (!vendedoresPorFilial.has(filialNome)) {
-        vendedoresPorFilial.set(filialNome, new Set())
+        vendedoresPorFilial.set(filialNome, new Set());
       }
       if (item.nmrepresentantevenda) {
-        vendedoresPorFilial.get(filialNome)!.add(item.nmrepresentantevenda)
+        vendedoresPorFilial.get(filialNome)!.add(item.nmrepresentantevenda);
       }
-    })
+    });
     
     filiaisMap.forEach((filial, nome) => {
-      filial.margem = calculateMargem(filial.vlfaturamento, filial.vltotalcustoproduto)
-      filial.vendedores = vendedoresPorFilial.get(nome)?.size || 0
-    })
+      filial.margem = calculateMargem(filial.vlfaturamento, filial.vltotalcustoproduto);
+      filial.vendedores = vendedoresPorFilial.get(nome)?.size || 0;
+    });
     
     // Sort vendedores by total sales
     const sortedVendedores = Array.from(vendedoresMap.values())
-      .sort((a, b) => b.total.vlfaturamento - a.total.vlfaturamento)
+      .sort((a, b) => b.total.vlfaturamento - a.total.vlfaturamento);
     
     // Sort filiais by total sales
     const sortedFiliais = Array.from(filiaisMap.values())
-      .sort((a, b) => b.vlfaturamento - a.vlfaturamento)
+      .sort((a, b) => b.vlfaturamento - a.vlfaturamento);
     
     // Calculate total margin
-    const totalMargemValue = calculateMargem(totalVendas, totalCusto)
+    const totalMargemValue = calculateMargem(totalVendas, totalCusto);
     
-    setVendedoresPerformance(sortedVendedores)
-    setFiliaisPerformance(sortedFiliais)
-    setTotalVendas(totalVendas)
-    setTotalMargem(totalMargemValue)
-  }
+    setVendedoresPerformance(sortedVendedores);
+    setFiliaisPerformance(sortedFiliais);
+    setTotalVendas(totalVendas);
+    setTotalMargem(totalMargemValue);
+  };
   
   // Calculate margin using the same formula as in the existing code
   const calculateMargem = (faturamento: number, custo: number): number => {
-    if (faturamento === 0) return 0
-    return ((faturamento - (faturamento * 0.268 + custo)) / faturamento) * 100
-  }
+    if (faturamento === 0) return 0;
+    return ((faturamento - (faturamento * 0.268 + custo)) / faturamento) * 100;
+  };
   
   // Get background color based on margin
   const getMarginBackgroundColor = (margin: number) => {
-    if (margin >= 5) return 'bg-green-50 dark:bg-green-900/20'
-    if (margin >= 0) return 'bg-yellow-50 dark:bg-yellow-900/20'
-    return 'bg-red-50 dark:bg-red-900/20'
-  }
+    if (margin >= 5) return 'bg-green-50 dark:bg-green-900/20';
+    if (margin >= 0) return 'bg-yellow-50 dark:bg-yellow-900/20';
+    return 'bg-red-50 dark:bg-red-900/20';
+  };
   
   // Get text color based on margin
   const getMarginTextColor = (margin: number) => {
-    if (margin >= 5) return 'text-green-600 dark:text-green-400'
-    if (margin >= 0) return 'text-yellow-600 dark:text-yellow-400'
-    return 'text-red-600 dark:text-red-400'
-  }
+    if (margin >= 5) return 'text-green-600 dark:text-green-400';
+    if (margin >= 0) return 'text-yellow-600 dark:text-yellow-400';
+    return 'text-red-600 dark:text-red-400';
+  };
 
   // Get progress color based on percentage
   const getProgressColor = (percentage: number) => {
-    if (percentage >= 100) return 'text-green-600 dark:text-green-400'
-    if (percentage >= 75) return 'text-blue-600 dark:text-blue-400'
-    if (percentage >= 50) return 'text-yellow-600 dark:text-yellow-400'
-    return 'text-red-600 dark:text-red-400'
-  }
+    if (percentage >= 100) return 'text-green-600 dark:text-green-400';
+    if (percentage >= 75) return 'text-blue-600 dark:text-blue-400';
+    if (percentage >= 50) return 'text-yellow-600 dark:text-yellow-400';
+    return 'text-red-600 dark:text-red-400';
+  };
 
   // Calcular projeção para uma filial específica
   const calcularProjecaoFilial = (faturamentoAtual: number, filialNome: string, diasUteisInfo: any) => {
@@ -418,22 +418,22 @@ export default function DashboardVendas() {
 
   // Formatar o título do período selecionado
   const getPeriodoTitle = () => {
-    let periodo = ''
+    let periodo = '';
     
     if (selectedMes !== 'all' && selectedAno !== 'all') {
-      const mesNome = MESES.find(m => m.value === selectedMes)?.label
-      periodo = `${mesNome} de ${selectedAno}`
+      const mesNome = MESES.find(m => m.value === selectedMes)?.label;
+      periodo = `${mesNome} de ${selectedAno}`;
     } else if (selectedAno !== 'all') {
-      periodo = `Ano de ${selectedAno}`
+      periodo = `Ano de ${selectedAno}`;
     } else if (selectedMes !== 'all') {
-      const mesNome = MESES.find(m => m.value === selectedMes)?.label
-      periodo = `${mesNome} (Todos os Anos)`
+      const mesNome = MESES.find(m => m.value === selectedMes)?.label;
+      periodo = `${mesNome} (Todos os Anos)`;
     } else {
-      periodo = 'Todo o Período'
+      periodo = 'Todo o Período';
     }
     
-    return periodo
-  }
+    return periodo;
+  };
 
   // Função para calcular dias úteis e projeção de faturamento
   const calcularDiasUteis = (feriados: string[]) => {
@@ -569,7 +569,7 @@ export default function DashboardVendas() {
     }
   }, [totalVendas, diasUteisInfo.diasUteisDecorridos, diasUteisInfo.diasUteisRestantes, diasUteisInfo.diasUteisTotais]);
 
-  if (isLoading) return <Loading />
+  if (isLoading) return <Loading />;
 
   if (error) {
     return (
@@ -582,7 +582,7 @@ export default function DashboardVendas() {
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
   // Prepare data for branch performance chart
@@ -591,7 +591,7 @@ export default function DashboardVendas() {
     value: filial.vlfaturamento,
     margin: filial.margem.toFixed(2),
     fill: COLORS[index % COLORS.length]
-  }))
+  }));
 
   // Prepare data for top salespeople chart
   const topSalespeopleData = vendedoresPerformance
@@ -601,7 +601,7 @@ export default function DashboardVendas() {
       value: vendedor.total.vlfaturamento,
       margin: vendedor.total.margem.toFixed(2),
       fill: COLORS[index % COLORS.length]
-    }))
+    }));
 
   // Create chart configs
   const branchChartConfig = filiaisPerformance.reduce((acc, filial, index) => {
@@ -1330,5 +1330,5 @@ export default function DashboardVendas() {
         )}
       </div>
     </PermissionGuard>
-  )
+  );
 } 
