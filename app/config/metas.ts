@@ -3,7 +3,7 @@ export const METAS_FATURAMENTO_POR_DATA: Record<string, Record<string, number>> 
   "2025": {
     "01": 22185000, // Janeiro 2025
     "02": 20300000,  // Fevereiro 2025
-    "03": 17000000 // Março 2025
+    "03": 17907000 // Março 2025
   }
 };
 
@@ -16,6 +16,13 @@ export const METAS_FILIAIS_POR_DATA: Record<string, Record<string, Record<string
       "SV MARACANAU": 700000,
       "SV BM EXPRESS": 450000,
       "SV SOBRAL": 500000
+    },
+    "03": { // Fevereiro
+      "Corporativo": 15000000,
+      "SV WS EXPRESS": 1120000,
+      "SV MARACANAU": 550000,
+      "SV BM EXPRESS": 447000,
+      "SV SOBRAL": 410000
     }
   }
 };
