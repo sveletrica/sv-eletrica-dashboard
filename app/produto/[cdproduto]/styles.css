@@ -1,7 +1,8 @@
-@keyframes expand {
+/* @keyframes expand {
     from {
         transform: scaleX(0);
     }
+
     to {
         transform: scaleX(1);
     }
@@ -11,15 +12,19 @@
     from {
         opacity: 0;
     }
+
     to {
         opacity: 1;
     }
 }
 
 @keyframes blink {
-    0%, 100% {
+
+    0%,
+    100% {
         opacity: 1;
     }
+
     50% {
         opacity: 0;
     }
@@ -77,5 +82,4 @@ input:focus {
 
 .recharts-text {
     fill: var(--foreground);
-}
- 
+} */

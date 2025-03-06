@@ -1,29 +1,29 @@
-"use client"
+"use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Skeleton } from "@/components/ui/skeleton"
-import { cn } from "@/lib/utils"
-import { useMediaQuery } from "@/hooks/use-media-query"
-import { useEffect, useState } from "react"
-import { Roboto } from 'next/font/google'
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
+import { useMediaQuery } from "@/hooks/use-media-query";
+import { useEffect, useState } from "react";
+import { Roboto } from 'next/font/google';
 
 const roboto = Roboto({
   weight: ['400', '500', '700'],
   subsets: ['latin'],
   display: 'swap',
-})
+});
 
 export default function Loading() {
-  const [mounted, setMounted] = useState(false)
-  const isMobile = useMediaQuery("(max-width: 1024px)")
+  const [mounted, setMounted] = useState(false);
+  const isMobile = useMediaQuery("(max-width: 1024px)");
 
   useEffect(() => {
-    setMounted(true)
-  }, [])
+    setMounted(true);
+  }, []);
 
   // Prevent hydration mismatch
   if (!mounted) {
-    return null
+    return null;
   }
 
   return (
@@ -171,5 +171,5 @@ export default function Loading() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 } 

@@ -1,31 +1,29 @@
-'use client'
+'use client';
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { useParams, useRouter, useSearchParams } from 'next/navigation'
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
-import { ArrowLeft, Package, ChevronLeft, ChevronRight, Check, AlertTriangle, XCircle, Search, X } from 'lucide-react'
-import { cn } from "@/lib/utils"
-import { useSpring, animated } from '@react-spring/web'
-import './styles.css'
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { useDebounce } from 'use-debounce'
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
-import { useMediaQuery } from "@/hooks/use-media-query"
-import { Roboto } from 'next/font/google'
-import Link from 'next/link'
-import { SortableColumnProps, SortDirection } from "@/components/ui/table"
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceArea, ReferenceLine } from 'recharts'
-import { ProductStockCard } from '@/components/product-stock-card'
-import { StockPopover } from "@/components/stock-popover"
-import ProductLoading from './loading'
-import { PermissionGuard } from '@/components/guards/permission-guard'
-import { Suspense } from 'react'
-import Image from 'next/image'
-import { ProductImageManager } from '@/components/product-image-manager'
-import { toast } from 'sonner'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft, Package, ChevronLeft, ChevronRight, Check, AlertTriangle, XCircle, Search, X } from 'lucide-react';
+import { cn } from "@/lib/utils";
+import './styles.css';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useDebounce } from 'use-debounce';
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { useMediaQuery } from "@/hooks/use-media-query";
+import { Roboto } from 'next/font/google';
+import Link from 'next/link';
+import { SortableColumnProps } from "@/components/ui/table";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceArea, ReferenceLine } from 'recharts';
+import { ProductStockCard } from '@/components/product-stock-card';
+import { StockPopover } from "@/components/stock-popover";
+import ProductLoading from './loading';
+import { PermissionGuard } from '@/components/guards/permission-guard';
+import { Suspense } from 'react';
+import Image from 'next/image';
+import { ProductImageManager } from '@/components/product-image-manager';
+import { toast } from 'sonner';
 
 interface ProductSale {
     cdpedido: string
@@ -96,28 +94,28 @@ const roboto = Roboto({
     weight: ['400', '500'],
     subsets: ['latin'],
     display: 'swap',
-})
+});
 
 // Hook personalizado para animar números
 function useCountUp(end: number, duration: number = 500) {
-    const [count, setCount] = useState(0)
+    const [count, setCount] = useState(0);
 
     useEffect(() => {
-        let startTimestamp: number | null = null
+        let startTimestamp: number | null = null;
         const step = (timestamp: number) => {
-            if (!startTimestamp) startTimestamp = timestamp
-            const progress = Math.min((timestamp - startTimestamp) / duration, 1)
-            setCount(Math.floor(progress * end))
+            if (!startTimestamp) startTimestamp = timestamp;
+            const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+            setCount(Math.floor(progress * end));
             if (progress < 1) {
-                window.requestAnimationFrame(step)
+                window.requestAnimationFrame(step);
             } else {
-                setCount(end) // Garante que chegue ao valor final exato
+                setCount(end); // Garante que chegue ao valor final exato
             }
-        }
-        window.requestAnimationFrame(step)
-    }, [end, duration])
+        };
+        window.requestAnimationFrame(step);
+    }, [end, duration]);
 
-    return count
+    return count;
 }
 
 // Componente para número animado
@@ -126,12 +124,12 @@ function AnimatedValue({ value, suffix = '', formatter }: {
     suffix?: string,
     formatter?: (value: number) => string
 }) {
-    const count = useCountUp(value)
+    const count = useCountUp(value);
     return (
         <span>
             {formatter ? formatter(count) : count}{suffix}
         </span>
-    )
+    );
 }
 
 // Função auxiliar para estilo da margem
@@ -141,21 +139,21 @@ const getMarginStyle = (margin: number) => {
             background: "bg-green-100 dark:bg-green-900",
             icon: <Check className="h-4 w-4 text-green-600 dark:text-green-400" />,
             text: "text-green-600 dark:text-green-400"
-        }
+        };
     } else if (margin >= 0) {
         return {
             background: "bg-yellow-100 dark:bg-yellow-900",
             icon: <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />,
             text: "text-yellow-600 dark:text-yellow-400"
-        }
+        };
     } else {
         return {
             background: "bg-red-100 dark:bg-red-900",
             icon: <XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />,
             text: "text-red-600 dark:text-red-400"
-        }
+        };
     }
-}
+};
 
 // Update the normalizeStr function
 const normalizeStr = (str: string | null | undefined) => {
@@ -167,7 +165,7 @@ const normalizeStr = (str: string | null | undefined) => {
         .replace(/[\u0300-\u036f]/g, '')
         .replace(/[.,]/g, '')
         .replace(/[x]/g, '');
-}
+};
 
 // Add this function to highlight matched terms
 const highlightMatches = (text: string, searchTerms: string[]) => {
@@ -195,96 +193,96 @@ const highlightMatches = (text: string, searchTerms: string[]) => {
 };
 
 // Add these constants and helper functions at the top level
-const DB_NAME = 'products_db'
-const STORE_NAME = 'products'
-const DB_VERSION = 1
-const CACHE_DURATION = 24 * 60 * 60 * 1000 // 24 hours
+const DB_NAME = 'products_db';
+const STORE_NAME = 'products';
+const DB_VERSION = 1;
+const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
 // Helper function to open IndexedDB
 const openDB = (): Promise<IDBDatabase> => {
     return new Promise((resolve, reject) => {
-        const request = indexedDB.open(DB_NAME, DB_VERSION)
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-        request.onerror = () => reject(request.error)
-        request.onsuccess = () => resolve(request.result)
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve(request.result);
 
         request.onupgradeneeded = (event) => {
-            const db = (event.target as IDBOpenDBRequest).result
+            const db = (event.target as IDBOpenDBRequest).result;
             if (!db.objectStoreNames.contains(STORE_NAME)) {
-                db.createObjectStore(STORE_NAME, { keyPath: 'timestamp' })
+                db.createObjectStore(STORE_NAME, { keyPath: 'timestamp' });
             }
-        }
-    })
-}
+        };
+    });
+};
 
 // Replace getStoredProducts with this version
 const getStoredProducts = async (): Promise<Product[] | null> => {
-    if (typeof window === 'undefined') return null
+    if (typeof window === 'undefined') return null;
 
     try {
-        const db = await openDB()
+        const db = await openDB();
         return new Promise((resolve, reject) => {
-            const transaction = db.transaction(STORE_NAME, 'readonly')
-            const store = transaction.objectStore(STORE_NAME)
-            const request = store.getAll()
+            const transaction = db.transaction(STORE_NAME, 'readonly');
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.getAll();
 
-            request.onerror = () => reject(request.error)
+            request.onerror = () => reject(request.error);
             request.onsuccess = () => {
-                const records = request.result
+                const records = request.result;
                 if (records.length === 0) {
-                    resolve(null)
-                    return
+                    resolve(null);
+                    return;
                 }
 
-                const latestRecord = records[records.length - 1]
+                const latestRecord = records[records.length - 1];
                 if (Date.now() - latestRecord.timestamp > CACHE_DURATION) {
                     // Cache expired, clear the store
-                    const clearTransaction = db.transaction(STORE_NAME, 'readwrite')
-                    const clearStore = clearTransaction.objectStore(STORE_NAME)
-                    clearStore.clear()
-                    resolve(null)
+                    const clearTransaction = db.transaction(STORE_NAME, 'readwrite');
+                    const clearStore = clearTransaction.objectStore(STORE_NAME);
+                    clearStore.clear();
+                    resolve(null);
                 } else {
-                    resolve(latestRecord.data)
+                    resolve(latestRecord.data);
                 }
-            }
-        })
+            };
+        });
     } catch (error) {
-        console.error('Error accessing IndexedDB:', error)
-        return null
+        console.error('Error accessing IndexedDB:', error);
+        return null;
     }
-}
+};
 
 // Replace storeProducts with this version
 const storeProducts = async (products: Product[]): Promise<void> => {
-    if (typeof window === 'undefined') return
+    if (typeof window === 'undefined') return;
 
     try {
-        const db = await openDB()
-        const transaction = db.transaction(STORE_NAME, 'readwrite')
-        const store = transaction.objectStore(STORE_NAME)
+        const db = await openDB();
+        const transaction = db.transaction(STORE_NAME, 'readwrite');
+        const store = transaction.objectStore(STORE_NAME);
 
         // Clear old data
         await new Promise<void>((resolve, reject) => {
-            const clearRequest = store.clear()
-            clearRequest.onerror = () => reject(clearRequest.error)
-            clearRequest.onsuccess = () => resolve()
-        })
+            const clearRequest = store.clear();
+            clearRequest.onerror = () => reject(clearRequest.error);
+            clearRequest.onsuccess = () => resolve();
+        });
 
         // Store new data
         const record = {
             timestamp: Date.now(),
             data: products
-        }
+        };
 
         return new Promise((resolve, reject) => {
-            const request = store.add(record)
-            request.onerror = () => reject(request.error)
-            request.onsuccess = () => resolve()
-        })
+            const request = store.add(record);
+            request.onerror = () => reject(request.error);
+            request.onsuccess = () => resolve();
+        });
     } catch (error) {
-        console.error('Error storing products in IndexedDB:', error)
+        console.error('Error storing products in IndexedDB:', error);
     }
-}
+};
 
 // Update the search logic
 const searchProducts = (products: Product[], query: string) => {
@@ -296,16 +294,16 @@ const searchProducts = (products: Product[], query: string) => {
 
     return products
         .filter(product => {
-            const normalizedName = normalizeStr(product.nmproduto)
-            const normalizedCode = normalizeStr(product.cdproduto)
+            const normalizedName = normalizeStr(product.nmproduto);
+            const normalizedCode = normalizeStr(product.cdproduto);
 
             return searchTerms.every(term =>
                 normalizedName.includes(term) ||
                 normalizedCode.includes(term)
-            )
+            );
         })
-        .slice(0, 50)
-}
+        .slice(0, 50);
+};
 
 const SearchContent = ({
     searchQuery,
@@ -363,37 +361,37 @@ const SearchContent = ({
                 )}
             </div>
         </div>
-    )
-}
+    );
+};
 
 type SortableColumn = 'dtemissao' | 'cdpedido' | 'nrdocumento' | 'nmpessoa' | 'tppessoa' | 'nmempresacurtovenda' | 'qtbrutaproduto' | 'vlfaturamento' | 'vltotalcustoproduto' | 'margem'
 
 // Add these constants at the top of the file, after the imports
-const SORT_STORAGE_KEY = 'product_table_sort'
+const SORT_STORAGE_KEY = 'product_table_sort';
 
 // Add these helper functions
 const getStoredSortConfig = (): SortableColumnProps | null => {
-    if (typeof window === 'undefined') return null
+    if (typeof window === 'undefined') return null;
 
-    const stored = localStorage.getItem(SORT_STORAGE_KEY)
-    if (!stored) return null
+    const stored = localStorage.getItem(SORT_STORAGE_KEY);
+    if (!stored) return null;
 
     try {
-        return JSON.parse(stored)
+        return JSON.parse(stored);
     } catch (error) {
-        console.error('Error parsing stored sort config:', error)
-        return null
+        console.error('Error parsing stored sort config:', error);
+        return null;
     }
-}
+};
 
 const storeSortConfig = (config: SortableColumnProps) => {
-    if (typeof window === 'undefined') return
-    localStorage.setItem(SORT_STORAGE_KEY, JSON.stringify(config))
-}
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(SORT_STORAGE_KEY, JSON.stringify(config));
+};
 
 const prepareMonthlyData = (salesData: ProductSale[], selectedFilial: string | null): MonthlyData[] => {
     // Primeiro filtra os dados pela filial selecionada, se houver
-    const filteredSales = selectedFilial 
+    const filteredSales = selectedFilial
         ? salesData.filter(sale => sale.nmempresacurtovenda === selectedFilial)
         : salesData;
 
@@ -423,7 +421,7 @@ const prepareMonthlyData = (salesData: ProductSale[], selectedFilial: string | n
 // Add this custom tooltip component
 const CustomTooltip = ({ active, payload, label, selectedMonth }: any) => {
     if (active && payload && payload.length) {
-        const isSelected = label === selectedMonth
+        const isSelected = label === selectedMonth;
         return (
             <div className={cn(
                 "bg-background border rounded-lg shadow-lg p-2",
@@ -434,28 +432,28 @@ const CustomTooltip = ({ active, payload, label, selectedMonth }: any) => {
                     Quantidade: {payload[0].value.toLocaleString('pt-BR')}
                 </p>
             </div>
-        )
+        );
     }
-    return null
-}
+    return null;
+};
 
 // Add this helper function at the top level
 const formatStockNumber = (num: number) => {
     return new Intl.NumberFormat('pt-BR').format(num);
-}
+};
 
 // Add this helper function at the top level, outside of the component
 const isDateInRange = (date: string, range: string) => {
     const [start, end] = range.split(' - ').map(d => {
-        const [month, year] = d.split('/')
-        return new Date(Number(year), Number(month) - 1)
-    })
+        const [month, year] = d.split('/');
+        return new Date(Number(year), Number(month) - 1);
+    });
 
-    const [month, year] = date.split('/')
-    const checkDate = new Date(Number(year), Number(month) - 1)
+    const [month, year] = date.split('/');
+    const checkDate = new Date(Number(year), Number(month) - 1);
 
-    return checkDate >= start && checkDate <= end
-}
+    return checkDate >= start && checkDate <= end;
+};
 
 // Add this function after the interfaces
 async function getProductImage(productName: string): Promise<GoogleImageResult | null> {
@@ -572,155 +570,155 @@ const ProductImageCard = ({ productName }: { productName: string }) => {
 
 // Create a wrapper component for the main content
 function ProductSalesDetailsContent() {
-    const router = useRouter()
-    const params = useParams()
-    const searchParams = useSearchParams()
+    const router = useRouter();
+    const params = useParams();
+    const searchParams = useSearchParams();
     const [data, setData] = useState<ApiResponse>({ product: [], stock: [] });
-    const [isLoading, setIsLoading] = useState(false)
-    const [error, setError] = useState<string | null>(null)
-    const [selectedFilial, setSelectedFilial] = useState<string | null>(null)
-    const [currentPage, setCurrentPage] = useState(1)
-    const itemsPerPage = 20
-    const [inputProductCode, setInputProductCode] = useState('')
-    const [isEditing, setIsEditing] = useState(false)
-    const [allProducts, setAllProducts] = useState<Product[]>([])
-    const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
-    const [isSearchOpen, setIsSearchOpen] = useState(false)
-    const [searchQuery, setSearchQuery] = useState('')
-    const [debouncedSearchQuery] = useDebounce(searchQuery, 300)
-    const isMobile = useMediaQuery("(max-width: 1024px)")
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [selectedFilial, setSelectedFilial] = useState<string | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 20;
+    const [inputProductCode, setInputProductCode] = useState('');
+    const [isEditing, setIsEditing] = useState(false);
+    const [allProducts, setAllProducts] = useState<Product[]>([]);
+    const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearchQuery] = useDebounce(searchQuery, 300);
+    const isMobile = useMediaQuery("(max-width: 1024px)");
     const [sortConfig, setSortConfig] = useState<SortableColumnProps>(() => {
-        const stored = getStoredSortConfig()
+        const stored = getStoredSortConfig();
         return stored || {
             column: 'dtemissao',
             direction: 'desc'
-        }
-    })
-    const monthlyData = useMemo(() => 
-        prepareMonthlyData(data.product, selectedFilial), 
+        };
+    });
+    const monthlyData = useMemo(() =>
+        prepareMonthlyData(data.product, selectedFilial),
         [data.product, selectedFilial]
     );
-    const [selectedMonth, setSelectedMonth] = useState<string | null>(null)
-    const [selecting, setSelecting] = useState(false)
-    const [dateRange, setDateRange] = useState<DateRange>({ start: null, end: null })
-    const chartRef = useRef<any>(null)
-    const isFirstRender = useRef(true)
+    const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
+    const [selecting, setSelecting] = useState(false);
+    const [dateRange, setDateRange] = useState<DateRange>({ start: null, end: null });
+    const chartRef = useRef<any>(null);
+    const isFirstRender = useRef(true);
+
+    const fetchData = async () => {
+        const cdproduto = params?.cdproduto as string;
+        if (!cdproduto) return;
+
+        setIsLoading(true);
+        setError(null);
+
+        try {
+            const [productResponse, priceResponse] = await Promise.all([
+                fetch(`/api/produto/${cdproduto}`),
+                fetch(`/api/produto/${cdproduto}/preco`)
+            ]);
+
+            if (!productResponse.ok) {
+                const errorData = await productResponse.json();
+                throw new Error(errorData.error || errorData.details || `Failed to fetch product data: ${productResponse.statusText}`);
+            }
+
+            const productData = await productResponse.json();
+
+            if (!productData?.product?.length) {
+                throw new Error('No product data found');
+            }
+
+            const priceData = priceResponse.ok ? await priceResponse.json() : null;
+
+            setData({
+                ...productData,
+                price: priceData
+            });
+        } catch (err) {
+            const error = err as Error;
+            console.error('Error fetching product data:', error);
+            const errorMessage = error.message || 'Failed to fetch product data';
+            setError(errorMessage);
+            toast.error(errorMessage);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchData = async () => {
-            const cdproduto = params?.cdproduto as string
-            if (!cdproduto) return;
-
-            setIsLoading(true)
-            setError(null)
-
-            try {
-                const [productResponse, priceResponse] = await Promise.all([
-                    fetch(`/api/produto/${cdproduto}`),
-                    fetch(`/api/produto/${cdproduto}/preco`)
-                ])
-
-                if (!productResponse.ok) {
-                    const errorData = await productResponse.json()
-                    throw new Error(errorData.error || errorData.details || `Failed to fetch product data: ${productResponse.statusText}`)
-                }
-
-                const productData = await productResponse.json()
-
-                if (!productData?.product?.length) {
-                    throw new Error('No product data found')
-                }
-
-                const priceData = priceResponse.ok ? await priceResponse.json() : null
-
-                setData({
-                    ...productData,
-                    price: priceData
-                })
-            } catch (err) {
-                const error = err as Error
-                console.error('Error fetching product data:', error)
-                const errorMessage = error.message || 'Failed to fetch product data'
-                setError(errorMessage)
-                toast.error(errorMessage)
-            } finally {
-                setIsLoading(false)
-            }
-        }
-
-        fetchData()
-    }, [params])
+        fetchData();
+    }, [params]);
 
     useEffect(() => {
         // Set initial product code when data is loaded
         if (data.product.length > 0) {
-            setInputProductCode(data.product[0].cdproduto)
+            setInputProductCode(data.product[0].cdproduto);
         }
-    }, [data.product])
+    }, [data.product]);
 
     useEffect(() => {
         const fetchAndStoreProducts = async () => {
             try {
                 // Try to get from IndexedDB first
-                const storedProducts = await getStoredProducts()
+                const storedProducts = await getStoredProducts();
                 if (storedProducts) {
-                    setAllProducts(storedProducts)
-                    return
+                    setAllProducts(storedProducts);
+                    return;
                 }
 
                 // If no cached data, fetch from API
-                const response = await fetch('/api/produtos')
-                if (!response.ok) throw new Error('Failed to fetch products')
-                const data = await response.json()
-                setAllProducts(data)
-                await storeProducts(data)
+                const response = await fetch('/api/produtos');
+                if (!response.ok) throw new Error('Failed to fetch products');
+                const data = await response.json();
+                setAllProducts(data);
+                await storeProducts(data);
             } catch (error) {
-                console.error('Error fetching products:', error)
+                console.error('Error fetching products:', error);
             }
-        }
+        };
 
-        fetchAndStoreProducts()
-    }, [])
+        fetchAndStoreProducts();
+    }, []);
 
     useEffect(() => {
         if (!isSearchOpen) {
-            setFilteredProducts([])
-            return
+            setFilteredProducts([]);
+            return;
         }
 
-        const filtered = searchProducts(allProducts, searchQuery)
-        setFilteredProducts(filtered)
-    }, [searchQuery, allProducts, isSearchOpen])
+        const filtered = searchProducts(allProducts, searchQuery);
+        setFilteredProducts(filtered);
+    }, [searchQuery, allProducts, isSearchOpen]);
 
     const handleProductSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
-            const newProductCode = (e.target as HTMLInputElement).value
+            const newProductCode = (e.target as HTMLInputElement).value;
             if (newProductCode && newProductCode !== params.cdproduto) {
-                router.push(`/produto/${newProductCode}`)
+                router.push(`/produto/${newProductCode}`);
             }
-            setIsEditing(false)
+            setIsEditing(false);
         }
-    }
+    };
 
     const handleBlur = () => {
-        setIsEditing(false)
-        setInputProductCode(data.product[0]?.cdproduto || '')
-    }
+        setIsEditing(false);
+        setInputProductCode(data.product[0]?.cdproduto || '');
+    };
 
     const handleProductSelect = (product: Product) => {
-        setIsSearchOpen(false)
-        setInputProductCode(product.cdproduto)
-        router.push(`/produto/${product.cdproduto}`)
-    }
+        setIsSearchOpen(false);
+        setInputProductCode(product.cdproduto);
+        router.push(`/produto/${product.cdproduto}`);
+    };
 
     const handleBack = () => {
-        const returnUrl = searchParams.get('returnUrl')
+        const returnUrl = searchParams.get('returnUrl');
         if (returnUrl) {
-            router.push(returnUrl)
+            router.push(returnUrl);
         } else {
-            router.back()
+            router.back();
         }
-    }
+    };
 
     const handleSort = (column: SortableColumn) => {
         setSortConfig(prev => {
@@ -733,47 +731,47 @@ function ProductSalesDetailsContent() {
                             ? null
                             : 'asc'
                     : 'asc'
-            }
-            storeSortConfig(newConfig)
-            return newConfig
-        })
-    }
+            };
+            storeSortConfig(newConfig);
+            return newConfig;
+        });
+    };
 
     const filteredData = useMemo(() => {
-        let filtered = [...data.product]
+        let filtered = [...data.product];
 
         // Apply sorting
         if (sortConfig.direction) {
             filtered.sort((a, b) => {
                 if (sortConfig.column === 'dtemissao') {
-                    const [dayA, monthA, yearA] = a.dtemissao.split('/').map(Number)
-                    const [dayB, monthB, yearB] = b.dtemissao.split('/').map(Number)
-                    const dateA = new Date(yearA, monthA - 1, dayA)
-                    const dateB = new Date(yearB, monthB - 1, dayB)
+                    const [dayA, monthA, yearA] = a.dtemissao.split('/').map(Number);
+                    const [dayB, monthB, yearB] = b.dtemissao.split('/').map(Number);
+                    const dateA = new Date(yearA, monthA - 1, dayA);
+                    const dateB = new Date(yearB, monthB - 1, dayB);
                     return sortConfig.direction === 'asc'
                         ? dateA.getTime() - dateB.getTime()
-                        : dateB.getTime() - dateA.getTime()
+                        : dateB.getTime() - dateA.getTime();
                 }
 
                 if (sortConfig.column === 'qtbrutaproduto' || sortConfig.column === 'vlfaturamento' || sortConfig.column === 'vltotalcustoproduto') {
                     return sortConfig.direction === 'asc'
                         ? Number(a[sortConfig.column]) - Number(b[sortConfig.column])
-                        : Number(b[sortConfig.column]) - Number(a[sortConfig.column])
+                        : Number(b[sortConfig.column]) - Number(a[sortConfig.column]);
                 }
 
                 // Type assertion to handle string indexing
-                const compareA = String((a as any)[sortConfig.column]).toLowerCase()
-                const compareB = String((b as any)[sortConfig.column]).toLowerCase()
+                const compareA = String((a as any)[sortConfig.column]).toLowerCase();
+                const compareB = String((b as any)[sortConfig.column]).toLowerCase();
 
                 return sortConfig.direction === 'asc'
                     ? compareA.localeCompare(compareB)
-                    : compareB.localeCompare(compareA)
-            })
+                    : compareB.localeCompare(compareA);
+            });
         }
 
         // Apply filial filter
         if (selectedFilial) {
-            filtered = filtered.filter(item => item.nmempresacurtovenda === selectedFilial)
+            filtered = filtered.filter(item => item.nmempresacurtovenda === selectedFilial);
         }
 
         // Apply month filter
@@ -781,75 +779,79 @@ function ProductSalesDetailsContent() {
             if (selectedMonth.includes(' - ')) {
                 // Range filter
                 filtered = filtered.filter(sale => {
-                    const [, saleMonth, saleYear] = sale.dtemissao.split('/')
-                    const saleDate = `${saleMonth}/${saleYear}`
-                    return isDateInRange(saleDate, selectedMonth)
-                })
+                    const [, saleMonth, saleYear] = sale.dtemissao.split('/');
+                    const saleDate = `${saleMonth}/${saleYear}`;
+                    return isDateInRange(saleDate, selectedMonth);
+                });
             } else {
                 // Single month filter
-                const [month, year] = selectedMonth.split('/')
+                const [month, year] = selectedMonth.split('/');
                 filtered = filtered.filter(sale => {
-                    const [, saleMonth, saleYear] = sale.dtemissao.split('/')
-                    return saleMonth === month && saleYear === year
-                })
+                    const [, saleMonth, saleYear] = sale.dtemissao.split('/');
+                    return saleMonth === month && saleYear === year;
+                });
             }
         }
 
-        return filtered
-    }, [data.product, selectedMonth, selectedFilial, sortConfig])
+        return filtered;
+    }, [data.product, selectedMonth, selectedFilial, sortConfig]);
 
     const handleMonthClick = (props: any) => {
         if (props && props.activeLabel) {
-            setSelectedMonth(selectedMonth === props.activeLabel ? null : props.activeLabel)
+            setSelectedMonth(selectedMonth === props.activeLabel ? null : props.activeLabel);
         }
-    }
+    };
 
     // Move the memoized calculations here, before any conditional returns
     const totals = useMemo(() => {
-        if (!filteredData?.length) return { faturamento: 0, quantidade: 0 }
+        if (!filteredData?.length) return { faturamento: 0, quantidade: 0 };
         return filteredData.reduce((acc, item) => ({
             faturamento: acc.faturamento + item.vlfaturamento,
             quantidade: acc.quantidade + item.qtbrutaproduto
-        }), { faturamento: 0, quantidade: 0 })
-    }, [filteredData])
+        }), { faturamento: 0, quantidade: 0 });
+    }, [filteredData]);
 
     const filialTotals = useMemo(() => {
-        if (!filteredData?.length) return {}
+        if (!filteredData?.length) return {};
         return filteredData.reduce((acc, item) => {
-            const filial = item.nmempresacurtovenda
+            const filial = item.nmempresacurtovenda;
             if (!acc[filial]) {
                 acc[filial] = {
                     quantidade: 0,
                     faturamento: 0,
                     custo: 0
-                }
+                };
             }
-            acc[filial].quantidade += item.qtbrutaproduto
-            acc[filial].faturamento += item.vlfaturamento
-            acc[filial].custo += item.vltotalcustoproduto
-            return acc
-        }, {} as Record<string, { quantidade: number, faturamento: number, custo: number }>)
-    }, [filteredData])
+            acc[filial].quantidade += item.qtbrutaproduto;
+            acc[filial].faturamento += item.vlfaturamento;
+            acc[filial].custo += item.vltotalcustoproduto;
+            return acc;
+        }, {} as Record<string, { quantidade: number, faturamento: number, custo: number }>);
+    }, [filteredData]);
 
     const stockDisplay = useMemo(() => {
-        if (!data?.stock?.length) return { total: 0, filialCount: 0 }
+        if (!data?.stock?.length) return { total: 0, filialCount: 0 };
 
-        const stockData = data.stock[0]
-        if (!stockData) return { total: 0, filialCount: 0 }
+        const stockData = data.stock[0];
+        if (!stockData) return { total: 0, filialCount: 0 };
 
         const filialCount = Object.keys(stockData)
-            .filter(key => key.startsWith('QtEstoque_') && stockData[key as keyof StockData] > 0)
-            .length
+            .filter(key => {
+                if (!key.startsWith('QtEstoque_')) return false;
+                const value = stockData[key as keyof StockData];
+                return typeof value === 'number' && value > 0;
+            })
+            .length;
 
         return {
             total: stockData.StkTotal || 0,
             filialCount
-        }
-    }, [data.stock])
+        };
+    }, [data.stock]);
 
     const calculateMargin = (faturamento: number, custo: number) => {
-        return ((faturamento - (faturamento * 0.268 + custo)) / faturamento) * 100
-    }
+        return ((faturamento - (faturamento * 0.268 + custo)) / faturamento) * 100;
+    };
 
     // Add this helper function near the top of the component
     const hasSales = useMemo(() => {
@@ -927,10 +929,10 @@ function ProductSalesDetailsContent() {
                     </CardContent>
                 </Card>
             </div>
-        )
+        );
     }
 
-    if (isLoading) return <ProductLoading />
+    if (isLoading) return <ProductLoading />;
 
     if (!data.product.length) {
         return (
@@ -951,21 +953,21 @@ function ProductSalesDetailsContent() {
                     </CardContent>
                 </Card>
             </div>
-        )
+        );
     }
 
     // Calculate derived values that don't need memoization
     const sortedFilials = Object.entries(filialTotals)
-        .sort(([, a], [, b]) => b.quantidade - a.quantidade)
+        .sort(([, a], [, b]) => b.quantidade - a.quantidade);
 
-    const maxQuantity = Math.max(...Object.values(filialTotals).map(v => v.quantidade))
+    const maxQuantity = Math.max(...Object.values(filialTotals).map(v => v.quantidade));
 
     // Paginação
-    const totalPages = Math.ceil(filteredData.length / itemsPerPage)
+    const totalPages = Math.ceil(filteredData.length / itemsPerPage);
     const currentItems = filteredData.slice(
         (currentPage - 1) * itemsPerPage,
         currentPage * itemsPerPage
-    )
+    );
 
     return (
         <PermissionGuard permission="inventory">
@@ -1208,8 +1210,8 @@ function ProductSalesDetailsContent() {
                                                     </TableHeader>
                                                     <TableBody>
                                                         {sortedFilials.map(([filial, values]) => {
-                                                            const percentage = (values.quantidade / totals.quantidade) * 100
-                                                            const margin = calculateMargin(values.faturamento, values.custo)
+                                                            const percentage = (values.quantidade / totals.quantidade) * 100;
+                                                            const margin = calculateMargin(values.faturamento, values.custo);
                                                             return (
                                                                 <TableRow
                                                                     key={filial}
@@ -1290,7 +1292,7 @@ function ProductSalesDetailsContent() {
                                                                         </div>
                                                                     </TableCell>
                                                                 </TableRow>
-                                                            )
+                                                            );
                                                         })}
                                                         <TableRow className={cn("font-bold", roboto.className, "text-xs sm:text-sm")}>
                                                             <TableCell>Total</TableCell>
@@ -1391,8 +1393,8 @@ function ProductSalesDetailsContent() {
                                                         onClick={handleMonthClick}
                                                         onMouseDown={(e) => {
                                                             if (e && e.activeLabel) {
-                                                                setSelecting(true)
-                                                                setDateRange({ start: e.activeLabel, end: null })
+                                                                setSelecting(true);
+                                                                setDateRange({ start: e.activeLabel, end: null });
                                                             }
                                                         }}
                                                         onMouseMove={(e) => {
@@ -1400,19 +1402,19 @@ function ProductSalesDetailsContent() {
                                                                 setDateRange(prev => ({
                                                                     ...prev,
                                                                     end: e.activeLabel as string
-                                                                }))
+                                                                }));
                                                             }
                                                         }}
                                                         onMouseUp={() => {
-                                                            setSelecting(false)
+                                                            setSelecting(false);
                                                             if (dateRange.start && dateRange.end) {
                                                                 const [start, end] = [dateRange.start, dateRange.end].sort((a, b) => {
-                                                                    const [monthA, yearA] = a.split('/')
-                                                                    const [monthB, yearB] = b.split('/')
+                                                                    const [monthA, yearA] = a.split('/');
+                                                                    const [monthB, yearB] = b.split('/');
                                                                     return new Date(Number(yearA), Number(monthA) - 1).getTime() -
-                                                                        new Date(Number(yearB), Number(monthB) - 1).getTime()
-                                                                })
-                                                                setSelectedMonth(`${start} - ${end}`)
+                                                                        new Date(Number(yearB), Number(monthB) - 1).getTime();
+                                                                });
+                                                                setSelectedMonth(`${start} - ${end}`);
                                                             }
                                                         }}
                                                         ref={chartRef}
@@ -1427,10 +1429,12 @@ function ProductSalesDetailsContent() {
                                                         <XAxis
                                                             dataKey="month"
                                                             fontSize={12}
+                                                            stroke="#8a8a8a"
                                                             tickMargin={5}
                                                         />
                                                         <YAxis
                                                             fontSize={12}
+                                                            stroke="#8a8a8a"
                                                             tickFormatter={(value) =>
                                                                 new Intl.NumberFormat('pt-BR', {
                                                                     notation: 'compact',
@@ -1448,12 +1452,12 @@ function ProductSalesDetailsContent() {
                                                             fill="url(#colorValue)"
                                                             isAnimationActive={isFirstRender.current}
                                                             onAnimationEnd={() => {
-                                                                isFirstRender.current = false
+                                                                isFirstRender.current = false;
                                                             }}
                                                             dot={(props: any) => {
                                                                 const isInRange = selectedMonth?.includes(' - ')
                                                                     ? isDateInRange(props.payload.month, selectedMonth)
-                                                                    : selectedMonth === props.payload.month
+                                                                    : selectedMonth === props.payload.month;
                                                                 return (
                                                                     <circle
                                                                         key={`dot-${props.payload.month}`}
@@ -1468,7 +1472,7 @@ function ProductSalesDetailsContent() {
                                                                             isInRange && "drop-shadow-md"
                                                                         )}
                                                                     />
-                                                                )
+                                                                );
                                                             }}
                                                             activeDot={{
                                                                 key: "active-dot",
@@ -1748,7 +1752,7 @@ function ProductSalesDetailsContent() {
                 )}
             </div>
         </PermissionGuard>
-    )
+    );
 }
 
 // Main component with Suspense boundary
@@ -1757,5 +1761,5 @@ export default function ProductSalesDetails() {
         <Suspense fallback={<ProductLoading />}>
             <ProductSalesDetailsContent />
         </Suspense>
-    )
+    );
 } 
