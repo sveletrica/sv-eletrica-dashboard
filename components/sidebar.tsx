@@ -1,13 +1,13 @@
-"use client"
+"use client";
 
-import Link from 'next/link'
-import Image from 'next/image'
-import { ContactRound, Home, BarChart2, Package, Menu, X, ShoppingCart, BarChart3, CalendarDays, TrendingUp, ChevronLeft, Calculator, LogOut, LogIn, User } from 'lucide-react'
-import { ThemeToggle } from "@/components/theme-toggle"
-import { Button } from "@/components/ui/button"
-import { useState, useEffect } from 'react'
-import { cn } from '@/lib/utils'
-import { useAuth } from '@/components/providers/auth-provider'
+import Link from 'next/link';
+import Image from 'next/image';
+import { ContactRound, Home, BarChart2, Package, Menu, X, ShoppingCart, BarChart3, CalendarDays, TrendingUp, ChevronLeft, Calculator, LogOut, LogIn, User } from 'lucide-react';
+import { ThemeToggle } from "@/components/theme-toggle";
+import { Button } from "@/components/ui/button";
+import { useState, useEffect } from 'react';
+import { cn } from '@/lib/utils';
+import { useAuth } from '@/components/providers/auth-provider';
 
 const sidebarLinks = [
     {
@@ -64,7 +64,13 @@ const sidebarLinks = [
         icon: User,
         permission: 'admin' as const,
     },
-] as const
+    {
+        href: '/admin/sql-logs',
+        label: 'Logs SQL',
+        icon: BarChart2,
+        permission: 'admin' as const,
+    },
+] as const;
 
 const storeLinks = [
     {
@@ -85,37 +91,37 @@ const storeLinks = [
         icon: BarChart2,
         permission: 'tags' as const,
     },
-] as const
+] as const;
 
 export function Sidebar() {
-    const [isOpen, setIsOpen] = useState(false)
-    const [isMobile, setIsMobile] = useState(false)
-    const [isCollapsed, setIsCollapsed] = useState(false)
-    const { user, logout } = useAuth()
+    const [isOpen, setIsOpen] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
+    const [isCollapsed, setIsCollapsed] = useState(false);
+    const { user, logout } = useAuth();
 
     useEffect(() => {
         const checkIsMobile = () => {
-            setIsMobile(window.innerWidth < 1024)
+            setIsMobile(window.innerWidth < 1024);
             if (window.innerWidth >= 1024) {
-                setIsOpen(true)
+                setIsOpen(true);
             } else {
-                setIsOpen(false)
+                setIsOpen(false);
             }
-        }
+        };
 
-        checkIsMobile()
-        window.addEventListener('resize', checkIsMobile)
-        return () => window.removeEventListener('resize', checkIsMobile)
-    }, [])
+        checkIsMobile();
+        window.addEventListener('resize', checkIsMobile);
+        return () => window.removeEventListener('resize', checkIsMobile);
+    }, []);
 
     const handleLogout = async (e: React.MouseEvent) => {
-        e.preventDefault()
+        e.preventDefault();
         try {
-            await logout()
+            await logout();
         } catch (error) {
-            console.error('Logout error:', error)
+            console.error('Logout error:', error);
         }
-    }
+    };
 
     return (
         <>
@@ -138,7 +144,7 @@ export function Sidebar() {
 
             {/* Backdrop */}
             {isMobile && isOpen && (
-                <div 
+                <div
                     className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40"
                     onClick={() => setIsOpen(false)}
                 />
@@ -208,9 +214,9 @@ export function Sidebar() {
                         <nav className="p-2">
                             {sidebarLinks.map((link) => (
                                 (!link.permission || (user?.permissions[link.permission])) && (
-                                    <Link 
+                                    <Link
                                         key={link.href}
-                                        href={link.href} 
+                                        href={link.href}
                                         className={cn(
                                             "flex items-center gap-2 px-4 py-3 text-foreground rounded-md hover:bg-accent hover:text-accent-foreground",
                                             isCollapsed && "px-2 justify-center"
@@ -223,7 +229,7 @@ export function Sidebar() {
                                     </Link>
                                 )
                             ))}
-                            
+
                             {/* Store Links Section */}
                             {user?.permissions.tags && (
                                 <>
@@ -241,9 +247,9 @@ export function Sidebar() {
                                     )}
 
                                     {storeLinks.map((link) => (
-                                        <Link 
+                                        <Link
                                             key={link.href}
-                                            href={link.href} 
+                                            href={link.href}
                                             className={cn(
                                                 "flex items-center gap-2 px-4 py-3 text-foreground rounded-md hover:bg-accent hover:text-accent-foreground",
                                                 isCollapsed && "px-2 justify-center"
@@ -309,5 +315,5 @@ export function Sidebar() {
                 </div>
             </aside>
         </>
-    )
+    );
 }

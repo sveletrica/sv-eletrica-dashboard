@@ -1,18 +1,18 @@
-'use client'
-import { PermissionGuard } from '@/components/guards/permission-guard'
-import { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Search, Calculator, Info, Check, X, Plus, Trash } from 'lucide-react'
-import { StockPopover } from "@/components/stock-popover"
-import { cn } from "@/lib/utils"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { toast } from "sonner"
-import { useAuth } from '@/components/providers/auth-provider'
-import { Building2, ShoppingBag, TrendingUp, TrendingDown, ArrowRight } from 'lucide-react'
+'use client';
+import { PermissionGuard } from '../../components/guards/permission-guard';
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
+import { Input } from "../../components/ui/input";
+import { Button } from "../../components/ui/button";
+import { Search, Calculator, Plus, Trash } from 'lucide-react';
+import { cn } from "../../lib/utils";
+import { ScrollArea } from "../../components/ui/scroll-area";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog";
+import { toast } from "sonner";
+import { useAuth } from '../../components/providers/auth-provider';
+import { Building2, ShoppingBag, TrendingUp, TrendingDown, ArrowRight } from 'lucide-react';
+import React from 'react';
 
 interface Product {
   cdproduto: string
@@ -61,28 +61,28 @@ interface AddProductDialogProps {
 }
 
 function AddProductDialog({ open, onOpenChange, onProductSelect }: AddProductDialogProps) {
-  const [searchTerm, setSearchTerm] = useState('')
-  const [products, setProducts] = useState<Product[]>([])
-  const [loading, setLoading] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('');
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const searchProducts = async () => {
-    if (searchTerm.length < 3) return
-    
-    setLoading(true)
+    if (searchTerm.length < 3) return;
+
+    setLoading(true);
     try {
-      const response = await fetch(`/api/produtos/search?q=${encodeURIComponent(searchTerm)}`)
+      const response = await fetch(`/api/produtos/search?q=${encodeURIComponent(searchTerm)}`);
       if (!response.ok) {
-        throw new Error('Failed to search products')
+        throw new Error('Failed to search products');
       }
-      const data = await response.json()
-      setProducts(data)
+      const data = await response.json();
+      setProducts(data);
     } catch (error) {
-      console.error('Error searching products:', error)
-      toast.error('Erro ao buscar produtos')
+      console.error('Error searching products:', error);
+      toast.error('Erro ao buscar produtos');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -103,7 +103,7 @@ function AddProductDialog({ open, onOpenChange, onProductSelect }: AddProductDia
               Buscar
             </Button>
           </div>
-          
+
           <ScrollArea className="h-[400px]">
             <Table>
               <TableHeader>
@@ -118,7 +118,7 @@ function AddProductDialog({ open, onOpenChange, onProductSelect }: AddProductDia
               </TableHeader>
               <TableBody>
                 {products.map((product) => (
-                  <TableRow key={product.cdproduto}>
+                  <TableRow key={`product-${product.cdproduto}`}>
                     <TableCell>{product.cdproduto}</TableCell>
                     <TableCell>{product.nmproduto}</TableCell>
                     <TableCell>{product.nmgrupoproduto}</TableCell>
@@ -133,8 +133,8 @@ function AddProductDialog({ open, onOpenChange, onProductSelect }: AddProductDia
                       <Button
                         size="sm"
                         onClick={() => {
-                          onProductSelect(product)
-                          onOpenChange(false)
+                          onProductSelect(product);
+                          onOpenChange(false);
                         }}
                       >
                         <Plus className="h-4 w-4" />
@@ -148,7 +148,7 @@ function AddProductDialog({ open, onOpenChange, onProductSelect }: AddProductDia
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
 
 interface ImportDialogProps {
@@ -158,40 +158,40 @@ interface ImportDialogProps {
 }
 
 function ImportDialog({ open, onOpenChange, onImport }: ImportDialogProps) {
-  const [text, setText] = useState('')
-  const [processing, setProcessing] = useState(false)
+  const [text, setText] = useState('');
+  const [processing, setProcessing] = useState(false);
 
   const handlePaste = (e: React.ClipboardEvent) => {
-    e.preventDefault() // Previne o comportamento padrão
-    const clipboardData = e.clipboardData.getData('text')
-    setText(clipboardData)
-  }
+    e.preventDefault(); // Previne o comportamento padrão
+    const clipboardData = e.clipboardData.getData('text');
+    setText(clipboardData);
+  };
 
   const handleImport = () => {
-    if (processing) return // Evita processamento duplo
-    
-    setProcessing(true)
+    if (processing) return; // Evita processamento duplo
+
+    setProcessing(true);
     try {
-      const items = parseClipboardData(text)
+      const items = parseClipboardData(text);
       if (items.length > 0) {
-        onImport(items)
-        onOpenChange(false)
-        setText('')
+        onImport(items);
+        onOpenChange(false);
+        setText('');
       } else {
-        toast.error('Nenhum item válido encontrado')
+        toast.error('Nenhum item válido encontrado');
       }
     } finally {
-      setProcessing(false)
+      setProcessing(false);
     }
-  }
+  };
 
   // Limpa o texto quando o diálogo é fechado
   useEffect(() => {
     if (!open) {
-      setText('')
-      setProcessing(false)
+      setText('');
+      setProcessing(false);
     }
-  }, [open])
+  }, [open]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -201,7 +201,7 @@ function ImportDialog({ open, onOpenChange, onImport }: ImportDialogProps) {
         </DialogHeader>
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Cole os dados do Excel aqui. O sistema irá extrair o código do produto, 
+            Cole os dados do Excel aqui. O sistema irá extrair o código do produto,
             quantidade e preço unitário.
           </p>
           <textarea
@@ -215,7 +215,7 @@ function ImportDialog({ open, onOpenChange, onImport }: ImportDialogProps) {
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button 
+            <Button
               onClick={handleImport}
               disabled={processing || !text.trim()}
             >
@@ -225,57 +225,57 @@ function ImportDialog({ open, onOpenChange, onImport }: ImportDialogProps) {
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
 
 const parseClipboardData = (text: string) => {
-  const rows = text.split('\n')
-  const items: { codigo: string; quantidade: number; precoFinal: number }[] = []
+  const rows = text.split('\n');
+  const items: { codigo: string; quantidade: number; precoFinal: number }[] = [];
 
   // Encontra os índices das colunas importantes no cabeçalho
-  const headerRow = rows[0]?.split('\t') || []
-  const qtdIndex = headerRow.findIndex(col => col.trim().toLowerCase().startsWith('qtd'))
-  const vlUnitIndex = headerRow.findIndex(col => col.trim().toLowerCase().startsWith('vl'))
+  const headerRow = rows[0]?.split('\t') || [];
+  const qtdIndex = headerRow.findIndex(col => col.trim().toLowerCase().startsWith('qtd'));
+  const vlUnitIndex = headerRow.findIndex(col => col.trim().toLowerCase().startsWith('vl'));
 
   if (qtdIndex === -1 || vlUnitIndex === -1) {
-    console.error('Colunas Qtd. ou Vl. Unit não encontradas')
-    return items
+    console.error('Colunas Qtd. ou Vl. Unit não encontradas');
+    return items;
   }
 
   const parseNumber = (value: string) => {
     // Remove espaços e substitui vírgula por ponto
-    const cleanValue = value.trim().replace(/\s/g, '')
-    
+    const cleanValue = value.trim().replace(/\s/g, '');
+
     // Se contém ponto como separador de milhar e vírgula como decimal
     if (cleanValue.includes('.') && cleanValue.includes(',')) {
-      return parseFloat(cleanValue.replace(/\./g, '').replace(',', '.'))
+      return parseFloat(cleanValue.replace(/\./g, '').replace(',', '.'));
     }
-    
+
     // Se contém apenas vírgula
     if (cleanValue.includes(',')) {
-      return parseFloat(cleanValue.replace(',', '.'))
+      return parseFloat(cleanValue.replace(',', '.'));
     }
-    
+
     // Se é um número simples
-    return parseFloat(cleanValue)
-  }
+    return parseFloat(cleanValue);
+  };
 
   rows.forEach((row, index) => {
     // Pula o cabeçalho
-    if (index === 0 || row.trim() === '') return
+    if (index === 0 || row.trim() === '') return;
 
-    const parts = row.split('\t')
-    
+    const parts = row.split('\t');
+
     // Procura por um código de 6 dígitos no início da linha
-    const codigo = parts[0]?.replace(/\s+/g, '')
-    
+    const codigo = parts[0]?.replace(/\s+/g, '');
+
     if (codigo?.match(/^\d{6}$/)) {
       // Pega os valores diretamente das colunas corretas
-      const quantidadeStr = parts[qtdIndex]?.trim()
-      const precoStr = parts[vlUnitIndex]?.trim()
-      
-      const quantidade = parseNumber(quantidadeStr)
-      const precoFinal = parseNumber(precoStr)
+      const quantidadeStr = parts[qtdIndex]?.trim();
+      const precoStr = parts[vlUnitIndex]?.trim();
+
+      const quantidade = parseNumber(quantidadeStr);
+      const precoFinal = parseNumber(precoStr);
 
       // Verifica se os valores são válidos
       if (!isNaN(quantidade) && !isNaN(precoFinal)) {
@@ -283,13 +283,13 @@ const parseClipboardData = (text: string) => {
           codigo,
           quantidade,
           precoFinal
-        })
+        });
       }
     }
-  })
+  });
 
-  return items
-}
+  return items;
+};
 
 interface ImportSQLDialogProps {
   open: boolean
@@ -298,48 +298,70 @@ interface ImportSQLDialogProps {
 }
 
 function ImportSQLDialog({ open, onOpenChange, onImport }: ImportSQLDialogProps) {
-  const [orderNumber, setOrderNumber] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [vendorName, setVendorName] = useState('')
-  const [branchName, setBranchName] = useState('')
+  const [orderNumber, setOrderNumber] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [vendorName, setVendorName] = useState('');
+  const [branchName, setBranchName] = useState('');
+  const { user } = useAuth();
 
   const handleImport = async () => {
-    if (!orderNumber.trim() || loading) return
-    
-    setLoading(true)
+    if (!orderNumber.trim() || loading) return;
+
+    setLoading(true);
     try {
+      // Log the SQL import usage to Supabase
+      if (user) {
+        try {
+          await fetch('/api/logs/sql-import', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              userId: user.id,
+              userName: user.name,
+              orderNumber: orderNumber.trim()
+            })
+          });
+        } catch (logError) {
+          console.error('Failed to log SQL import:', logError);
+          // Continue with import even if logging fails
+        }
+      }
+
       const response = await fetch('https://n8n2.sveletrica.com/webhook/orcamentos', {
         method: 'POST',
         headers: {
-          'cdpedido': orderNumber.trim()
+          'cdpedido': orderNumber.trim(),
+          'usuario': user?.name || 'Usuário não identificado'
         }
-      })
+      });
 
       if (!response.ok) {
-        throw new Error('Falha ao importar orçamento')
+        throw new Error('Falha ao importar orçamento');
       }
 
-      const data = await response.json()
-      
+      const data = await response.json();
+
       // Verificar se a resposta está vazia ou contém apenas um objeto vazio
       if (!data || data.length === 0 || (data.length === 1 && Object.keys(data[0]).length === 0)) {
-        toast.error('Pedido não encontrado, verifique se já foi fechado ou se o número está correto')
-        return
+        toast.error('Pedido não encontrado, verifique se já foi fechado ou se o número está correto');
+        return;
       }
-      
+
       // Extrair o nome do vendedor, a filial e o número do orçamento do primeiro item
-      const vendorName = data[0]?.NmRepresentanteVenda || ''
-      const branchName = data[0]?.NmEmpresaCurtoVenda || ''
-      
+      const vendorName = data[0]?.NmRepresentanteVenda || '';
+      const branchName = data[0]?.NmEmpresaCurtoVenda || '';
+
       // Transformar os dados do orçamento para o formato SimulationItem
       const items: SimulationItem[] = data.map((item: any) => {
         // Verificar se o item tem as propriedades necessárias
         if (!item.CdProduto || !item.NmProduto) {
-          return null
+          return null;
         }
-        
-        const desconto = ((item.VlPrecoVendaInformado - item.VlFaturamento) / item.VlPrecoVendaInformado) * 100
-        
+
+        const desconto = ((item.VlPrecoVendaInformado - item.VlFaturamento) / item.VlPrecoVendaInformado) * 100;
+
         return {
           cdproduto: item.CdProduto,
           nmproduto: item.NmProduto,
@@ -359,25 +381,25 @@ function ImportSQLDialog({ open, onOpenChange, onImport }: ImportSQLDialogProps)
           vlprecoreposicao: item.VlPrecoCustoInformado / item.QtPedida,
           quantidade: item.QtPedida,
           desconto: parseFloat(desconto.toFixed(2)),
-        }
-      }).filter(Boolean)
-      
+        };
+      }).filter(Boolean);
+
       // Verificar se há itens válidos após o processamento
       if (items.length === 0) {
-        toast.error('Pedido não encontrado, verifique se já foi fechado ou se o número está correto')
-        return
+        toast.error('Pedido não encontrado, verifique se já foi fechado ou se o número está correto');
+        return;
       }
 
-      onImport(items, orderNumber.trim(), vendorName, branchName)
-      onOpenChange(false)
-      toast.success(`${items.length} produtos importados do orçamento ${orderNumber.trim()}`)
+      onImport(items, orderNumber.trim(), vendorName, branchName);
+      onOpenChange(false);
+      toast.success(`${items.length} produtos importados do orçamento ${orderNumber.trim()}`);
     } catch (error) {
-      console.error('Erro ao importar do SQL:', error)
-      toast.error('Erro ao importar orçamento')
+      console.error('Erro ao importar do SQL:', error);
+      toast.error('Erro ao importar orçamento');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -394,8 +416,8 @@ function ImportSQLDialog({ open, onOpenChange, onImport }: ImportSQLDialogProps)
               placeholder="Digite o número do orçamento"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
-                  e.preventDefault()
-                  handleImport()
+                  e.preventDefault();
+                  handleImport();
                 }
               }}
             />
@@ -404,7 +426,7 @@ function ImportSQLDialog({ open, onOpenChange, onImport }: ImportSQLDialogProps)
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button 
+            <Button
               onClick={handleImport}
               disabled={loading || !orderNumber.trim()}
             >
@@ -414,7 +436,7 @@ function ImportSQLDialog({ open, onOpenChange, onImport }: ImportSQLDialogProps)
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
 
 // Adicione esta interface para os dados do vendedor
@@ -435,176 +457,176 @@ interface ChannelPerformance {
 }
 
 export default function SimulationPage() {
-  const [items, setItems] = useState<SimulationItem[]>([])
-  const [originalItems, setOriginalItems] = useState<SimulationItem[]>([])
-  const [addProductOpen, setAddProductOpen] = useState(false)
-  const [globalDiscount, setGlobalDiscount] = useState('')
-  const [importDialogOpen, setImportDialogOpen] = useState(false)
-  const [targetMargin, setTargetMargin] = useState<string>('')
-  const [targetValue, setTargetValue] = useState<string>('')
-  const [importSQLDialogOpen, setImportSQLDialogOpen] = useState(false)
-  const [editingUnitPrice, setEditingUnitPrice] = useState<{[key: number]: string}>({})
-  const [editingTotalPrice, setEditingTotalPrice] = useState<{[key: number]: string}>({})
-  const [orderNumber, setOrderNumber] = useState<string>('')
-  const [vendorName, setVendorName] = useState<string>('')
-  const [branchName, setBranchName] = useState<string>('')
-  const [vendorPerformance, setVendorPerformance] = useState<VendorPerformance[]>([])
-  const [loadingVendorData, setLoadingVendorData] = useState(false)
-  const [channelPerformance, setChannelPerformance] = useState<ChannelPerformance[]>([])
-  const [loadingChannelData, setLoadingChannelData] = useState(false)
-  const { user } = useAuth()
+  const [items, setItems] = useState<SimulationItem[]>([]);
+  const [originalItems, setOriginalItems] = useState<SimulationItem[]>([]);
+  const [addProductOpen, setAddProductOpen] = useState(false);
+  const [globalDiscount, setGlobalDiscount] = useState('');
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [targetMargin, setTargetMargin] = useState<string>('');
+  const [targetValue, setTargetValue] = useState<string>('');
+  const [importSQLDialogOpen, setImportSQLDialogOpen] = useState(false);
+  const [editingUnitPrice, setEditingUnitPrice] = useState<{ [key: number]: string }>({});
+  const [editingTotalPrice, setEditingTotalPrice] = useState<{ [key: number]: string }>({});
+  const [orderNumber, setOrderNumber] = useState<string>('');
+  const [vendorName, setVendorName] = useState<string>('');
+  const [branchName, setBranchName] = useState<string>('');
+  const [vendorPerformance, setVendorPerformance] = useState<VendorPerformance[]>([]);
+  const [loadingVendorData, setLoadingVendorData] = useState(false);
+  const [channelPerformance, setChannelPerformance] = useState<ChannelPerformance[]>([]);
+  const [loadingChannelData, setLoadingChannelData] = useState(false);
+  const { user } = useAuth();
 
   const calculateMargin = (revenue: number, cost: number) => {
-    return ((revenue - (revenue * 0.268 + cost)) / revenue) * 100
-  }
+    return ((revenue - (revenue * 0.268 + cost)) / revenue) * 100;
+  };
 
   const handleAddProduct = (product: Product) => {
-    const newItem = { ...product, quantidade: 1, desconto: 0 }
-    setItems(prev => [...prev, newItem])
-    setOriginalItems(prev => [...prev, newItem])
-  }
+    const newItem = { ...product, quantidade: 1, desconto: 0 };
+    setItems(prev => [...prev, newItem]);
+    setOriginalItems(prev => [...prev, newItem]);
+  };
 
   const handleQuantityChange = (index: number, quantity: number) => {
-    setItems(prev => prev.map((item, i) => 
+    setItems(prev => prev.map((item, i) =>
       i === index ? { ...item, quantidade: quantity } : item
-    ))
-  }
+    ));
+  };
 
   const handleDiscountChange = (index: number, discount: number) => {
-    setItems(prev => prev.map((item, i) => 
+    setItems(prev => prev.map((item, i) =>
       i === index ? { ...item, desconto: discount } : item
-    ))
-  }
+    ));
+  };
 
   const handleRemoveItem = (index: number) => {
-    setItems(prev => prev.filter((_, i) => i !== index))
-  }
+    setItems(prev => prev.filter((_, i) => i !== index));
+  };
 
   const applyGlobalDiscount = () => {
-    const discount = parseFloat(globalDiscount)
-    if (isNaN(discount)) return
+    const discount = parseFloat(globalDiscount);
+    if (isNaN(discount)) return;
 
     setItems(prev => prev.map(item => ({
       ...item,
       desconto: discount
-    })))
-  }
+    })));
+  };
 
   // Calculate totals
   const totals = items.reduce((acc, item) => {
-    const priceAfterDiscount = item.vlprecosugerido * (1 - item.desconto / 100)
-    const totalPrice = priceAfterDiscount * item.quantidade
-    const totalCost = item.vlprecoreposicao * item.quantidade
+    const priceAfterDiscount = item.vlprecosugerido * (1 - item.desconto / 100);
+    const totalPrice = priceAfterDiscount * item.quantidade;
+    const totalCost = item.vlprecoreposicao * item.quantidade;
 
     return {
       precoLista: acc.precoLista + (item.vlprecosugerido * item.quantidade),
       faturamento: acc.faturamento + totalPrice,
       custo: acc.custo + totalCost,
       quantidade: acc.quantidade + item.quantidade
-    }
-  }, { precoLista: 0, faturamento: 0, custo: 0, quantidade: 0 })
+    };
+  }, { precoLista: 0, faturamento: 0, custo: 0, quantidade: 0 });
 
-  const marginTotal = items.length > 0 
+  const marginTotal = items.length > 0
     ? calculateMargin(totals.faturamento, totals.custo)
-    : 0
+    : 0;
 
   const handleImportItems = async (importedItems: { codigo: string; quantidade: number; precoFinal: number }[]) => {
     try {
-      const products: SimulationItem[] = []
-      
+      const products: SimulationItem[] = [];
+
       for (const item of importedItems) {
-        const response = await fetch(`/api/produtos/search?q=${item.codigo}`)
-        if (!response.ok) continue
-        
-        const data = await response.json()
-        const product = data.find((p: Product) => p.cdproduto.trim() === item.codigo)
-        
+        const response = await fetch(`/api/produtos/search?q=${item.codigo}`);
+        if (!response.ok) continue;
+
+        const data = await response.json();
+        const product = data.find((p: Product) => p.cdproduto.trim() === item.codigo);
+
         if (product) {
-          const desconto = ((product.vlprecosugerido - item.precoFinal) / product.vlprecosugerido) * 100
-          
+          const desconto = ((product.vlprecosugerido - item.precoFinal) / product.vlprecosugerido) * 100;
+
           products.push({
             ...product,
             quantidade: item.quantidade,
             desconto: Math.max(0, Math.min(100, desconto))
-          })
+          });
         }
       }
 
       if (products.length > 0) {
-        setItems(prev => [...prev, ...products])
-        setOriginalItems(prev => [...prev, ...products])
-        toast.success(`${products.length} produtos importados`)
+        setItems(prev => [...prev, ...products]);
+        setOriginalItems(prev => [...prev, ...products]);
+        toast.success(`${products.length} produtos importados`);
       } else {
-        toast.error('Nenhum produto encontrado')
+        toast.error('Nenhum produto encontrado');
       }
     } catch (error) {
-      console.error('Error importing items:', error)
-      toast.error('Erro ao importar produtos')
+      console.error('Error importing items:', error);
+      toast.error('Erro ao importar produtos');
     }
-  }
+  };
 
   const calculateDiscountForTargetMargin = (listPrice: number, cost: number, targetMarginPercent: number) => {
-    const taxRate = 0.268
-    const discountDecimal = 1 - (cost / (listPrice * (1 - taxRate - targetMarginPercent/100)))
-    return Math.max(Math.min(discountDecimal * 100, 100), 0)
-  }
+    const taxRate = 0.268;
+    const discountDecimal = 1 - (cost / (listPrice * (1 - taxRate - targetMarginPercent / 100)));
+    return Math.max(Math.min(discountDecimal * 100, 100), 0);
+  };
 
   const applyTargetMarginDiscounts = () => {
-    const marginValue = parseFloat(targetMargin)
-    if (isNaN(marginValue)) return
+    const marginValue = parseFloat(targetMargin);
+    if (isNaN(marginValue)) return;
 
-    const newDiscounts: Record<string, number> = {}
+    const newDiscounts: Record<string, number> = {};
     items.forEach(item => {
       const targetMarginDiscount = calculateDiscountForTargetMargin(
         item.vlprecosugerido,
         item.vlprecoreposicao,
         marginValue
-      )
-      newDiscounts[item.cdproduto] = parseFloat(targetMarginDiscount.toFixed(2))
-    })
+      );
+      newDiscounts[item.cdproduto] = parseFloat(targetMarginDiscount.toFixed(2));
+    });
     setItems(prev => prev.map(item => ({
       ...item,
       desconto: newDiscounts[item.cdproduto]
-    })))
-  }
+    })));
+  };
 
   const applyTargetValue = () => {
-    const desiredTotal = parseFloat(targetValue)
-    if (isNaN(desiredTotal) || desiredTotal <= 0) return
+    const desiredTotal = parseFloat(targetValue);
+    if (isNaN(desiredTotal) || desiredTotal <= 0) return;
 
-    const currentTotal = items.reduce((acc, item) => acc + (item.vlprecosugerido * item.quantidade), 0)
-    const globalDiscountNeeded = ((currentTotal - desiredTotal) / currentTotal) * 100
+    const currentTotal = items.reduce((acc, item) => acc + (item.vlprecosugerido * item.quantidade), 0);
+    const globalDiscountNeeded = ((currentTotal - desiredTotal) / currentTotal) * 100;
 
-    const newDiscounts: Record<string, number> = {}
+    const newDiscounts: Record<string, number> = {};
     items.forEach(item => {
-      newDiscounts[item.cdproduto] = parseFloat(globalDiscountNeeded.toFixed(2))
-    })
+      newDiscounts[item.cdproduto] = parseFloat(globalDiscountNeeded.toFixed(2));
+    });
     setItems(prev => prev.map(item => ({
       ...item,
       desconto: newDiscounts[item.cdproduto]
-    })))
-  }
+    })));
+  };
 
   const handleImportSQL = (importedItems: SimulationItem[], orderNum?: string, vendor?: string, branch?: string) => {
-    setItems(prev => [...prev, ...importedItems])
-    setOriginalItems(prev => [...prev, ...importedItems])
+    setItems(prev => [...prev, ...importedItems]);
+    setOriginalItems(prev => [...prev, ...importedItems]);
     if (orderNum) {
-      setOrderNumber(orderNum)
+      setOrderNumber(orderNum);
     }
     if (vendor) {
-      setVendorName(vendor)
-      fetchVendorPerformance(vendor)
+      setVendorName(vendor);
+      fetchVendorPerformance(vendor);
     }
     if (branch) {
-      setBranchName(branch)
+      setBranchName(branch);
     }
-  }
+  };
 
   // Nova função para buscar o desempenho do vendedor
   const fetchVendorPerformance = async (vendorName: string) => {
-    if (!vendorName) return
-    
-    setLoadingVendorData(true)
+    if (!vendorName) return;
+
+    setLoadingVendorData(true);
     try {
       const response = await fetch('/api/vendedores/performance', {
         method: 'POST',
@@ -612,112 +634,112 @@ export default function SimulationPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ vendorName }),
-      })
-      
+      });
+
       if (!response.ok) {
-        throw new Error('Falha ao buscar dados do vendedor')
+        throw new Error('Falha ao buscar dados do vendedor');
       }
-      
-      const data = await response.json()
-      setVendorPerformance(data)
+
+      const data = await response.json();
+      setVendorPerformance(data);
     } catch (error) {
-      console.error('Erro ao buscar desempenho do vendedor:', error)
-      toast.error('Erro ao carregar dados do vendedor')
+      console.error('Erro ao buscar desempenho do vendedor:', error);
+      toast.error('Erro ao carregar dados do vendedor');
     } finally {
-      setLoadingVendorData(false)
+      setLoadingVendorData(false);
     }
-  }
+  };
 
   const resetValues = () => {
-    setItems([...originalItems])
-    setGlobalDiscount('')
-    setTargetMargin('')
-    setTargetValue('')
-    
+    setItems([...originalItems]);
+    setGlobalDiscount('');
+    setTargetMargin('');
+    setTargetValue('');
+
     // Não limpar esses valores ao resetar, apenas manter os dados originais
     // setOrderNumber('')
     // setVendorName('')
     // setBranchName('')
     // setVendorPerformance([])
-  }
+  };
 
   const clearSimulation = () => {
-    setItems([])
-    setOriginalItems([])
-    setGlobalDiscount('')
-    setTargetMargin('')
-    setTargetValue('')
-    setOrderNumber('')
-    setVendorName('')
-    setBranchName('')
-    setVendorPerformance([])
-  }
+    setItems([]);
+    setOriginalItems([]);
+    setGlobalDiscount('');
+    setTargetMargin('');
+    setTargetValue('');
+    setOrderNumber('');
+    setVendorName('');
+    setBranchName('');
+    setVendorPerformance([]);
+  };
 
   const handleUnitPriceChange = (index: number, price: number) => {
     setItems(prev => prev.map((item, i) => {
-      if (i !== index) return item
-      
+      if (i !== index) return item;
+
       // Calculate new discount based on the new unit price
       // Negative discount means price increase (acréscimo)
-      const discount = ((item.vlprecosugerido - price) / item.vlprecosugerido) * 100
+      const discount = ((item.vlprecosugerido - price) / item.vlprecosugerido) * 100;
       return {
         ...item,
         desconto: parseFloat(discount.toFixed(2))
-      }
-    }))
+      };
+    }));
     // Clear the editing state for this index
     setEditingUnitPrice(prev => {
-      const newState = {...prev}
-      delete newState[index]
-      return newState
-    })
-  }
+      const newState = { ...prev };
+      delete newState[index];
+      return newState;
+    });
+  };
 
   const handleFinalPriceChange = (index: number, finalPrice: number) => {
     setItems(prev => prev.map((item, i) => {
-      if (i !== index) return item
-      
+      if (i !== index) return item;
+
       // Calculate new discount based on the desired final price
       // Negative discount means price increase (acréscimo)
-      const unitPrice = finalPrice / item.quantidade
-      const discount = ((item.vlprecosugerido - unitPrice) / item.vlprecosugerido) * 100
+      const unitPrice = finalPrice / item.quantidade;
+      const discount = ((item.vlprecosugerido - unitPrice) / item.vlprecosugerido) * 100;
       return {
         ...item,
         desconto: parseFloat(discount.toFixed(2))
-      }
-    }))
+      };
+    }));
     // Clear the editing state for this index
     setEditingTotalPrice(prev => {
-      const newState = {...prev}
-      delete newState[index]
-      return newState
-    })
-  }
+      const newState = { ...prev };
+      delete newState[index];
+      return newState;
+    });
+  };
 
   // Função para buscar o desempenho dos canais
   const fetchChannelPerformance = async () => {
-    setLoadingChannelData(true)
+    setLoadingChannelData(true);
     try {
-      const response = await fetch('/api/canais/performance')
-      
+      const response = await fetch('/api/canais/performance');
+
       if (!response.ok) {
-        throw new Error('Falha ao buscar dados dos canais')
+        throw new Error('Falha ao buscar dados dos canais');
       }
-      
-      const data = await response.json()
-      setChannelPerformance(data)
+
+      const data = await response.json();
+      setChannelPerformance(data);
     } catch (error) {
-      console.error('Erro ao buscar desempenho dos canais:', error)
-      toast.error('Erro ao carregar dados dos canais')
+      console.error('Erro ao buscar desempenho dos canais:', error);
+      toast.error('Erro ao carregar dados dos canais');
     } finally {
-      setLoadingChannelData(false)
+      setLoadingChannelData(false);
     }
-  }
+  };
 
   // Carregar dados dos canais ao montar o componente
   useEffect(() => {
-    fetchChannelPerformance()
-  }, [])
+    fetchChannelPerformance();
+  }, []);
 
   // Função para calcular o impacto da simulação atual no canal
   const calculateChannelImpact = () => {
@@ -726,52 +748,52 @@ export default function SimulationPage() {
     // Determinar se a simulação atual é para Corporativo ou Varejo
     const isCurrentCorporativo = branchName === 'SV FILIAL' || branchName === 'SV MATRIZ';
     const currentChannel = isCurrentCorporativo ? 'Corporativo' : 'Varejo';
-    
+
     // Encontrar os dados do canal atual
     const channelData = channelPerformance.find(c => c.nmempresacurtovenda === currentChannel);
-    
+
     if (!channelData) return null;
-    
+
     // Calcular totais da simulação atual
     const simulationTotals = items.reduce((acc, item) => {
       const priceAfterDiscount = item.vlprecosugerido * (1 - item.desconto / 100);
       const totalPrice = priceAfterDiscount * item.quantidade;
       const totalCost = item.vlprecoreposicao * item.quantidade;
-      
+
       return {
         faturamento: acc.faturamento + totalPrice,
         custo: acc.custo + totalCost
       };
     }, { faturamento: 0, custo: 0 });
-    
+
     // Calcular totais projetados
     const projectedTotals = {
       faturamento: Number(channelData.vlfaturamento) + simulationTotals.faturamento,
       custo: Number(channelData.vltotalcustoproduto) + simulationTotals.custo
     };
-    
+
     // Calcular margens usando a fórmula correta
     const calculateMarginWithTax = (revenue: number, cost: number) => {
       if (revenue === 0) return 0;
       return ((revenue - (revenue * 0.268 + cost)) / revenue) * 100;
     };
-    
+
     // Calcular a margem atual do canal usando a fórmula correta
     const currentMargin = calculateMarginWithTax(
-      Number(channelData.vlfaturamento), 
+      Number(channelData.vlfaturamento),
       Number(channelData.vltotalcustoproduto)
     );
-    
+
     // Calcular a margem projetada usando a fórmula correta
     const projectedMargin = calculateMarginWithTax(
-      projectedTotals.faturamento, 
+      projectedTotals.faturamento,
       projectedTotals.custo
     );
-    
+
     // Calcular o impacto percentual no faturamento e na margem
     const faturamentoImpact = (simulationTotals.faturamento / Number(channelData.vlfaturamento)) * 100;
     const margemImpact = projectedMargin - currentMargin;
-    
+
     return {
       channel: currentChannel,
       current: {
@@ -798,79 +820,79 @@ export default function SimulationPage() {
     if (!vendorPerformance.length || !items.length) return null;
 
     // Agrupar os dados de desempenho por canal (Corporativo vs Varejo)
-    const corporativoData = vendorPerformance.filter(p => 
+    const corporativoData = vendorPerformance.filter(p =>
       p.nmempresacurtovenda === 'Corporativo'
     );
-    
-    const varejoData = vendorPerformance.filter(p => 
+
+    const varejoData = vendorPerformance.filter(p =>
       p.nmempresacurtovenda === 'Varejo'
     );
 
     // Determinar se a simulação atual é para Corporativo ou Varejo
     const isCurrentCorporativo = branchName === 'SV FILIAL' || branchName === 'SV MATRIZ';
-    
+
     // Calcular totais atuais por canal
     const corporativoTotals = {
       faturamento: corporativoData.length > 0 ? Number(corporativoData[0].vlfaturamento) : 0,
       custo: corporativoData.length > 0 ? Number(corporativoData[0].vltotalcustoproduto) : 0
     };
-    
+
     const varejoTotals = {
       faturamento: varejoData.length > 0 ? Number(varejoData[0].vlfaturamento) : 0,
       custo: varejoData.length > 0 ? Number(varejoData[0].vltotalcustoproduto) : 0
     };
-    
+
     // Calcular totais da simulação atual
     const simulationTotals = items.reduce((acc, item) => {
       const priceAfterDiscount = item.vlprecosugerido * (1 - item.desconto / 100);
       const totalPrice = priceAfterDiscount * item.quantidade;
       const totalCost = item.vlprecoreposicao * item.quantidade;
-      
+
       return {
         faturamento: acc.faturamento + totalPrice,
         custo: acc.custo + totalCost
       };
     }, { faturamento: 0, custo: 0 });
-    
+
     // Adicionar a simulação atual ao canal apropriado
     const newCorporativoTotals = {
       faturamento: corporativoTotals.faturamento + (isCurrentCorporativo ? simulationTotals.faturamento : 0),
       custo: corporativoTotals.custo + (isCurrentCorporativo ? simulationTotals.custo : 0)
     };
-    
+
     const newVarejoTotals = {
       faturamento: varejoTotals.faturamento + (!isCurrentCorporativo ? simulationTotals.faturamento : 0),
       custo: varejoTotals.custo + (!isCurrentCorporativo ? simulationTotals.custo : 0)
     };
-    
+
     // Calcular totais combinados (Corporativo + Varejo)
     const combinedCurrentTotals = {
       faturamento: corporativoTotals.faturamento + varejoTotals.faturamento,
       custo: corporativoTotals.custo + varejoTotals.custo
     };
-    
+
     const combinedProjectedTotals = {
       faturamento: newCorporativoTotals.faturamento + newVarejoTotals.faturamento,
       custo: newCorporativoTotals.custo + newVarejoTotals.custo
     };
-    
+
     // Calcular margens atuais e projetadas
     const calculateMarginWithTax = (revenue: number, cost: number) => {
       if (revenue === 0) return 0;
       return ((revenue - (revenue * 0.268 + cost)) / revenue) * 100;
     };
-    
+
     const currentCorporativoMargin = calculateMarginWithTax(corporativoTotals.faturamento, corporativoTotals.custo);
     const currentVarejoMargin = calculateMarginWithTax(varejoTotals.faturamento, varejoTotals.custo);
     const currentCombinedMargin = calculateMarginWithTax(combinedCurrentTotals.faturamento, combinedCurrentTotals.custo);
-    
+
     const projectedCorporativoMargin = calculateMarginWithTax(newCorporativoTotals.faturamento, newCorporativoTotals.custo);
     const projectedVarejoMargin = calculateMarginWithTax(newVarejoTotals.faturamento, newVarejoTotals.custo);
     const projectedCombinedMargin = calculateMarginWithTax(combinedProjectedTotals.faturamento, combinedProjectedTotals.custo);
-    
+
     // Calcular o impacto na margem combinada
     const combinedMarginImpact = projectedCombinedMargin - currentCombinedMargin;
-    
+
     return {
       corporativo: {
         current: {
@@ -1019,12 +1041,12 @@ export default function SimulationPage() {
                           className="w-full"
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') {
-                              e.preventDefault()
-                              applyTargetMarginDiscounts()
+                              e.preventDefault();
+                              applyTargetMarginDiscounts();
                             }
                           }}
                         />
-                        <Button 
+                        <Button
                           onClick={applyTargetMarginDiscounts}
                           disabled={!targetMargin}
                         >
@@ -1047,12 +1069,12 @@ export default function SimulationPage() {
                           className="w-full"
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') {
-                              e.preventDefault()
-                              applyTargetValue()
+                              e.preventDefault();
+                              applyTargetValue();
                             }
                           }}
                         />
-                        <Button 
+                        <Button
                           onClick={applyTargetValue}
                           disabled={!targetValue}
                         >
@@ -1111,7 +1133,7 @@ export default function SimulationPage() {
                           <p className={cn(
                             "font-medium",
                             marginTotal >= 5 ? "text-green-600" :
-                            marginTotal >= 0 ? "text-yellow-600" : "text-red-600"
+                              marginTotal >= 0 ? "text-yellow-600" : "text-red-600"
                           )}>
                             <span>Margem:</span>{' '}
                             {marginTotal.toFixed(2)}%
@@ -1143,7 +1165,7 @@ export default function SimulationPage() {
                                 </TableHeader>
                                 <TableBody>
                                   {vendorPerformance.map((performance, index) => (
-                                    <TableRow key={index}>
+                                    <TableRow key={`vendor-performance-${index}`}>
                                       <TableCell>{performance.nmempresacurtovenda}</TableCell>
                                       <TableCell className="text-right">
                                         {performance.vlfaturamento.toLocaleString('pt-BR', {
@@ -1154,7 +1176,7 @@ export default function SimulationPage() {
                                       <TableCell className={cn(
                                         "text-right",
                                         parseFloat(performance.margem) >= 5 ? "text-green-600" :
-                                        parseFloat(performance.margem) >= 0 ? "text-yellow-600" : "text-red-600"
+                                          parseFloat(performance.margem) >= 0 ? "text-yellow-600" : "text-red-600"
                                       )}>
                                         {performance.margem}
                                       </TableCell>
@@ -1293,8 +1315,8 @@ export default function SimulationPage() {
                     {channelImpact && (
                       <Card className={cn(
                         channelImpact.projected.margin >= 3 ? "border-green-200 dark:border-green-800" :
-                        channelImpact.projected.margin > 0 ? "border-yellow-200 dark:border-yellow-800" : 
-                        "border-red-200 dark:border-red-800",
+                          channelImpact.projected.margin > 0 ? "border-yellow-200 dark:border-yellow-800" :
+                            "border-red-200 dark:border-red-800",
                         "border-2"
                       )}>
                         <CardHeader className="pb-2">
@@ -1327,14 +1349,14 @@ export default function SimulationPage() {
                                 </p>
                               </div>
                             </div>
-                            
+
                             <div className="grid grid-cols-2 gap-4">
                               <div>
                                 <p className="text-xs text-muted-foreground">Margem Atual</p>
                                 <p className={cn(
                                   "text-lg font-medium",
                                   channelImpact.current.margin >= 3 ? "text-green-600" :
-                                  channelImpact.current.margin > 0 ? "text-yellow-600" : "text-red-600"
+                                    channelImpact.current.margin > 0 ? "text-yellow-600" : "text-red-600"
                                 )}>
                                   {channelImpact.current.margin.toFixed(2)}%
                                 </p>
@@ -1344,13 +1366,13 @@ export default function SimulationPage() {
                                 <p className={cn(
                                   "text-lg font-medium",
                                   channelImpact.projected.margin >= 3 ? "text-green-600" :
-                                  channelImpact.projected.margin > 0 ? "text-yellow-600" : "text-red-600"
+                                    channelImpact.projected.margin > 0 ? "text-yellow-600" : "text-red-600"
                                 )}>
                                   {channelImpact.projected.margin.toFixed(2)}%
                                 </p>
                               </div>
                             </div>
-                            
+
                             <div className="pt-2 border-t">
                               <p className="text-xs text-muted-foreground mb-1">Impacto desta simulação</p>
                               <div className="flex justify-between">
@@ -1407,12 +1429,12 @@ export default function SimulationPage() {
                       </TableHeader>
                       <TableBody>
                         {items.map((item, index) => {
-                          const priceAfterDiscount = item.vlprecosugerido * (1 - item.desconto / 100)
-                          const totalPrice = priceAfterDiscount * item.quantidade
-                          const margin = calculateMargin(totalPrice, item.vlprecoreposicao * item.quantidade)
+                          const priceAfterDiscount = item.vlprecosugerido * (1 - item.desconto / 100);
+                          const totalPrice = priceAfterDiscount * item.quantidade;
+                          const margin = calculateMargin(totalPrice, item.vlprecoreposicao * item.quantidade);
 
                           return (
-                            <TableRow key={index}>
+                            <TableRow key={`simulation-item-${item.cdproduto}-${index}`}>
                               <TableCell>{item.cdproduto}</TableCell>
                               <TableCell>{item.nmproduto}</TableCell>
                               <TableCell className="text-right">{item.sktotal}</TableCell>
@@ -1445,41 +1467,41 @@ export default function SimulationPage() {
                               <TableCell>
                                 <Input
                                   type="text"
-                                  value={editingUnitPrice[index] !== undefined 
-                                    ? editingUnitPrice[index] 
+                                  value={editingUnitPrice[index] !== undefined
+                                    ? editingUnitPrice[index]
                                     : priceAfterDiscount.toFixed(2).replace('.', ',')}
                                   onChange={(e) => {
                                     setEditingUnitPrice(prev => ({
                                       ...prev,
                                       [index]: e.target.value
-                                    }))
+                                    }));
                                   }}
                                   onBlur={(e) => {
-                                    const value = e.target.value.replace(',', '.')
+                                    const value = e.target.value.replace(',', '.');
                                     if (!isNaN(parseFloat(value))) {
-                                      handleUnitPriceChange(index, parseFloat(value))
+                                      handleUnitPriceChange(index, parseFloat(value));
                                     } else {
                                       // Reset to calculated value if invalid input
                                       setEditingUnitPrice(prev => {
-                                        const newState = {...prev}
-                                        delete newState[index]
-                                        return newState
-                                      })
+                                        const newState = { ...prev };
+                                        delete newState[index];
+                                        return newState;
+                                      });
                                     }
                                   }}
                                   onKeyDown={(e) => {
                                     if (e.key === 'Enter') {
-                                      e.preventDefault()
-                                      const value = e.currentTarget.value.replace(',', '.')
+                                      e.preventDefault();
+                                      const value = e.currentTarget.value.replace(',', '.');
                                       if (!isNaN(parseFloat(value))) {
-                                        handleUnitPriceChange(index, parseFloat(value))
+                                        handleUnitPriceChange(index, parseFloat(value));
                                       } else {
                                         // Reset to calculated value if invalid input
                                         setEditingUnitPrice(prev => {
-                                          const newState = {...prev}
-                                          delete newState[index]
-                                          return newState
-                                        })
+                                          const newState = { ...prev };
+                                          delete newState[index];
+                                          return newState;
+                                        });
                                       }
                                     }
                                   }}
@@ -1490,41 +1512,41 @@ export default function SimulationPage() {
                               <TableCell>
                                 <Input
                                   type="text"
-                                  value={editingTotalPrice[index] !== undefined 
-                                    ? editingTotalPrice[index] 
+                                  value={editingTotalPrice[index] !== undefined
+                                    ? editingTotalPrice[index]
                                     : totalPrice.toFixed(2).replace('.', ',')}
                                   onChange={(e) => {
                                     setEditingTotalPrice(prev => ({
                                       ...prev,
                                       [index]: e.target.value
-                                    }))
+                                    }));
                                   }}
                                   onBlur={(e) => {
-                                    const value = e.target.value.replace(',', '.')
+                                    const value = e.target.value.replace(',', '.');
                                     if (!isNaN(parseFloat(value))) {
-                                      handleFinalPriceChange(index, parseFloat(value))
+                                      handleFinalPriceChange(index, parseFloat(value));
                                     } else {
                                       // Reset to calculated value if invalid input
                                       setEditingTotalPrice(prev => {
-                                        const newState = {...prev}
-                                        delete newState[index]
-                                        return newState
-                                      })
+                                        const newState = { ...prev };
+                                        delete newState[index];
+                                        return newState;
+                                      });
                                     }
                                   }}
                                   onKeyDown={(e) => {
                                     if (e.key === 'Enter') {
-                                      e.preventDefault()
-                                      const value = e.currentTarget.value.replace(',', '.')
+                                      e.preventDefault();
+                                      const value = e.currentTarget.value.replace(',', '.');
                                       if (!isNaN(parseFloat(value))) {
-                                        handleFinalPriceChange(index, parseFloat(value))
+                                        handleFinalPriceChange(index, parseFloat(value));
                                       } else {
                                         // Reset to calculated value if invalid input
                                         setEditingTotalPrice(prev => {
-                                          const newState = {...prev}
-                                          delete newState[index]
-                                          return newState
-                                        })
+                                          const newState = { ...prev };
+                                          delete newState[index];
+                                          return newState;
+                                        });
                                       }
                                     }
                                   }}
@@ -1535,7 +1557,7 @@ export default function SimulationPage() {
                               <TableCell className={cn(
                                 "text-right",
                                 margin >= 5 ? "text-green-600" :
-                                margin >= 0 ? "text-yellow-600" : "text-red-600"
+                                  margin >= 0 ? "text-yellow-600" : "text-red-600"
                               )}>
                                 {margin.toFixed(2)}%
                               </TableCell>
@@ -1550,7 +1572,7 @@ export default function SimulationPage() {
                                 </Button>
                               </TableCell>
                             </TableRow>
-                          )
+                          );
                         })}
                       </TableBody>
                     </Table>
@@ -1574,5 +1596,5 @@ export default function SimulationPage() {
         />
       </div>
     </PermissionGuard>
-  )
+  );
 } 
