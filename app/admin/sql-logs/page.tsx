@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../../components/providers/auth-provider';
-import { createPublicClient } from '../../../lib/supabase-client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
 import { format } from 'date-fns';
@@ -32,17 +31,13 @@ export default function SQLLogsPage() {
     const fetchLogs = async () => {
         setLoading(true);
         try {
-            const supabase = createPublicClient();
+            const response = await fetch('/api/admin/sql-logs');
 
-            const { data, error } = await supabase
-                .from('sql_import_logs')
-                .select('*')
-                .order('timestamp', { ascending: false });
-
-            if (error) {
-                throw error;
+            if (!response.ok) {
+                throw new Error('Failed to fetch logs');
             }
 
+            const data = await response.json();
             setLogs(data || []);
         } catch (error) {
             console.error('Error fetching SQL import logs:', error);
