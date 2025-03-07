@@ -24,6 +24,7 @@ import { Suspense } from 'react';
 import Image from 'next/image';
 import { ProductImageManager } from '@/components/product-image-manager';
 import { toast } from 'sonner';
+import { Separator } from "@/components/ui/separator";
 
 interface ProductSale {
     cdpedido: string
@@ -568,6 +569,32 @@ const ProductImageCard = ({ productName }: { productName: string }) => {
     );
 };
 
+// Add this helper function at the top level
+const calculateGiro3M = (salesData: ProductSale[], selectedFilial: string | null): number => {
+    // Get current date to calculate last 3 months
+    const now = new Date();
+    const threeMonthsAgo = new Date();
+    threeMonthsAgo.setMonth(now.getMonth() - 3);
+
+    // Filter sales by last 3 months
+    const last3MonthsSales = salesData.filter(sale => {
+        const [day, month, year] = sale.dtemissao.split('/').map(Number);
+        const saleDate = new Date(year, month - 1, day);
+        return saleDate >= threeMonthsAgo && saleDate <= now;
+    });
+
+    // Filter by filial if selected
+    const filteredSales = selectedFilial
+        ? last3MonthsSales.filter(sale => sale.nmempresacurtovenda === selectedFilial)
+        : last3MonthsSales;
+
+    // Calculate total quantity
+    const totalQuantity = filteredSales.reduce((sum, sale) => sum + sale.qtbrutaproduto, 0);
+
+    // Calculate monthly average (divide by 3 for 3 months)
+    return totalQuantity / 3;
+};
+
 // Create a wrapper component for the main content
 function ProductSalesDetailsContent() {
     const router = useRouter();
@@ -858,6 +885,12 @@ function ProductSalesDetailsContent() {
         return totals?.quantidade > 0 || totals?.faturamento > 0;
     }, [totals]);
 
+    // Inside the ProductSalesDetailsContent component, add this calculation
+    const giro3M = useMemo(() =>
+        calculateGiro3M(data.product, selectedFilial),
+        [data.product, selectedFilial]
+    );
+
     // Then handle conditional returns
     if (!data.product.length && !isLoading) {
         return (
@@ -1082,16 +1115,34 @@ function ProductSalesDetailsContent() {
                                     <div className="text-sm md:text-xl font-bold">
                                         <AnimatedValue value={totals.quantidade} suffix=" un" />
                                     </div>
-                                    <p className="text-xs text-muted-foreground">
-                                        <AnimatedValue
-                                            value={totals.faturamento}
-                                            formatter={(value) => value.toLocaleString('pt-BR', {
-                                                style: 'currency',
-                                                currency: 'BRL'
-                                            })}
-                                        />
-                                    </p>
+                                    <div className="flex flex-col gap-1">
+                                        <p className="text-xs text-muted-foreground">
+                                            <AnimatedValue
+                                                value={totals.faturamento}
+                                                formatter={(value) => value.toLocaleString('pt-BR', {
+                                                    style: 'currency',
+                                                    currency: 'BRL'
+                                                })}
+                                            />
+                                        </p>
+                                    </div>
                                 </CardContent>
+                                <Separator />
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2">
+                                    <CardTitle className="text-xs sm:text-sm font-medium">
+                                        Giro 3M
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-2 md:p-4">
+                                    <div className="text-sm md:text-xl font-bold">
+                                        <AnimatedValue
+                                            value={giro3M}
+                                            formatter={(value) => value.toFixed(1)}
+                                            suffix=" un/mês"
+                                        />
+                                    </div>
+                                </CardContent>
+
                             </Card>
 
                             {data.stock && data.stock[0] && (

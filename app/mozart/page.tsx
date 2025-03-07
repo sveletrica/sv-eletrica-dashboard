@@ -9,7 +9,7 @@ import {
     ChartLegend,
     ChartLegendContent
 } from "../../components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LabelList } from 'recharts';
 import { Button } from "../../components/ui/button";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -375,7 +375,6 @@ export default function Mozart() {
                     </div>
                 </Card>
             </div>
-
             <Card>
                 <CardHeader>
                     <CardTitle>Distribuição de Etiquetas</CardTitle>
@@ -386,7 +385,7 @@ export default function Mozart() {
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={chartData}>
                                     <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="name" />
+                                    <XAxis dataKey="name" tickMargin={10} tickLine={false} axisLine={false} />
                                     <YAxis />
                                     <ChartTooltip
                                         content={<ChartTooltipContent />}
@@ -395,22 +394,43 @@ export default function Mozart() {
                                     <ChartLegend content={<ChartLegendContent />} />
                                     <Bar
                                         dataKey="totalTagged"
-                                        radius={4}
+                                        radius={8}
                                         fill="hsl(142, 76%, 36%)"
                                         name={chartConfig.totalTagged.label}
-                                    />
+                                    >
+                                        <LabelList
+                                            position="top"
+                                            offset={12}
+                                            className="fill-foreground"
+                                            fontSize={12}
+                                        />
+                                    </Bar>
                                     <Bar
                                         dataKey="tagsUsedTwice"
-                                        radius={4}
+                                        radius={8}
                                         fill="hsl(43, 96%, 48%)"
                                         name={chartConfig.tagsUsedTwice.label}
-                                    />
+                                    >
+                                        <LabelList
+                                            position="top"
+                                            offset={12}
+                                            className="fill-foreground"
+                                            fontSize={12}
+                                        />
+                                    </Bar>
                                     <Bar
                                         dataKey="taggedNoStock"
-                                        radius={4}
+                                        radius={8}
                                         fill="hsl(0, 74%, 51%)"
                                         name={chartConfig.taggedNoStock.label}
-                                    />
+                                    >
+                                        <LabelList
+                                            position="top"
+                                            offset={12}
+                                            className="fill-foreground"
+                                            fontSize={12}
+                                        />
+                                    </Bar>
                                 </BarChart>
                             </ResponsiveContainer>
                         </ChartContainer>

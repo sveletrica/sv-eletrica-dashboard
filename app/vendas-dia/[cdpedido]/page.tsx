@@ -1,69 +1,69 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { useRouter, useSearchParams, useParams } from 'next/navigation'
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
-import { ArrowLeft, TrendingUp, TrendingDown, AlertTriangle, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react'
-import { SaleDetail } from '@/types/sales'
-import Loading from '../loading'
-import { cn } from "@/lib/utils"
-import Link from 'next/link'
-import { Roboto } from 'next/font/google'
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams, useParams } from 'next/navigation';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft, TrendingUp, TrendingDown, AlertTriangle, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
+import { SaleDetail } from '@/types/sales';
+import Loading from '../loading';
+import { cn } from "@/lib/utils";
+import Link from 'next/link';
+import { Roboto } from 'next/font/google';
 
 const roboto = Roboto({
-  weight: ['400', '500', '700'],
-  subsets: ['latin'],
-  display: 'swap',
-})
+    weight: ['400', '500', '700'],
+    subsets: ['latin'],
+    display: 'swap',
+});
 
 export default function SaleDetails() {
-    const router = useRouter()
-    const searchParams = useSearchParams()
-    const params = useParams()
-    const [data, setData] = useState<SaleDetail[]>([])
-    const [isLoading, setIsLoading] = useState(true)
-    const [error, setError] = useState<string | null>(null)
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const params = useParams();
+    const [data, setData] = useState<SaleDetail[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [_error, setError] = useState<string | null>(null);
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({
         key: '',
         direction: 'asc'
-    })
+    });
 
-    const highlightedProduct = searchParams.get('fromProduct')
+    const highlightedProduct = searchParams.get('fromProduct');
 
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const nrdocumento = searchParams.get('nrdocumento')
-                const dtemissao = searchParams.get('dtemissao')
-                const cdpedido = params?.cdpedido as string
-                
+                const nrdocumento = searchParams.get('nrdocumento');
+                const dtemissao = searchParams.get('dtemissao');
+                const cdpedido = params?.cdpedido as string;
+
                 if (!nrdocumento || !cdpedido || !dtemissao) {
-                    throw new Error('Documento, pedido ou data de emissão não encontrado')
+                    throw new Error('Documento, pedido ou data de emissão não encontrado');
                 }
 
-                const response = await fetch(`/api/vendas-dia/${cdpedido}?nrdocumento=${nrdocumento}&dtemissao=${dtemissao}`)
+                const response = await fetch(`/api/vendas-dia/${cdpedido}?nrdocumento=${nrdocumento}&dtemissao=${dtemissao}`);
                 if (!response.ok) {
-                    throw new Error('Failed to fetch sale details')
+                    throw new Error('Failed to fetch sale details');
                 }
-                const saleData = await response.json()
-                setData(saleData)
+                const saleData = await response.json();
+                setData(saleData);
             } catch (error) {
-                console.error('Error fetching sale details:', error)
-                setError(error instanceof Error ? error.message : 'Failed to fetch sale details')
+                console.error('Error fetching sale details:', error);
+                setError(error instanceof Error ? error.message : 'Failed to fetch sale details');
             } finally {
-                setIsLoading(false)
+                setIsLoading(false);
             }
-        }
+        };
 
-        fetchData()
-    }, [params, searchParams])
+        fetchData();
+    }, [params, searchParams]);
 
     const calculateMargin = (totalRevenue: number, totalCost: number) => {
-        const margin = (totalRevenue - (totalRevenue * 0.268 + totalCost)) / totalRevenue * 100
-        return margin
-    }
+        const margin = (totalRevenue - (totalRevenue * 0.268 + totalCost)) / totalRevenue * 100;
+        return margin;
+    };
 
     const getMarginStyle = (margin: number) => {
         if (margin > 3) {
@@ -71,23 +71,23 @@ export default function SaleDetails() {
                 background: "linear-gradient(to right, hsl(142.1 76.2% 36.3%), hsl(143.8 71.8% 29.2%))",
                 icon: <TrendingUp className="h-8 w-8 text-white" />,
                 textColor: "text-white"
-            }
+            };
         } else if (margin >= 0) {
             return {
                 background: "linear-gradient(to right, hsl(47.9 95.8% 53.1%), hsl(46 96.2% 48.3%))",
                 icon: <AlertTriangle className="h-8 w-8 text-white" />,
                 textColor: "text-white"
-            }
+            };
         } else {
             return {
                 background: "linear-gradient(to right, hsl(0 72.2% 50.6%), hsl(0 72.2% 40.6%))",
                 icon: <TrendingDown className="h-8 w-8 text-white" />,
                 textColor: "text-white"
-            }
+            };
         }
-    }
+    };
 
-    if (isLoading) return <Loading />
+    if (isLoading) return <Loading />;
 
     if (!data.length) {
         return (
@@ -108,17 +108,17 @@ export default function SaleDetails() {
                     </CardContent>
                 </Card>
             </div>
-        )
+        );
     }
 
     const totals = data.reduce((acc, item) => ({
         faturamento: acc.faturamento + item.vlfaturamento,
         custo: acc.custo + item.vltotalcustoproduto,
         quantidade: acc.quantidade + item.qtbrutaproduto
-    }), { faturamento: 0, custo: 0, quantidade: 0 })
+    }), { faturamento: 0, custo: 0, quantidade: 0 });
 
-    const marginPercentage = calculateMargin(totals.faturamento, totals.custo)
-    const marginStyle = getMarginStyle(marginPercentage)
+    const marginPercentage = calculateMargin(totals.faturamento, totals.custo);
+    const marginStyle = getMarginStyle(marginPercentage);
 
     return (
         <div className="space-y-2">
@@ -175,7 +175,7 @@ export default function SaleDetails() {
                     </CardContent>
                 </Card>
                 <Card className="relative overflow-hidden">
-                    <div 
+                    <div
                         className="absolute inset-0 z-0"
                         style={{ background: marginStyle.background }}
                     />
@@ -205,17 +205,17 @@ export default function SaleDetails() {
                                     <TableHead className="text-[12px] sm:text-sm">Cód</TableHead>
                                     <TableHead className="text-[12px] sm:text-sm">Produto</TableHead>
                                     <TableHead className="text-[12px] sm:text-sm">Grupo</TableHead>
-                                    <TableHead 
+                                    <TableHead
                                         className="text-[12px] sm:text-sm text-right cursor-pointer hover:bg-accent/50"
                                         onClick={() => {
                                             const newData = [...data].sort((a, b) => {
                                                 if (sortConfig.key === 'qtd' && sortConfig.direction === 'asc') {
-                                                    return b.qtbrutaproduto - a.qtbrutaproduto
+                                                    return b.qtbrutaproduto - a.qtbrutaproduto;
                                                 }
-                                                return a.qtbrutaproduto - b.qtbrutaproduto
-                                            })
-                                            setData(newData)
-                                            setSortConfig({ key: 'qtd', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })
+                                                return a.qtbrutaproduto - b.qtbrutaproduto;
+                                            });
+                                            setData(newData);
+                                            setSortConfig({ key: 'qtd', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' });
                                         }}
                                     >
                                         <div className="flex items-center justify-end gap-2">
@@ -225,19 +225,19 @@ export default function SaleDetails() {
                                             ) : <ArrowUpDown className="h-4 w-4" />}
                                         </div>
                                     </TableHead>
-                                    <TableHead 
+                                    <TableHead
                                         className="text-[12px] sm:text-sm text-right cursor-pointer hover:bg-accent/50"
                                         onClick={() => {
                                             const newData = [...data].sort((a, b) => {
-                                                const aValue = a.vlfaturamento / a.qtbrutaproduto
-                                                const bValue = b.vlfaturamento / b.qtbrutaproduto
+                                                const aValue = a.vlfaturamento / a.qtbrutaproduto;
+                                                const bValue = b.vlfaturamento / b.qtbrutaproduto;
                                                 if (sortConfig.key === 'unitValue' && sortConfig.direction === 'asc') {
-                                                    return bValue - aValue
+                                                    return bValue - aValue;
                                                 }
-                                                return aValue - bValue
-                                            })
-                                            setData(newData)
-                                            setSortConfig({ key: 'unitValue', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })
+                                                return aValue - bValue;
+                                            });
+                                            setData(newData);
+                                            setSortConfig({ key: 'unitValue', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' });
                                         }}
                                     >
                                         <div className="flex items-center justify-end gap-2">
@@ -247,17 +247,17 @@ export default function SaleDetails() {
                                             ) : <ArrowUpDown className="h-4 w-4" />}
                                         </div>
                                     </TableHead>
-                                    <TableHead 
+                                    <TableHead
                                         className="text-[12px] sm:text-sm text-right cursor-pointer hover:bg-accent/50"
                                         onClick={() => {
                                             const newData = [...data].sort((a, b) => {
                                                 if (sortConfig.key === 'total' && sortConfig.direction === 'asc') {
-                                                    return b.vlfaturamento - a.vlfaturamento
+                                                    return b.vlfaturamento - a.vlfaturamento;
                                                 }
-                                                return a.vlfaturamento - b.vlfaturamento
-                                            })
-                                            setData(newData)
-                                            setSortConfig({ key: 'total', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })
+                                                return a.vlfaturamento - b.vlfaturamento;
+                                            });
+                                            setData(newData);
+                                            setSortConfig({ key: 'total', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' });
                                         }}
                                     >
                                         <div className="flex items-center justify-end gap-2">
@@ -267,17 +267,17 @@ export default function SaleDetails() {
                                             ) : <ArrowUpDown className="h-4 w-4" />}
                                         </div>
                                     </TableHead>
-                                    <TableHead 
+                                    <TableHead
                                         className="text-[12px] sm:text-sm text-right cursor-pointer hover:bg-accent/50"
                                         onClick={() => {
                                             const newData = [...data].sort((a, b) => {
                                                 if (sortConfig.key === 'cost' && sortConfig.direction === 'asc') {
-                                                    return b.vltotalcustoproduto - a.vltotalcustoproduto
+                                                    return b.vltotalcustoproduto - a.vltotalcustoproduto;
                                                 }
-                                                return a.vltotalcustoproduto - b.vltotalcustoproduto
-                                            })
-                                            setData(newData)
-                                            setSortConfig({ key: 'cost', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })
+                                                return a.vltotalcustoproduto - b.vltotalcustoproduto;
+                                            });
+                                            setData(newData);
+                                            setSortConfig({ key: 'cost', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' });
                                         }}
                                     >
                                         <div className="flex items-center justify-end gap-2">
@@ -287,19 +287,19 @@ export default function SaleDetails() {
                                             ) : <ArrowUpDown className="h-4 w-4" />}
                                         </div>
                                     </TableHead>
-                                    <TableHead 
+                                    <TableHead
                                         className="text-[12px] sm:text-sm text-right cursor-pointer hover:bg-accent/50"
                                         onClick={() => {
                                             const newData = [...data].sort((a, b) => {
-                                                const aMargin = parseFloat(a.margem)
-                                                const bMargin = parseFloat(b.margem)
+                                                const aMargin = parseFloat(a.margem);
+                                                const bMargin = parseFloat(b.margem);
                                                 if (sortConfig.key === 'margin' && sortConfig.direction === 'asc') {
-                                                    return bMargin - aMargin
+                                                    return bMargin - aMargin;
                                                 }
-                                                return aMargin - bMargin
-                                            })
-                                            setData(newData)
-                                            setSortConfig({ key: 'margin', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' })
+                                                return aMargin - bMargin;
+                                            });
+                                            setData(newData);
+                                            setSortConfig({ key: 'margin', direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' });
                                         }}
                                     >
                                         <div className="flex items-center justify-end gap-2">
@@ -313,19 +313,19 @@ export default function SaleDetails() {
                             </TableHeader>
                             <TableBody className={roboto.className}>
                                 {data.map((item, index) => {
-                                    const margin = parseFloat(item.margem)
+                                    const margin = parseFloat(item.margem);
                                     return (
-                                        <TableRow 
+                                        <TableRow
                                             key={index}
                                             className={cn(
-                                                highlightedProduct && item.cdproduto.trim() === highlightedProduct.trim() && 
+                                                highlightedProduct && item.cdproduto.trim() === highlightedProduct.trim() &&
                                                 "bg-yellow-300 dark:bg-red-800/50 animate-pulse-slow",
                                                 margin <= 0 && "bg-red-200 dark:bg-red-900/90",
                                                 "transition-colors hover:bg-accent/50"
                                             )}
                                         >
                                             <TableCell className="text-xs sm:text-sm">
-                                                <Link 
+                                                <Link
                                                     href={`/produto/${item.cdproduto.trim()}`}
                                                     className="text-blue-500 hover:underline"
                                                 >
@@ -365,7 +365,7 @@ export default function SaleDetails() {
                                                 {item.margem}
                                             </TableCell>
                                         </TableRow>
-                                    )
+                                    );
                                 })}
                                 <TableRow className="font-bold">
                                     <TableCell colSpan={3} className="text-xs sm:text-sm">Total</TableCell>
@@ -393,5 +393,5 @@ export default function SaleDetails() {
                 </CardContent>
             </Card>
         </div>
-    )
+    );
 } 
