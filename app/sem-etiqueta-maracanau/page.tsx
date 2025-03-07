@@ -1,17 +1,17 @@
-'use client'
+'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
-import { format } from "date-fns"
-import { ptBR } from "date-fns/locale"
-import { RefreshCw, Download, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { UntaggedItem } from '@/types/untagged'
-import Loading from './loading'
-import * as XLSX from 'xlsx'
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
+import { Input } from "../../components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
+import { Button } from "../../components/ui/button";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { RefreshCw, Download, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { cn } from '../../lib/utils';
+import { UntaggedItem } from '../../types/untagged';
+import Loading from './loading';
+import * as XLSX from 'xlsx';
 import {
     ColumnDef,
     flexRender,
@@ -20,11 +20,12 @@ import {
     getPaginationRowModel,
     SortingState,
     useReactTable,
-} from '@tanstack/react-table'
-import { HighlightedText } from "@/components/highlighted-text"
+} from '@tanstack/react-table';
+import { HighlightedText } from "../../components/highlighted-text";
+import React from 'react';
 
-const CACHE_KEY = 'untaggedData_maracanau'
-const CACHE_DURATION = 24 * 60 * 60 * 1000 // 24 hours
+const CACHE_KEY = 'untaggedData_maracanau';
+const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
 type CachedData = {
     items: UntaggedItem[]
@@ -32,18 +33,18 @@ type CachedData = {
 }
 
 export default function UntaggedItems() {
-    const [data, setData] = useState<UntaggedItem[]>([])
-    const [isLoading, setIsLoading] = useState(true)
-    const [isRefreshing, setIsRefreshing] = useState(false)
-    const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
-    const [error, setError] = useState<string | null>(null)
-    const [sorting, setSorting] = useState<SortingState>([])
-    const [searchTerm, setSearchTerm] = useState('')
-    const [searchTerms, setSearchTerms] = useState<string[]>([])
+    const [data, setData] = useState<UntaggedItem[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+    const [error, setError] = useState<string | null>(null);
+    const [sorting, setSorting] = useState<SortingState>([]);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [searchTerms, setSearchTerms] = useState<string[]>([]);
     const [pagination, setPagination] = useState({
         pageIndex: 0,
         pageSize: 20,
-    })
+    });
 
     const columns = useMemo<ColumnDef<UntaggedItem>[]>(() => [
         {
@@ -63,13 +64,13 @@ export default function UntaggedItems() {
                             <ArrowUpDown className="ml-2 h-4 w-4" />
                         )}
                     </Button>
-                )
+                );
             },
             cell: ({ getValue }) => {
-                const value = getValue() as string
+                const value = getValue() as string;
                 return searchTerms.length ? (
                     <HighlightedText text={value} searchTerms={searchTerms} />
-                ) : value
+                ) : value;
             }
         },
         {
@@ -89,13 +90,13 @@ export default function UntaggedItems() {
                             <ArrowUpDown className="ml-2 h-4 w-4" />
                         )}
                     </Button>
-                )
+                );
             },
             cell: ({ getValue }) => {
-                const value = getValue() as string
+                const value = getValue() as string;
                 return searchTerms.length ? (
                     <HighlightedText text={value} searchTerms={searchTerms} />
-                ) : value
+                ) : value;
             }
         },
         {
@@ -115,42 +116,42 @@ export default function UntaggedItems() {
                             <ArrowUpDown className="ml-2 h-4 w-4" />
                         )}
                     </Button>
-                )
+                );
             },
             cell: ({ row }) => {
-                const value = row.getValue('estoque') as number
-                return value.toLocaleString('pt-BR')
+                const value = row.getValue('estoque') as number;
+                return value.toLocaleString('pt-BR');
             },
         },
-    ], [searchTerms])
+    ], [searchTerms]);
 
     const loadFromCache = () => {
         if (typeof window !== 'undefined') {
-            const cached = localStorage.getItem(CACHE_KEY)
+            const cached = localStorage.getItem(CACHE_KEY);
             if (cached) {
                 try {
-                    const parsedCache: CachedData = JSON.parse(cached)
-                    const now = Date.now()
+                    const parsedCache: CachedData = JSON.parse(cached);
+                    const now = Date.now();
                     if (now - parsedCache.timestamp < CACHE_DURATION) {
-                        setData(parsedCache.items)
-                        setLastUpdate(new Date(parsedCache.timestamp))
-                        setIsLoading(false)
-                        return true
+                        setData(parsedCache.items);
+                        setLastUpdate(new Date(parsedCache.timestamp));
+                        setIsLoading(false);
+                        return true;
                     }
                 } catch (error) {
-                    console.error('Error parsing cache:', error)
+                    console.error('Error parsing cache:', error);
                 }
             }
         }
-        return false
-    }
+        return false;
+    };
 
-    const fetchData = async (force: boolean = false) => {
-        setError(null)
-        
+    const fetchData = useCallback(async (force: boolean = false) => {
+        setError(null);
+
         try {
             if (!force && loadFromCache()) {
-                return
+                return;
             }
 
             const response = await fetch('/api/untagged_maracanau', {
@@ -159,63 +160,67 @@ export default function UntaggedItems() {
                     'Accept': 'application/json',
                     'Content-Type': 'application/json',
                 },
-            })
-            
+            });
+
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}))
-                throw new Error(errorData.error || 'Failed to fetch data')
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || 'Failed to fetch data');
             }
 
-            const items: UntaggedItem[] = await response.json()
-            
+            const items: UntaggedItem[] = await response.json();
+
             if (typeof window !== 'undefined') {
                 localStorage.setItem(CACHE_KEY, JSON.stringify({
                     items,
                     timestamp: Date.now()
-                }))
+                }));
             }
 
-            setData(items)
-            setLastUpdate(new Date())
-            setIsLoading(false)
+            setData(items);
+            setLastUpdate(new Date());
+            setIsLoading(false);
         } catch (error) {
-            console.error('Error fetching data:', error)
-            setError(error instanceof Error ? error.message : 'Falha ao carregar dados. Por favor, tente novamente.')
-            setIsLoading(false)
+            console.error('Error fetching data:', error);
+            setError(error instanceof Error ? error.message : 'Falha ao carregar dados. Por favor, tente novamente.');
+            setIsLoading(false);
         }
-    }
+    }, []);
 
     const handleRefresh = async () => {
-        setIsRefreshing(true)
-        await fetchData(true)
-        setIsRefreshing(false)
-    }
+        setIsRefreshing(true);
+        await fetchData(true);
+        setIsRefreshing(false);
+    };
 
     const handleExportXLSX = () => {
-        const worksheet = XLSX.utils.json_to_sheet(data)
-        const workbook = XLSX.utils.book_new()
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Itens sem Etiqueta")
-        XLSX.writeFile(workbook, `Maracanau-itens-sem-etiqueta-${format(new Date(), 'dd-MM-yyyy')}.xlsx`)
-    }
+        const worksheet = XLSX.utils.json_to_sheet(data);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Itens sem Etiqueta");
+        XLSX.writeFile(workbook, `Maracanau-itens-sem-etiqueta-${format(new Date(), 'dd-MM-yyyy')}.xlsx`);
+    };
 
     useEffect(() => {
-        fetchData()
-    }, [])
+        fetchData();
+    }, [fetchData]);
 
     const handleSearch = useCallback((value: string) => {
-        setSearchTerm(value)
-        const terms = value.trim().toLowerCase().split(/\s+/).filter(Boolean)
-        setSearchTerms(terms)
-    }, [])
+        setSearchTerm(value);
+        const terms = value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+        setSearchTerms(terms);
+    }, []);
 
     const filteredData = useMemo(() => {
-        if (!searchTerms.length) return data
+        if (!searchTerms.length) return data;
 
         return data.filter(item => {
-            const searchText = item.nome.toLowerCase()
-            return searchTerms.every(term => searchText.includes(term.toLowerCase()))
-        })
-    }, [data, searchTerms])
+            const searchTextNome = item.nome.toLowerCase();
+            const searchTextCodigo = item.codigo.toLowerCase();
+            return searchTerms.every(term =>
+                searchTextNome.includes(term.toLowerCase()) ||
+                searchTextCodigo.includes(term.toLowerCase())
+            );
+        });
+    }, [data, searchTerms]);
 
     const table = useReactTable({
         data: filteredData,
@@ -229,10 +234,10 @@ export default function UntaggedItems() {
             sorting,
             pagination,
         },
-    })
+    });
 
     if (isLoading) {
-        return <Loading />
+        return <Loading />;
     }
 
     return (
@@ -360,5 +365,5 @@ export default function UntaggedItems() {
                 </CardContent>
             </Card>
         </div>
-    )
+    );
 } 
