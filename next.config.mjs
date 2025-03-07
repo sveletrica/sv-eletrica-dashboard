@@ -9,7 +9,7 @@ const nextConfig = {
         GOOGLE_CX: process.env.GOOGLE_CX,
     },
     serverRuntimeConfig: {
-        SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,       
+        SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
     },
     publicRuntimeConfig: {
         NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -59,6 +59,6 @@ const nextConfig = {
     eslint: {
         ignoreDuringBuilds: true,
     },
-}
+};
 
-export default nextConfig 
+export default nextConfig; 

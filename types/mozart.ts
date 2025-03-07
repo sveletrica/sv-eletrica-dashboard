@@ -1,11 +1,11 @@
-export type MaracanauItem = {
+export type MozartItem = {
     id: string
     NmProduto: string
     CdProduto: string
     NmGrupoProduto: string
     NmFamiliaProduto: string
-    QtEstoque_Empresa59: number
-    VlPreco_Empresa59: number
+    QtEstoque_Empresa20: number
+    VlPreco_Empresa20: number
     PrecoPromo: number | null
     PrecoDe: number | null
     DataInicio: string | null
@@ -13,7 +13,7 @@ export type MaracanauItem = {
     Atualizacao: string
 }
 
-export type ColumnId = keyof MaracanauItem
+export type ColumnId = keyof MozartItem
 
 export const columnDefinitions: Record<ColumnId, { label: string }> = {
     id: { label: 'ID' },
@@ -21,8 +21,8 @@ export const columnDefinitions: Record<ColumnId, { label: string }> = {
     CdProduto: { label: 'Código' },
     NmGrupoProduto: { label: 'Grupo' },
     NmFamiliaProduto: { label: 'Família' },
-    QtEstoque_Empresa59: { label: 'Estoque Maracanau' },
-    VlPreco_Empresa59: { label: 'Preço Maracanau' },
+    QtEstoque_Empresa20: { label: 'Estoque Mozart' },
+    VlPreco_Empresa20: { label: 'Preço Mozart' },
     PrecoPromo: { label: 'Preço Promo' },
     PrecoDe: { label: 'Preço De' },
     DataInicio: { label: 'Início Promo' },
@@ -35,14 +35,14 @@ export function getDefaultVisibleColumns(): Set<ColumnId> {
         'NmProduto',
         'CdProduto',
         'NmGrupoProduto',
-        'QtEstoque_Empresa59',
-        'VlPreco_Empresa59',
+        'QtEstoque_Empresa20',
+        'VlPreco_Empresa20',
         'PrecoPromo',
         'Atualizacao'
     ]);
 }
 
-export type MaracanauStats = {
+export type MozartStats = {
     totalEstoque: number
     produtosEtiquetados: number
     produtosSemEtiqueta: number
@@ -54,6 +54,6 @@ export type MaracanauStats = {
 }
 
 export type CachedData = {
-    stats: MaracanauStats
+    stats: MozartStats
     timestamp: number
 } 
