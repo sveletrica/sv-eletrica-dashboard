@@ -1347,12 +1347,22 @@ export default function DailySales() {
                                         table.getRowModel().rows.map((row) => (
                                             <TableRow 
                                                 key={row.id}
-                                                className="hover:bg-muted/40"
+                                                className="hover:bg-muted/40 cursor-pointer"
+                                                onClick={() => {
+                                                    router.push(`/vendas-dia/${row.original.cdpedido}?nrdocumento=${row.original.nrdocumento}&dtemissao=${row.original.dtemissao}`);
+                                                }}
+                                                style={{ position: 'relative' }}
                                             >
                                                 {row.getVisibleCells().map((cell) => (
                                                     <TableCell 
                                                         key={cell.id}
                                                         className="!py-1 text-xs md:text-sm"
+                                                        onClick={(e) => {
+                                                            // If clicking on a link, stop propagation to prevent row click
+                                                            if ((e.target as HTMLElement).closest('a')) {
+                                                                e.stopPropagation();
+                                                            }
+                                                        }}
                                                     >
                                                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                                     </TableCell>

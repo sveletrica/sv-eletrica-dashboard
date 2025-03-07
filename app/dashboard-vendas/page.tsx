@@ -1,11 +1,16 @@
 'use client';
-
+import React from 'react';
 import { useState, useEffect } from 'react';
-import { PermissionGuard } from '@/components/guards/permission-guard';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PermissionGuard } from '../../components/guards/permission-guard';
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent
+} from "../../components/ui/chart";
 import { 
-  BarChart, 
-  Bar, 
   XAxis, 
   YAxis, 
   CartesianGrid, 
@@ -14,24 +19,19 @@ import {
   ResponsiveContainer, 
   PieChart, 
   Pie, 
-  Cell 
+  Cell,
+  BarChart,
+  Bar
 } from 'recharts';
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent
-} from "@/components/ui/chart";
 import Loading from '../vendas-dia/loading';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ExternalLink } from 'lucide-react';
-import { FERIADOS } from '@/app/config/feriados';
+import { FERIADOS } from '../../app/config/feriados';
 import { 
   getMetaGeral, 
   getMetaFilial 
-} from '@/app/config/metas';
+} from '../../app/config/metas';
 
 // Define interfaces for the data
 interface VendedorMensal {
@@ -463,9 +463,9 @@ export default function DashboardVendas() {
     ultimoDiaMes.setHours(0, 0, 0, 0);
     
     // Arrays para armazenar os dias
-    const diasUteisTotais = [];
-    const diasUteisDecorridos = [];
-    const diasUteisRestantes = [];
+    const diasUteisTotais: string[] = [];
+    const diasUteisDecorridos: string[] = [];
+    const diasUteisRestantes: string[] = [];
     
     // Calcular todos os dias úteis do mês
     const dataIteracaoTotal = new Date(primeiroDiaMes);
@@ -917,6 +917,33 @@ export default function DashboardVendas() {
                         </div>
                       </div>
                       
+                      {/* Informação sobre dias úteis */}
+                      <div className="mt-2 pt-2 border-t">
+                        <div className="flex justify-between text-sm">
+                          <span>Dias úteis totais:</span>
+                          <span>{diasUteisInfo.diasUteisTotais}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span>Dias úteis decorridos:</span>
+                          <span>{diasUteisInfo.diasUteisDecorridos}</span>
+                        </div>
+                        {diasUteisInfo.diasUteisRestantes > 0 && (
+                          <div className="flex justify-between text-sm">
+                            <span>Dias úteis restantes:</span>
+                            <span>{diasUteisInfo.diasUteisRestantes}</span>
+                          </div>
+                        )}
+                        {diasUteisInfo.diasUteisDecorridos > 0 && (
+                          <div className="flex justify-between text-sm">
+                            <span>Média por dia útil:</span>
+                            <span>{(filial.vlfaturamento / diasUteisInfo.diasUteisDecorridos).toLocaleString('pt-BR', {
+                              style: 'currency',
+                              currency: 'BRL'
+                            })}</span>
+                          </div>
+                        )}
+                      </div>
+                      
                       {/* Projeção para a filial */}
                       {diasUteisInfo.diasUteisDecorridos > 0 && diasUteisInfo.diasUteisRestantes > 0 && (
                         <>
@@ -1257,6 +1284,33 @@ export default function DashboardVendas() {
                                   {((filial.vlfaturamento / metaFilial) * 100).toFixed(1)}%
                                 </span>
                               </div>
+                            </div>
+                            
+                            {/* Informação sobre dias úteis */}
+                            <div className="mt-2 pt-2 border-t">
+                              <div className="flex justify-between text-sm">
+                                <span>Dias úteis totais:</span>
+                                <span>{diasUteisInfo.diasUteisTotais}</span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span>Dias úteis decorridos:</span>
+                                <span>{diasUteisInfo.diasUteisDecorridos}</span>
+                              </div>
+                              {diasUteisInfo.diasUteisRestantes > 0 && (
+                                <div className="flex justify-between text-sm">
+                                  <span>Dias úteis restantes:</span>
+                                  <span>{diasUteisInfo.diasUteisRestantes}</span>
+                                </div>
+                              )}
+                              {diasUteisInfo.diasUteisDecorridos > 0 && (
+                                <div className="flex justify-between text-sm">
+                                  <span>Média por dia útil:</span>
+                                  <span>{(filial.vlfaturamento / diasUteisInfo.diasUteisDecorridos).toLocaleString('pt-BR', {
+                                    style: 'currency',
+                                    currency: 'BRL'
+                                  })}</span>
+                                </div>
+                              )}
                             </div>
                             
                             {/* Projeção para a filial */}
