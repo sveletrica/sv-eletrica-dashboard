@@ -1,50 +1,50 @@
-'use client'
-
-import { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { 
-    ChartContainer, 
-    ChartTooltip, 
+'use client';
+import React from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
+import {
+    ChartContainer,
+    ChartTooltip,
     ChartTooltipContent,
     ChartLegend,
     ChartLegendContent
-} from "@/components/ui/chart"
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts'
-import { Button } from "@/components/ui/button"
-import { format } from "date-fns"
-import { ptBR } from "date-fns/locale"
-import { 
-    Package, 
-    Tag, 
-    AlertTriangle, 
-    Tags, 
-    AlertCircle, 
-    PackageX, 
+} from "../../components/ui/chart";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
+import { Button } from "../../components/ui/button";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import {
+    Package,
+    Tag,
+    AlertTriangle,
+    Tags,
+    AlertCircle,
+    PackageX,
     CheckCircle2,
     RefreshCw,
     ArrowRight,
     Check,
     MoreHorizontal,
     Flashlight
-} from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { MozartStats } from '@/types/mozart'
-import MozartLoading from './loading'
-import './styles.css'
-import Link from 'next/link'
-import { toast } from "sonner"
-import { WorkflowProgress } from "@/components/workflow-progress"
-import { Progress } from "@/components/ui/progress"
+} from 'lucide-react';
+import { cn } from '../../lib/utils';
+import { MozartStats } from '../../types/mozart';
+import MozartLoading from './loading';
+import './styles.css';
+import Link from 'next/link';
+import { toast } from "sonner";
+import { WorkflowProgress } from "../../components/workflow-progress";
+import { Progress } from "../../components/ui/progress";
 import {
     Dialog,
     DialogContent,
     DialogHeader,
     DialogTitle,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
+} from "../../components/ui/dialog";
+import { Input } from "../../components/ui/input";
 
-const CACHE_KEY = 'mozartData'
-const CACHE_DURATION = 24 * 60 * 60 * 1000 // 24 hours in milliseconds
+const CACHE_KEY = 'mozartData';
+const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
 type CachedData = {
     stats: MozartStats
@@ -52,44 +52,44 @@ type CachedData = {
 }
 
 export default function Mozart() {
-    const [isLoading, setIsLoading] = useState(true)
-    const [isRefreshing, setIsRefreshing] = useState(false)
-    const [data, setData] = useState<MozartStats | null>(null)
-    const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
-    const [error, setError] = useState<string | null>(null)
-    const [isUpdatingESL, setIsUpdatingESL] = useState(false)
-    const [showWorkflow, setShowWorkflow] = useState(false)
-    const [showFlashModal, setShowFlashModal] = useState(false)
-    const [productCode, setProductCode] = useState('')
-    const [isFlashing, setIsFlashing] = useState(false)
+    const [isLoading, setIsLoading] = useState(true);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [data, setData] = useState<MozartStats | null>(null);
+    const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+    const [error, setError] = useState<string | null>(null);
+    const [isUpdatingESL, setIsUpdatingESL] = useState(false);
+    const [showWorkflow, setShowWorkflow] = useState(false);
+    const [showFlashModal, setShowFlashModal] = useState(false);
+    const [productCode, setProductCode] = useState('');
+    const [isFlashing, setIsFlashing] = useState(false);
 
     const loadFromCache = () => {
         if (typeof window !== 'undefined') {
-            const cached = localStorage.getItem(CACHE_KEY)
+            const cached = localStorage.getItem(CACHE_KEY);
             if (cached) {
                 try {
-                    const parsedCache: CachedData = JSON.parse(cached)
-                    const now = Date.now()
+                    const parsedCache: CachedData = JSON.parse(cached);
+                    const now = Date.now();
                     if (now - parsedCache.timestamp < CACHE_DURATION) {
-                        setData(parsedCache.stats)
-                        setLastUpdate(new Date(parsedCache.timestamp))
-                        setIsLoading(false)
-                        return true
+                        setData(parsedCache.stats);
+                        setLastUpdate(new Date(parsedCache.timestamp));
+                        setIsLoading(false);
+                        return true;
                     }
                 } catch (error) {
-                    console.error('Error parsing cache:', error)
+                    console.error('Error parsing cache:', error);
                 }
             }
         }
-        return false
-    }
+        return false;
+    };
 
-    const fetchData = async (force: boolean = false) => {
-        setError(null)
-        
+    const fetchData = useCallback(async (force: boolean = false) => {
+        setError(null);
+
         try {
             if (!force && loadFromCache()) {
-                return
+                return;
             }
 
             const response = await fetch('/api/mozart', {
@@ -98,76 +98,78 @@ export default function Mozart() {
                     'Accept': 'application/json',
                     'Content-Type': 'application/json',
                 },
-            })
-            
+            });
+
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}))
-                throw new Error(errorData.error || 'Failed to fetch data')
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || 'Failed to fetch data');
             }
 
-            const rawData = await response.json()
-            
+            const rawData = await response.json();
+
             if (!Array.isArray(rawData) || rawData.length === 0) {
-                throw new Error('No data available')
+                throw new Error('No data available');
             }
 
-            const stats: MozartStats = rawData[0]
-            
+            const stats: MozartStats = rawData[0];
+
             if (typeof window !== 'undefined') {
                 localStorage.setItem(CACHE_KEY, JSON.stringify({
                     stats,
                     timestamp: Date.now()
-                }))
+                }));
             }
 
-            setData(stats)
-            setLastUpdate(new Date())
-            setIsLoading(false)
+            setData(stats);
+            setLastUpdate(new Date());
+            setIsLoading(false);
         } catch (error) {
-            console.error('Error fetching data:', error)
-            setError(error instanceof Error ? error.message : 'Failed to load data')
-            setData(null)
+            console.error('Error fetching data:', error);
+            setError(error instanceof Error ? error.message : 'Failed to load data');
+            setData(null);
         } finally {
-            setIsLoading(false)
-            setIsRefreshing(false)
+            setIsLoading(false);
+            setIsRefreshing(false);
         }
-    }
+    }, []);
 
     const handleRefresh = async () => {
-        setIsRefreshing(true)
-        await fetchData(true)
-        setIsRefreshing(false)
-    }
+        setIsRefreshing(true);
+        await fetchData(true);
+        setIsRefreshing(false);
+    };
 
     const handleESLUpdate = async () => {
-        setIsUpdatingESL(true)
-        setShowWorkflow(true)
+        setIsUpdatingESL(true);
+        setShowWorkflow(true);
         try {
             const response = await fetch('https://wh.sveletrica.com/webhook/f6de9653-39ef-4488-9a32-fc3816760f3c', {
                 method: 'POST',
-            })
-            
-            if (response.ok) {
-                toast.success('ESL atualizado com sucesso!')
-            } else {
-                throw new Error('Falha ao atualizar ESL')
+            });
+
+            if (!response.ok) {
+                throw new Error('Falha ao atualizar ESL');
             }
+
+            toast.success('Processo de atualização iniciado');
         } catch (error) {
-            toast.error('Erro ao atualizar ESL')
-            console.error('Error updating ESL:', error)
+            setShowWorkflow(false);
+            setIsUpdatingESL(false);
+            toast.error('Erro ao iniciar atualização do ESL');
+            console.error('Error updating ESL:', error);
         } finally {
             // We'll let the workflow completion handle this now
             // setIsUpdatingESL(false)
         }
-    }
+    };
 
     const handleFlashLight = async () => {
         if (!productCode.trim()) {
-            toast.error('Digite um código de produto')
-            return
+            toast.error('Digite um código de produto');
+            return;
         }
 
-        setIsFlashing(true)
+        setIsFlashing(true);
         try {
             const response = await fetch('https://n8n.sveletrica.com/webhook/led', {
                 method: 'POST',
@@ -178,52 +180,52 @@ export default function Mozart() {
                     codproduto: productCode.trim(),
                     storeId: "1739288058697"
                 })
-            })
+            });
 
-            const responseText = await response.text()
-            let data
+            const responseText = await response.text();
+            let data;
 
             try {
-                data = JSON.parse(responseText)
+                data = JSON.parse(responseText);
             } catch {
-                throw new Error('Erro ao processar resposta do servidor')
+                throw new Error('Erro ao processar resposta do servidor');
             }
 
             if (data.success) {
-                toast.success(`O Led da ETIQUETA com o Produto "${productCode}" irá piscar durante 1 minuto.`)
-                setShowFlashModal(false)
-                setProductCode('')
+                toast.success(`O Led da ETIQUETA com o Produto "${productCode}" irá piscar durante 1 minuto.`);
+                setShowFlashModal(false);
+                setProductCode('');
             } else {
-                toast.error('Não foi encontrada uma etiqueta para este Produto, tem certeza que estás operando na Loja correta?')
+                toast.error('Não foi encontrada uma etiqueta para este Produto, tem certeza que estás operando na Loja correta?');
             }
         } catch (error) {
-            toast.error(error instanceof Error ? error.message : 'Erro ao enviar comando')
-            console.error('Error flashing light:', error)
+            toast.error(error instanceof Error ? error.message : 'Erro ao enviar comando');
+            console.error('Error flashing light:', error);
         } finally {
-            setIsFlashing(false)
+            setIsFlashing(false);
         }
-    }
+    };
 
     useEffect(() => {
         const handleWorkflowComplete = () => {
-            setIsUpdatingESL(false)
-            setShowWorkflow(false)
-        }
+            setIsUpdatingESL(false);
+            setShowWorkflow(false);
+        };
 
-        window.addEventListener('workflowComplete', handleWorkflowComplete)
-        return () => window.removeEventListener('workflowComplete', handleWorkflowComplete)
-    }, [])
+        window.addEventListener('workflowComplete', handleWorkflowComplete);
+        return () => window.removeEventListener('workflowComplete', handleWorkflowComplete);
+    }, []);
 
     useEffect(() => {
-        fetchData()
-    }, [])
+        fetchData();
+    }, [fetchData]);
 
     const calculatePercentage = (value: number, total: number) => {
-        return ((value / total) * 100).toFixed(1)
-    }
+        return ((value / total) * 100).toFixed(1);
+    };
 
     if (isLoading || !data || typeof data.totalEstoque === 'undefined') {
-        return <MozartLoading />
+        return <MozartLoading />;
     }
 
     const safeData = {
@@ -235,14 +237,14 @@ export default function Mozart() {
         emStkSemEtiq: data.emStkSemEtiq ?? 0,
         bindSemStk: data.bindSemStk ?? 0,
         skuetiquetados: data.skuetiquetados ?? 0
-    }
+    };
 
     const chartData = [{
         name: 'Mozart',
         totalTagged: safeData.skuetiquetados,
         tagsUsedTwice: safeData.etiquetasDuplicadas,
         taggedNoStock: safeData.bindSemStk
-    }]
+    }];
 
     return (
         <div className="space-y-6">
@@ -327,8 +329,8 @@ export default function Mozart() {
                                     <p className="text-xs md:text-sm text-muted-foreground">
                                         {calculatePercentage(safeData.produtosEtiquetados, safeData.totalEstoque)}% do total
                                     </p>
-                                    <Progress 
-                                        value={Number(calculatePercentage(safeData.produtosEtiquetados, safeData.totalEstoque))} 
+                                    <Progress
+                                        value={Number(calculatePercentage(safeData.produtosEtiquetados, safeData.totalEstoque))}
                                         className="h-2"
                                     />
                                 </div>
@@ -357,8 +359,8 @@ export default function Mozart() {
                                     <p className="text-xs md:text-sm text-muted-foreground">
                                         {calculatePercentage(safeData.emStkSemEtiq, safeData.totalEstoque)}% do total
                                     </p>
-                                    <Progress 
-                                        value={Number(calculatePercentage(safeData.emStkSemEtiq, safeData.totalEstoque))} 
+                                    <Progress
+                                        value={Number(calculatePercentage(safeData.emStkSemEtiq, safeData.totalEstoque))}
                                         className="h-2"
                                     />
                                 </div>
@@ -386,26 +388,26 @@ export default function Mozart() {
                                     <CartesianGrid strokeDasharray="3 3" />
                                     <XAxis dataKey="name" />
                                     <YAxis />
-                                    <ChartTooltip 
-                                        content={<ChartTooltipContent />} 
+                                    <ChartTooltip
+                                        content={<ChartTooltipContent />}
                                         cursor={{ fill: 'rgba(0, 0, 0, 0.05)' }}
                                     />
                                     <ChartLegend content={<ChartLegendContent />} />
-                                    <Bar 
-                                        dataKey="totalTagged" 
-                                        radius={4} 
+                                    <Bar
+                                        dataKey="totalTagged"
+                                        radius={4}
                                         fill="hsl(142, 76%, 36%)"
                                         name={chartConfig.totalTagged.label}
                                     />
-                                    <Bar 
-                                        dataKey="tagsUsedTwice" 
-                                        radius={4} 
+                                    <Bar
+                                        dataKey="tagsUsedTwice"
+                                        radius={4}
                                         fill="hsl(43, 96%, 48%)"
                                         name={chartConfig.tagsUsedTwice.label}
                                     />
-                                    <Bar 
-                                        dataKey="taggedNoStock" 
-                                        radius={4} 
+                                    <Bar
+                                        dataKey="taggedNoStock"
+                                        radius={4}
                                         fill="hsl(0, 74%, 51%)"
                                         name={chartConfig.taggedNoStock.label}
                                     />
@@ -487,12 +489,12 @@ export default function Mozart() {
                             onChange={(e) => setProductCode(e.target.value)}
                             onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
-                                    handleFlashLight()
+                                    handleFlashLight();
                                 }
                             }}
                         />
-                        <Button 
-                            onClick={handleFlashLight} 
+                        <Button
+                            onClick={handleFlashLight}
                             className="w-full"
                             disabled={isFlashing}
                         >
@@ -507,23 +509,23 @@ export default function Mozart() {
                 </DialogContent>
             </Dialog>
         </div>
-    )
+    );
 }
 
 const chartConfig = {
-    totalTagged: { 
-        label: "Total Etiquetado", 
+    totalTagged: {
+        label: "Total Etiquetado",
         color: "hsl(var(--chart-totalTagged))",
         showValue: true
     },
-    tagsUsedTwice: { 
-        label: "Etiquetas Duplicadas", 
+    tagsUsedTwice: {
+        label: "Etiquetas Duplicadas",
         color: "hsl(var(--chart-tagsUsedTwice))",
         showValue: true
     },
-    taggedNoStock: { 
-        label: "Etiquetados sem Estoque", 
+    taggedNoStock: {
+        label: "Etiquetados sem Estoque",
         color: "hsl(var(--chart-taggedNoStock))",
         showValue: true
     },
-} 
+}; 

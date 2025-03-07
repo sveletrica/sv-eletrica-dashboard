@@ -1,8 +1,9 @@
-'use client'
+'use client';
 
-import { useEffect, useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Progress } from "@/components/ui/progress"
+import React from 'react';
+import { useEffect, useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { Progress } from "../components/ui/progress";
 
 interface WorkflowUpdate {
     step: number
@@ -14,47 +15,71 @@ interface WorkflowUpdate {
 }
 
 export function WorkflowProgress() {
-    const [progress, setProgress] = useState<WorkflowUpdate | null>(null)
-    const [error, setError] = useState<string | null>(null)
-    const POLLING_INTERVAL = 1000 // 1 second
+    const [progress, setProgress] = useState<WorkflowUpdate | null>(null);
+    const [error, setError] = useState<string | null>(null);
+    const [timeoutCount, setTimeoutCount] = useState(0);
+    const POLLING_INTERVAL = 1000; // 1 second
+    const MAX_TIMEOUT_ATTEMPTS = 3; // Maximum number of consecutive timeouts before showing error
 
     useEffect(() => {
-        let pollInterval: NodeJS.Timeout
-
-        const fetchProgress = async () => {
+        const pollInterval = setInterval(async () => {
             try {
-                const response = await fetch('/api/workflow-progress')
-                if (!response.ok) throw new Error('Failed to fetch progress')
-                
-                const data = await response.json()
-                setProgress(data)
+                const response = await fetch('/api/workflow-progress');
+
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        setTimeoutCount(prev => prev + 1);
+                        if (timeoutCount >= MAX_TIMEOUT_ATTEMPTS) {
+                            throw new Error('Processo não encontrado');
+                        }
+                        return;
+                    }
+                    throw new Error('Failed to fetch progress');
+                }
+
+                const data = await response.json();
+                setTimeoutCount(0); // Reset timeout counter on successful response
+                setProgress(data);
 
                 if (data.status === 'completed' || data.step === data.totalSteps) {
-                    window.dispatchEvent(new CustomEvent('workflowComplete'))
-                    clearInterval(pollInterval)
+                    window.dispatchEvent(new CustomEvent('workflowComplete', {
+                        detail: { success: true }
+                    }));
+                    clearInterval(pollInterval);
                 }
 
                 if (data.status === 'error') {
-                    setError('Falha na atualização')
-                    clearInterval(pollInterval)
+                    window.dispatchEvent(new CustomEvent('workflowComplete', {
+                        detail: { success: false, error: 'Falha na atualização' }
+                    }));
+                    setError('Falha na atualização');
+                    clearInterval(pollInterval);
                 }
             } catch (err) {
-                console.error('Error fetching progress:', err)
-                setError('Erro ao buscar atualização')
-                clearInterval(pollInterval)
+                console.error('Error fetching progress:', err);
+                const errorMessage = err instanceof Error ? err.message : 'Erro ao buscar atualização';
+                setError(errorMessage);
+                window.dispatchEvent(new CustomEvent('workflowComplete', {
+                    detail: { success: false, error: errorMessage }
+                }));
+                clearInterval(pollInterval);
             }
-        }
+        }, POLLING_INTERVAL);
 
         // Initial fetch
-        fetchProgress()
+        (async () => {
+            try {
+                const response = await fetch('/api/workflow-progress');
+                if (!response.ok) throw new Error('Failed to fetch initial progress');
+                const data = await response.json();
+                setProgress(data);
+            } catch (err) {
+                console.error('Error fetching initial progress:', err);
+            }
+        })();
 
-        // Start polling
-        pollInterval = setInterval(fetchProgress, POLLING_INTERVAL)
-
-        return () => {
-            clearInterval(pollInterval)
-        }
-    }, [])
+        return () => clearInterval(pollInterval);
+    }, [timeoutCount]);
 
     if (error) {
         return (
@@ -66,7 +91,7 @@ export function WorkflowProgress() {
                     <p>{error}</p>
                 </CardContent>
             </Card>
-        )
+        );
     }
 
     if (!progress) {
@@ -79,10 +104,10 @@ export function WorkflowProgress() {
                     <Progress value={0} />
                 </CardContent>
             </Card>
-        )
+        );
     }
 
-    const percentComplete = (progress.step / progress.totalSteps) * 100
+    const percentComplete = (progress.step / progress.totalSteps) * 100;
 
     return (
         <Card>
@@ -102,5 +127,5 @@ export function WorkflowProgress() {
                 </div>
             </CardContent>
         </Card>
-    )
+    );
 } 
