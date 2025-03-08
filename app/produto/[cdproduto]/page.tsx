@@ -1138,7 +1138,7 @@ function ProductSalesDetailsContent() {
                                         <AnimatedValue
                                             value={giro3M}
                                             formatter={(value) => value.toFixed(1)}
-                                            suffix=" un/mês"
+                                            suffix={<span className="text-sm font-light"> un/mês</span>}
                                         />
                                     </div>
                                 </CardContent>
@@ -1155,7 +1155,7 @@ function ProductSalesDetailsContent() {
                                             <Package className="h-4 w-4 text-muted-foreground" />
                                         </CardHeader>
                                         <CardContent className="p-2 md:p-4">
-                                            <div className="text-sm md:text-xl font-bold">
+                                            <div className="text-xl md:text-xl font-bold">
                                                 <AnimatedValue value={stockDisplay.total} suffix=" un" />
                                             </div>
                                             <p className="text-xs text-muted-foreground">
@@ -1180,7 +1180,7 @@ function ProductSalesDetailsContent() {
                                                 <div className="text-xs md:text-sm text-muted-foreground">
                                                     Preço Sugerido
                                                 </div>
-                                                <div className="text-xs md:text-xl font-bold">
+                                                <div className="text-md md:text-xl font-bold">
                                                     {Number(data.price.vlprecosugerido || 0).toLocaleString('pt-BR', {
                                                         style: 'currency',
                                                         currency: 'BRL',
