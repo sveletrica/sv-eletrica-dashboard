@@ -181,6 +181,7 @@ export default function SalesmanDetails() {
             vltotalcustoproduto: number
             margem: number
             items: ClientSale[]
+            uniqueProducts: Set<string>
         }>();
 
         sales.forEach(sale => {
@@ -198,22 +199,24 @@ export default function SalesmanDetails() {
                     vlfaturamento: 0,
                     vltotalcustoproduto: 0,
                     margem: 0,
-                    items: []
+                    items: [],
+                    uniqueProducts: new Set<string>()
                 });
             }
             
             const order = orderMap.get(key)!;
             order.items.push(sale);
-            order.qtdsku += sale.qtbrutaproduto;
+            order.uniqueProducts.add(sale.cdproduto);
             order.vlfaturamento += sale.vlfaturamento;
             order.vltotalcustoproduto += sale.vltotalcustoproduto;
         });
 
         orderMap.forEach(order => {
+            order.qtdsku = order.uniqueProducts.size;
             order.margem = ((order.vlfaturamento - (order.vlfaturamento * 0.268 + order.vltotalcustoproduto)) / order.vlfaturamento) * 100;
         });
 
-        return Array.from(orderMap.values());
+        return Array.from(orderMap.values()).map(({ uniqueProducts, ...rest }) => rest);
     };
 
     // Reuse the same data fetching logic but with the new endpoint
@@ -454,7 +457,7 @@ export default function SalesmanDetails() {
                 {decodeURIComponent(params?.nmrepresentantevenda as string)}
             </h1>
 
-            <div className="grid gap-4 grid-cols-2 md:grid-cols-2 lg:grid-cols-5">
+            <div className="grid gap-4 grid-cols-3 md:grid-cols-3 lg:grid-cols-5">
                 <Card>
                     <CardHeader>
                         <CardTitle className="text-sm font-medium">
@@ -523,7 +526,7 @@ export default function SalesmanDetails() {
                     </CardContent>
                 </Card>
 
-                <Card className={getMarginBackgroundColor(monthlyMargin)}>
+                <Card className={`col-span-2 md:col-span-1 lg:col-span-1 ${getMarginBackgroundColor(monthlyMargin)}`}>
                     <CardHeader>
                         <CardTitle className="text-sm font-medium">
                             Resultado Mensal
@@ -583,55 +586,57 @@ export default function SalesmanDetails() {
                         </div>
                     </CardContent>
                 </Card>
-
-                <Card className="col-span-2 md:col-span-1 lg:col-span-1">
-                    <CardHeader>
-                        <CardTitle className="text-sm font-medium">
-                            Comparativo Anual
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-2">
-                            <div className="text-md md:text-sm lg:text-lg">
-                                {new Date().getFullYear()}:{' '}
-                                {window.innerWidth < 600
-                                    ? new Intl.NumberFormat('pt-BR', {
-                                        notation: 'compact',
-                                        compactDisplay: 'short',
-                                        style: 'currency',
-                                        currency: 'BRL'
-                                    }).format(getYearlyComparison(data).currentYear)
-                                    : getYearlyComparison(data).currentYear.toLocaleString('pt-BR', {
-                                        style: 'currency',
-                                        currency: 'BRL'
-                                    })
-                                }
-                            </div>
-                            <div className="text-md md:text-sm lg:text-lg text-muted-foreground">
-                                {new Date().getFullYear() - 1}:{' '}
-                                {window.innerWidth < 600
-                                    ? new Intl.NumberFormat('pt-BR', {
-                                        notation: 'compact',
-                                        compactDisplay: 'short',
-                                        style: 'currency',
-                                        currency: 'BRL'
-                                    }).format(getYearlyComparison(data).lastYear)
-                                    : getYearlyComparison(data).lastYear.toLocaleString('pt-BR', {
-                                        style: 'currency',
-                                        currency: 'BRL'
-                                    })
-                                }
-                            </div>
-                            <div className={`text-md md:text-sm lg:text-lg font-bold ${getYearlyComparison(data).percentageChange >= 0
+                    <Card className="col-span-1 md:col-span-2 lg:col-span-1">
+                        <CardHeader>
+                            <CardTitle className="text-sm font-medium">
+                                Comparativo Anual
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-2">
+                                <div className="text-md md:text-sm lg:text-lg">
+                                    {new Date().getFullYear()}:{' '}
+                                    {window.innerWidth < 600
+                                        ? new Intl.NumberFormat('pt-BR', {
+                                            notation: 'compact',
+                                            compactDisplay: 'short',
+                                            style: 'currency',
+                                            currency: 'BRL'
+                                        }).format(getYearlyComparison(data).currentYear)
+                                        : getYearlyComparison(data).currentYear.toLocaleString('pt-BR', {
+                                            style: 'currency',
+                                            currency: 'BRL'
+                                        })
+                                    }
+                                </div>
+                                <div className="text-md md:text-sm lg:text-lg text-muted-foreground">
+                                    {new Date().getFullYear() - 1}:{' '}
+                                    {window.innerWidth < 600
+                                        ? new Intl.NumberFormat('pt-BR', {
+                                            notation: 'compact',
+                                            compactDisplay: 'short',
+                                            style: 'currency',
+                                            currency: 'BRL'
+                                        }).format(getYearlyComparison(data).lastYear)
+                                        : getYearlyComparison(data).lastYear.toLocaleString('pt-BR', {
+                                            style: 'currency',
+                                            currency: 'BRL'
+                                        })
+                                    }
+                                </div>
+                                <div className={`text-md md:text-sm lg:text-lg font-bold ${getYearlyComparison(data).percentageChange >= 0
                                     ? 'text-green-600 dark:text-green-400'
                                     : 'text-red-600 dark:text-red-400'
-                                }`}>
-                                {getYearlyComparison(data).percentageChange >= 0 ? '↑' : '↓'}{' '}
-                                {Math.abs(getYearlyComparison(data).percentageChange).toFixed(1)}%
+                                    }`}>
+                                    {getYearlyComparison(data).percentageChange >= 0 ? '↑' : '↓'}{' '}
+                                    {Math.abs(getYearlyComparison(data).percentageChange).toFixed(1)}%
+                                </div>
                             </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                        </CardContent>
+                    </Card>
+                </div>
+                    <div className="grid gap-4 grid-cols-2 md:grid-cols-2 lg:grid-cols-5">
+                
 
                 <Card className="col-span-2 md:col-span-3 lg:col-span-5">
                     <CardHeader>
@@ -736,13 +741,25 @@ export default function SalesmanDetails() {
                                                     {quotation.dtemissao}
                                                 </TableCell>
                                                 <TableCell className="py-1 text-sm">
-                                                    {quotation.cdpedidodevenda}
+                                                    <Link
+                                                        href={`/orcamento/${quotation.cdpedidodevenda}`}
+                                                        className="text-blue-500 hover:text-blue-700 underline"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        {quotation.cdpedidodevenda}
+                                                    </Link>
                                                 </TableCell>
                                                 <TableCell className="py-1 text-sm">
                                                     {quotation.nmempresacurtovenda}
                                                 </TableCell>
                                                 <TableCell className="py-1 text-sm">
-                                                    {quotation.nmpessoa}
+                                                    <Link
+                                                        href={`/cliente/${encodeURIComponent(quotation.nmpessoa)}?returnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`}
+                                                        className="text-blue-500 hover:text-blue-700 underline"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        {quotation.nmpessoa}
+                                                    </Link>
                                                 </TableCell>
                                                 <TableCell className="py-1 text-sm text-right">
                                                     {quotation.qtd_produtos}
@@ -899,7 +916,14 @@ export default function SalesmanDetails() {
                                             </Link>
                                         </TableCell>
                                         <TableCell>{order.nrdocumento}</TableCell>
-                                        <TableCell>{order.nmpessoa}</TableCell>
+                                        <TableCell>
+                                            <Link
+                                                href={`/cliente/${encodeURIComponent(order.nmpessoa)}?returnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`}
+                                                className="text-blue-500 hover:text-blue-700 underline"
+                                            >
+                                                {order.nmpessoa}
+                                            </Link>
+                                        </TableCell>
                                         <TableCell>{order.nmempresacurtovenda}</TableCell>
                                         <TableCell>{order.tpmovimentooperacao}</TableCell>
                                         <TableCell className="text-right">{order.qtdsku}</TableCell>
