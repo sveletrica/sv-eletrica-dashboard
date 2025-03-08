@@ -383,7 +383,9 @@ export default function Mozart() {
                     <div className="h-[300px] w-full">
                         <ChartContainer config={chartConfig} className="h-full w-full">
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={chartData}>
+                                <BarChart data={chartData} margin={{
+                                    top: 20
+                                }}>
                                     <CartesianGrid strokeDasharray="3 3" />
                                     <XAxis dataKey="name" tickMargin={10} tickLine={false} axisLine={false} />
                                     <YAxis />

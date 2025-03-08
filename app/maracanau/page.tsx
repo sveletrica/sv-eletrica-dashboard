@@ -9,7 +9,7 @@ import {
     ChartLegend,
     ChartLegendContent
 } from "@/components/ui/chart"
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LabelList } from 'recharts'
 import { Button } from "@/components/ui/button"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
@@ -382,33 +382,56 @@ export default function Maracanau() {
                     <div className="h-[300px] w-full">
                         <ChartContainer config={chartConfig} className="h-full w-full">
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={chartData}>
+                                <BarChart data={chartData} margin={{
+                                    top: 20
+                                }}>
                                     <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="name" />
-                                    <YAxis />
-                                    <ChartTooltip 
-                                        content={<ChartTooltipContent />} 
+                                    <XAxis dataKey="name" tickMargin={10} tickLine={false} axisLine={false} />
+                                    <YAxis tickMargin={10} />
+                                    <ChartTooltip
+                                        content={<ChartTooltipContent />}
                                         cursor={{ fill: 'rgba(0, 0, 0, 0.05)' }}
                                     />
                                     <ChartLegend content={<ChartLegendContent />} />
-                                    <Bar 
-                                        dataKey="totalTagged" 
-                                        radius={4} 
+                                    <Bar
+                                        dataKey="totalTagged"
+                                        radius={8}
                                         fill="hsl(142, 76%, 36%)"
                                         name={chartConfig.totalTagged.label}
-                                    />
-                                    <Bar 
-                                        dataKey="tagsUsedTwice" 
-                                        radius={4} 
+                                    >
+                                        <LabelList
+                                            position="top"
+                                            offset={12}
+                                            className="fill-foreground"
+                                            fontSize={12}
+                                        />
+                                    </Bar>
+                                    <Bar
+                                        dataKey="tagsUsedTwice"
+                                        radius={8}
                                         fill="hsl(43, 96%, 48%)"
                                         name={chartConfig.tagsUsedTwice.label}
-                                    />
-                                    <Bar 
-                                        dataKey="taggedNoStock" 
-                                        radius={4} 
+                                    >
+                                        <LabelList
+                                            position="top"
+                                            offset={12}
+                                            className="fill-foreground"
+                                            fontSize={12}
+                                        />
+                                    </Bar>
+                                    <Bar
+                                        dataKey="taggedNoStock"
+                                        radius={8}
                                         fill="hsl(0, 74%, 51%)"
                                         name={chartConfig.taggedNoStock.label}
-                                    />
+                                    >
+                                        <LabelList
+                                            position="top"
+                                            offset={12}
+                                            className="fill-foreground"
+                                            fontSize={12}
+                                        />
+                                    </Bar>
                                 </BarChart>
                             </ResponsiveContainer>
                         </ChartContainer>
