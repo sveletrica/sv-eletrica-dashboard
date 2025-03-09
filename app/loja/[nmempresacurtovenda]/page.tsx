@@ -93,9 +93,9 @@ const getYearlyComparison = (orders: GroupedOrder[]) => {
         const orderYear = parseInt(year)
         
         if (orderYear === currentYear) {
-            acc.currentYear += order.vlfaturamento
+            acc.currentYear += order.vlfaturamento ?? 0
         } else if (orderYear === lastYear) {
-            acc.lastYear += order.vlfaturamento
+            acc.lastYear += order.vlfaturamento ?? 0
         }
         
         return acc
@@ -115,7 +115,7 @@ const getYearlyComparison = (orders: GroupedOrder[]) => {
 const getYearlyTotals = (orders: GroupedOrder[]) => {
     return orders.reduce((acc, order) => {
         const year = order.dtemissao.split('/')[2]
-        acc[year] = (acc[year] || 0) + order.vlfaturamento
+        acc[year] = (acc[year] || 0) + (order.vlfaturamento ?? 0)
         return acc
     }, {} as Record<string, number>)
 }
