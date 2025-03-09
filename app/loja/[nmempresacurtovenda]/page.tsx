@@ -1,11 +1,11 @@
 'use client'
 import React from 'react'
-import { PermissionGuard } from '@/components/guards/permission-guard'
+import { PermissionGuard } from '../../../components/guards/permission-guard'
 import { useState, useEffect } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../components/ui/table"
+import { Button } from "../../../components/ui/button"
 import { ArrowLeft, ArrowUpDown, ChevronLeft, ChevronRight, Search } from 'lucide-react'
 import Loading from '../../vendas-dia/loading'
 import Link from 'next/link'

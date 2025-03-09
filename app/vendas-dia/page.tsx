@@ -244,7 +244,14 @@ export default function DailySales() {
         {
             accessorKey: 'nmempresacurtovenda',
             header: "Empresa",
-            cell: ({ row }) => row.original.nmempresacurtovenda,
+            cell: ({ row }) => (
+                <Link
+                    href={`/loja/${encodeURIComponent(row.original.nmempresacurtovenda)}?returnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`}
+                    className="text-blue-500 hover:text-blue-700 underline"
+                >
+                    {row.original.nmempresacurtovenda}
+                </Link>
+            ),
             enableSorting: true,
         },
         {
