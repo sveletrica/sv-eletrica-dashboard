@@ -2,76 +2,106 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { MonthlySalesMetrics } from "../components/monthly-sales-metrics";
 import React from "react";
-
-const sections = [
-  {
-    title: "Estoque",
-    description: "Ferramenta para gerenciar o estoque de produtos.",
-    link: "/inventory",
-    metrics: [
-      { label: "Total Items", value: "2,500" },
-      { label: "Tagged Items", value: "900" },
-    ]
-  },
-  {
-    title: "Vendas Mensais",
-    description: "Analise o desempenho mensal de vendas, tendências e comparações entre lojas.",
-    link: "/vendas-mes",
-    type: "monthly-sales"
-  },
-  {
-    title: "Vendas Diárias",
-    description: "Monitore atividades e métricas de desempenho das vendas diárias.",
-    link: "/vendas-dia",
-    metrics: [
-      { label: "Hoje", value: "R$ 4.2K" },
-      { label: "vs Ontem", value: "+5%" },
-    ]
-  },
-  {
-    title: "Dashboard de Vendas",
-    description: "Visualize o desempenho de vendas por vendedor e filial com métricas detalhadas.",
-    link: "/dashboard-vendas",
-    metrics: [
-      { label: "Vendedores", value: "Análise" },
-      { label: "Filiais", value: "Comparativo" },
-    ]
-  }
-];
-
+import { Separator } from "@/components/ui/separator";
 export default function Dashboard() {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold flex justify-center">SV Elétrica Dashboard</h1>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {sections.map((section) => (
-          <Card key={section.title} className="h-full hover:bg-accent/50 transition-colors relative group">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Card Estoque */}
+        <div className="grid grid-rows-2 gap-4">
+          <Card className="hover:bg-accent/50 transition-colors relative group">
             <CardHeader>
-              <CardTitle>{section.title}</CardTitle>
+              <CardTitle>Estoques</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground mb-4">{section.description}</p>
+              <p className="text-muted-foreground mb-4">Ferramenta para gerenciar o estoque de produtos.</p>
               <div className="grid grid-cols-2 gap-4">
-                {section.type === "monthly-sales" ? (
-                  <MonthlySalesMetrics />
-                ) : (
-                  Array.isArray(section.metrics) && section.metrics.map((metric) => (
-                    <div key={metric.label}>
-                      <p className="text-sm text-muted-foreground">{metric.label}</p>
-                      <p className={`font-bold ${metric.value === "Análise" || metric.value === "Comparativo" ? "text-lg" : "text-2xl"}`}>{metric.value}</p>
-                    </div>
-                  ))
-                )}
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Items</p>
+                  <p className="font-bold text-2xl">2,500</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Tagged Items</p>
+                  <p className="font-bold text-2xl">900</p>
+                </div>
               </div>
             </CardContent>
-            <Link 
-              href={section.link} 
+            <Link
+              href="/inventory"
               className="absolute inset-0 z-10 group-hover:bg-accent/10 transition-colors"
-              aria-label={`View ${section.title}`}
+              aria-label="View Estoque"
             />
           </Card>
-        ))}
+
+          <Card className="hover:bg-accent/50 transition-colors relative group">
+            <CardHeader>
+              <CardTitle>Vendas Diárias</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground mb-4">Monitore atividades e métricas de desempenho das vendas diárias.</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Hoje</p>
+                  <p className="font-bold text-2xl">R$ 4.2K</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">vs Ontem</p>
+                  <p className="font-bold text-2xl">+5%</p>
+                </div>
+              </div>
+            </CardContent>
+            <Link
+              href="/vendas-dia"
+              className="absolute inset-0 z-10 group-hover:bg-accent/10 transition-colors"
+              aria-label="View Vendas Diárias"
+            />
+          </Card>
+        </div>
+
+        {/* Card Vendas Mensais */}
+        <Card className="h-full hover:bg-accent/50 transition-colors relative group">
+          <CardHeader>
+            <CardTitle>Vendas Mensais</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground mb-4">Analise o desempenho mensal de vendas, tendências e comparações entre lojas.</p>
+            <div className="grid grid-cols-2 gap-4">
+              <MonthlySalesMetrics />
+            </div>
+          </CardContent>
+          <Link 
+            href="/vendas-mes" 
+            className="absolute inset-0 z-10 group-hover:bg-accent/10 transition-colors"
+            aria-label="View Vendas Mensais"
+          />
+        </Card>
+
+        {/* Card Dashboard de Vendas */}
+        <Card className="h-full hover:bg-accent/50 transition-colors relative group">
+          <CardHeader>
+            <CardTitle>Dashboard de Vendas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground mb-4">Visualize o desempenho de vendas por vendedor e filial com métricas detalhadas.</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Vendedores</p>
+                <p className="font-bold text-lg">Análise</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Filiais</p>
+                <p className="font-bold text-lg">Comparativo</p>
+              </div>
+            </div>
+          </CardContent>
+          <Link 
+            href="/dashboard-vendas" 
+            className="absolute inset-0 z-10 group-hover:bg-accent/10 transition-colors"
+            aria-label="View Dashboard de Vendas"
+          />
+        </Card>
       </div>
 
       <Card>
