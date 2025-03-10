@@ -9,6 +9,8 @@ import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import LogsChart from '../../../components/logs-chart';
 import LogsBar from '../../../components/logs-bar';
+import LogsLineChart from '../../../components/LogsLineChart';
+
 interface SQLImportLog {
     id: string
     user_id: string
@@ -78,6 +80,9 @@ export default function SQLLogsPage() {
                         <div className="md:col-span-2">
                             <LogsBar logs={logs} />
                         </div>
+                    </div>
+                    <div className="mt-6">
+                        <LogsLineChart logs={logs} />
                     </div>
                     <div className="mt-6">
                         <Card>
