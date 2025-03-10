@@ -59,7 +59,7 @@ export default function Dashboard() {
                   Array.isArray(section.metrics) && section.metrics.map((metric) => (
                     <div key={metric.label}>
                       <p className="text-sm text-muted-foreground">{metric.label}</p>
-                      <p className="text-2xl font-bold">{metric.value}</p>
+                      <p className={`font-bold ${metric.value === "Análise" || metric.value === "Comparativo" ? "text-lg" : "text-2xl"}`}>{metric.value}</p>
                     </div>
                   ))
                 )}
