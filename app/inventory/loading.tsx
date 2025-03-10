@@ -1,5 +1,6 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Skeleton } from "@/components/ui/skeleton"
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
+import { Skeleton } from "../../components/ui/skeleton";
+import React from "react";
 
 export default function InventoryLoading() {
   return (
@@ -55,5 +56,5 @@ export default function InventoryLoading() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 } 

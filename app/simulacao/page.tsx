@@ -294,7 +294,7 @@ const parseClipboardData = (text: string) => {
 interface ImportSQLDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onImport: (items: SimulationItem[], orderNumber?: string, vendorName?: string, branchName?: string) => void
+  onImport: (items: SimulationItem[], orderNumber?: string, vendorName?: string, branchName?: string, customerName?: string) => void
 }
 
 function ImportSQLDialog({ open, onOpenChange, onImport }: ImportSQLDialogProps) {
@@ -302,6 +302,7 @@ function ImportSQLDialog({ open, onOpenChange, onImport }: ImportSQLDialogProps)
   const [loading, setLoading] = useState(false);
   const [vendorName, setVendorName] = useState('');
   const [branchName, setBranchName] = useState('');
+  const [customerName, setCustomerName] = useState('');
   const { user } = useAuth();
 
   const handleImport = async () => {
@@ -352,6 +353,7 @@ function ImportSQLDialog({ open, onOpenChange, onImport }: ImportSQLDialogProps)
       // Extrair o nome do vendedor, a filial e o número do orçamento do primeiro item
       const vendorName = data[0]?.NmRepresentanteVenda || '';
       const branchName = data[0]?.NmEmpresaCurtoVenda || '';
+      const customerName = data[0]?.NmPessoa || '';
 
       // Transformar os dados do orçamento para o formato SimulationItem
       const items: SimulationItem[] = data.map((item: any) => {
@@ -390,7 +392,7 @@ function ImportSQLDialog({ open, onOpenChange, onImport }: ImportSQLDialogProps)
         return;
       }
 
-      onImport(items, orderNumber.trim(), vendorName, branchName);
+      onImport(items, orderNumber.trim(), vendorName, branchName, customerName);
       onOpenChange(false);
       toast.success(`${items.length} produtos importados do orçamento ${orderNumber.trim()}`);
     } catch (error) {
@@ -470,6 +472,7 @@ export default function SimulationPage() {
   const [orderNumber, setOrderNumber] = useState<string>('');
   const [vendorName, setVendorName] = useState<string>('');
   const [branchName, setBranchName] = useState<string>('');
+  const [customerName, setCustomerName] = useState<string>('');
   const [vendorPerformance, setVendorPerformance] = useState<VendorPerformance[]>([]);
   const [loadingVendorData, setLoadingVendorData] = useState(false);
   const [channelPerformance, setChannelPerformance] = useState<ChannelPerformance[]>([]);
@@ -607,7 +610,7 @@ export default function SimulationPage() {
     })));
   };
 
-  const handleImportSQL = (importedItems: SimulationItem[], orderNum?: string, vendor?: string, branch?: string) => {
+  const handleImportSQL = (importedItems: SimulationItem[], orderNum?: string, vendor?: string, branch?: string, customer?: string) => {
     setItems(prev => [...prev, ...importedItems]);
     setOriginalItems(prev => [...prev, ...importedItems]);
     if (orderNum) {
@@ -619,6 +622,9 @@ export default function SimulationPage() {
     }
     if (branch) {
       setBranchName(branch);
+    }
+    if (customer) {
+      setCustomerName(customer);
     }
   };
 
@@ -672,6 +678,7 @@ export default function SimulationPage() {
     setOrderNumber('');
     setVendorName('');
     setBranchName('');
+    setCustomerName('');
     setVendorPerformance([]);
   };
 
@@ -964,6 +971,11 @@ export default function SimulationPage() {
                 {orderNumber && (
                   <span className="text-md font-normal bg-muted px-2 py-1 rounded-md">
                     #{orderNumber}
+                  </span>
+                )}
+                {customerName && (
+                  <span className="text-md font-normal bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300 px-2 py-1 rounded-md">
+                    Cliente: {customerName}
                   </span>
                 )}
                 {branchName && (

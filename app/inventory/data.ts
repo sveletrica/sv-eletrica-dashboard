@@ -19,4 +19,4 @@ export const inventoryData = [
     tags: Math.floor(Math.random() * 480) + 45,
     store: ['Sobral', 'Maracanau', 'Caucaia'][Math.floor(Math.random() * 3)]
   }))
-) 
+); 

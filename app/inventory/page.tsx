@@ -1,88 +1,78 @@
-'use client'
-import { PermissionGuard } from '@/components/guards/permission-guard'
-import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
-import { ColumnSelector } from "@/components/column-selector"
-import { columnDefinitions, ColumnId, InventoryItem } from "@/types/inventory"
-import { format, parseISO } from "date-fns"
-import { toZonedTime } from 'date-fns-tz'
-import { ptBR } from "date-fns/locale"
-import { RefreshCw } from "lucide-react"
-import InventoryLoading from './loading'
-import { cn } from '@/lib/utils'
+'use client';
+import { PermissionGuard } from '../../components/guards/permission-guard';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
+import { Input } from "../../components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
+import { Button } from "../../components/ui/button";
+import { ColumnSelector } from "../../components/column-selector";
+import { columnDefinitions, ColumnId, InventoryItem } from "../../types/inventory";
+import { RefreshCw } from "lucide-react";
+import InventoryLoading from './loading';
+import { cn } from '../../lib/utils';
 import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  SortingState,
-  useReactTable,
-  ColumnResizeMode,
-} from '@tanstack/react-table'
-import './styles.css'
+    flexRender,
+    getCoreRowModel,
+    getPaginationRowModel,
+    getSortedRowModel,
+    SortingState,
+    useReactTable,
+    ColumnResizeMode,
+} from '@tanstack/react-table';
+import './styles.css';
 import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuTrigger,
-  ContextMenuSeparator,
-} from "@/components/ui/context-menu"
-import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
-import { HighlightedText } from "@/components/highlighted-text"
-import { compressData, decompressData } from '@/lib/utils';
+    ContextMenu,
+    ContextMenuContent,
+    ContextMenuItem,
+    ContextMenuTrigger,
+    ContextMenuSeparator,
+} from "../../components/ui/context-menu";
+import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { HighlightedText } from "../../components/highlighted-text";
+import { compressData, decompressData } from '../../lib/utils';
 import { useDebouncedCallback } from 'use-debounce';
 import Fuse from 'fuse.js';
-import { Roboto } from 'next/font/google'
-import Link from 'next/link'
-import { useRouter, useSearchParams, usePathname } from 'next/navigation'
+import { Roboto } from 'next/font/google';
+import Link from 'next/link';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select"
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from "../../components/ui/command";
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import { Check, ChevronsUpDown } from "lucide-react"
-import Image from 'next/image'
-import { ImagePreviewModal } from "@/components/image-preview-modal"
-import { ManageProductImagesModal } from "@/components/manage-product-images-modal"
-import { LayoutGrid, Table as TableIcon } from "lucide-react"
-import { Toggle } from "@/components/ui/toggle"
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "../../components/ui/popover";
+import { Check, ChevronsUpDown } from "lucide-react";
+import Image from 'next/image';
+import { ImagePreviewModal } from "../../components/image-preview-modal";
+import { ManageProductImagesModal } from "../../components/manage-product-images-modal";
+import { LayoutGrid, Table as TableIcon } from "lucide-react";
+import React from 'react';
+import { Switch } from "@/components/ui/switch";
 
 const roboto = Roboto({
     weight: ['400', '500'],
     subsets: ['latin'],
     display: 'swap',
-})
+});
 
-const CACHE_KEY = 'inventoryData'
-const CACHE_DURATION = 24 * 60 * 60 * 1000 // 24 hours in milliseconds
+const CACHE_KEY = 'inventoryData';
+const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
 interface CachedData {
     items: InventoryItem[]
     timestamp: number
 }
 
-interface SearchIndex {
-    fuse: Fuse<InventoryItem>;
-    lastData: InventoryItem[];
+interface SearchableItem {
+    item: InventoryItem;
+    searchString: string;
 }
 
 interface ProductImage {
@@ -92,14 +82,14 @@ interface ProductImage {
 type ViewMode = 'table' | 'grid';
 
 interface PageState {
-  sorting: SortingState;
-  columnOrder: string[];
-  columnSizing: Record<string, number>;
-  searchTerm: string;
-  selectedGroups: string[];
-  showOnlyInStock: boolean;
-  viewMode: ViewMode;
-  pageIndex: number;
+    sorting: SortingState;
+    columnOrder: string[];
+    columnSizing: Record<string, number>;
+    searchTerm: string;
+    selectedGroups: string[];
+    showOnlyInStock: boolean;
+    viewMode: ViewMode;
+    pageIndex: number;
 }
 
 function getDefaultVisibleColumns(): Set<ColumnId> {
@@ -107,7 +97,7 @@ function getDefaultVisibleColumns(): Set<ColumnId> {
         Object.entries(columnDefinitions)
             .filter(([_, { show }]) => show)
             .map(([id]) => id as ColumnId)
-    )
+    );
 }
 
 // First, add this CSS to ensure the table respects column widths
@@ -120,7 +110,7 @@ const TABLE_STYLES = {
 // Add this function at the top level of the component
 const loadSavedColumnOrder = (): string[] => {
     if (typeof window === 'undefined') return [];
-    
+
     try {
         const savedOrder = localStorage.getItem('inventoryColumnOrder');
         if (!savedOrder) return [];
@@ -147,57 +137,57 @@ function getProductImage(cdChamada: string): Promise<string | null> {
 }
 
 function safeEncode(data: any): string {
-  try {
-    const jsonString = JSON.stringify(data);
-    return btoa(encodeURIComponent(jsonString));
-  } catch (error) {
-    console.error('Error encoding state:', error);
-    return '';
-  }
+    try {
+        const jsonString = JSON.stringify(data);
+        return btoa(encodeURIComponent(jsonString));
+    } catch (error) {
+        console.error('Error encoding state:', error);
+        return '';
+    }
 }
 
 function safeDecode(encoded: string): any {
-  try {
-    const jsonString = decodeURIComponent(atob(encoded));
-    return JSON.parse(jsonString);
-  } catch (error) {
-    console.error('Error decoding state:', error);
-    return null;
-  }
+    try {
+        const jsonString = decodeURIComponent(atob(encoded));
+        return JSON.parse(jsonString);
+    } catch (error) {
+        console.error('Error decoding state:', error);
+        return null;
+    }
 }
 
 function savePageState(state: PageState) {
-  if (typeof window === 'undefined') return;
-  try {
-    const encoded = safeEncode(state);
-    sessionStorage.setItem('inventoryPageState', encoded);
-  } catch (error) {
-    console.error('Error saving page state:', error);
-  }
+    if (typeof window === 'undefined') return;
+    try {
+        const encoded = safeEncode(state);
+        sessionStorage.setItem('inventoryPageState', encoded);
+    } catch (error) {
+        console.error('Error saving page state:', error);
+    }
 }
 
 function loadPageState(): PageState | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    const encoded = sessionStorage.getItem('inventoryPageState');
-    if (!encoded) return null;
-    return safeDecode(encoded);
-  } catch (error) {
-    console.error('Error loading page state:', error);
-    return null;
-  }
+    if (typeof window === 'undefined') return null;
+    try {
+        const encoded = sessionStorage.getItem('inventoryPageState');
+        if (!encoded) return null;
+        return safeDecode(encoded);
+    } catch (error) {
+        console.error('Error loading page state:', error);
+        return null;
+    }
 }
 
 export default function Inventory() {
-    const router = useRouter()
-    const searchParams = useSearchParams()
-    const pathname = usePathname()
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const pathname = usePathname();
     const tableContainerRef = useRef<HTMLDivElement>(null);
-    
+
     // Add debounce utility function
-    const debounce = (func: Function, wait: number) => {
+    const debounce = <T extends (...args: any[]) => void>(func: T, wait: number) => {
         let timeout: NodeJS.Timeout;
-        return function executedFunction(...args: any[]) {
+        return function executedFunction(...args: Parameters<T>) {
             const later = () => {
                 clearTimeout(timeout);
                 func(...args);
@@ -207,22 +197,22 @@ export default function Inventory() {
         };
     };
 
-    const [isLoading, setIsLoading] = useState(true)
-    const [isRefreshing, setIsRefreshing] = useState(false)
-    const [searchTerm, setSearchTerm] = useState(searchParams.get('q') || '')
-    const [data, setData] = useState<InventoryItem[]>([])
-    const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
-    const [visibleColumns, setVisibleColumns] = useState<Set<ColumnId>>(getDefaultVisibleColumns())
-    const [error, setError] = useState<string | null>(null)
-    const [pageSize] = useState(40)
-    const [pageIndex, setPageIndex] = useState(0)
-    const [columnOrder, setColumnOrder] = useState<string[]>(loadSavedColumnOrder())
-    const [columnSizing, setColumnSizing] = useState<Record<string, number>>({})
-    const [columnResizeMode] = useState<ColumnResizeMode>('onChange')
-    const [sorting, setSorting] = useState<SortingState>([])
-    const [searchTerms, setSearchTerms] = useState<string[]>([])
-    const [filteredData, setFilteredData] = useState<InventoryItem[]>([])
-    const searchIndexRef = useRef<SearchIndex | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [searchTerm, setSearchTerm] = useState(searchParams.get('q') || '');
+    const [data, setData] = useState<InventoryItem[]>([]);
+    const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+    const [visibleColumns, setVisibleColumns] = useState<Set<ColumnId>>(getDefaultVisibleColumns());
+    const [error, setError] = useState<string | null>(null);
+    const [pageSize] = useState(40);
+    const [pageIndex, setPageIndex] = useState(0);
+    const [columnOrder, setColumnOrder] = useState<string[]>(loadSavedColumnOrder());
+    const [columnSizing, setColumnSizing] = useState<Record<string, number>>({});
+    const [columnResizeMode] = useState<ColumnResizeMode>('onChange');
+    const [sorting, setSorting] = useState<SortingState>([]);
+    const [searchTerms, setSearchTerms] = useState<string[]>([]);
+    const [filteredData, setFilteredData] = useState<InventoryItem[]>([]);
+    const [searchableData, setSearchableData] = useState<SearchableItem[]>([]);
     const [selectedGroups, setSelectedGroups] = useState<string[]>(() => {
         const groups = searchParams.get('groups');
         if (!groups) return [ALL_GROUPS];
@@ -246,9 +236,9 @@ export default function Inventory() {
     });
     const [viewMode, setViewMode] = useState<ViewMode>(() => {
         if (typeof window !== 'undefined') {
-            return localStorage.getItem('inventoryViewMode') as ViewMode || 'table'
+            return localStorage.getItem('inventoryViewMode') as ViewMode || 'table';
         }
-        return 'table'
+        return 'table';
     });
 
     // Load saved state on component mount
@@ -321,7 +311,7 @@ export default function Inventory() {
                         setPageIndex(decompressedState.pageIndex);
                     }
                 }
-                
+
                 // Remove the state parameter from URL without triggering a reload
                 const newParams = new URLSearchParams(searchParams);
                 newParams.delete('inventoryPageState');
@@ -338,7 +328,7 @@ export default function Inventory() {
             // Load visible columns first
             const savedVisibleColumns = localStorage.getItem('inventoryColumns');
             let visibleColumnSet: Set<ColumnId>;
-            
+
             if (savedVisibleColumns) {
                 try {
                     const parsed = JSON.parse(savedVisibleColumns) as ColumnId[];
@@ -349,17 +339,17 @@ export default function Inventory() {
             } else {
                 visibleColumnSet = getDefaultVisibleColumns();
             }
-            
+
             // Load saved column order
             const savedOrder = loadSavedColumnOrder();
-            
+
             if (savedOrder.length > 0) {
                 // Use the saved order exactly as is, only filtering out non-visible columns
                 const validOrder = savedOrder.filter(id => visibleColumnSet.has(id as ColumnId));
-                
+
                 // Only add missing columns that are visible but not in the saved order
                 const missingColumns = Array.from(visibleColumnSet).filter(id => !validOrder.includes(id));
-                
+
                 setColumnOrder([...validOrder, ...missingColumns]);
             } else {
                 // If no saved order exists, create initial order from visible columns
@@ -368,7 +358,7 @@ export default function Inventory() {
                 // Save this initial order
                 localStorage.setItem('inventoryColumnOrder', JSON.stringify(defaultOrder));
             }
-            
+
             setVisibleColumns(visibleColumnSet);
         }
     }, []); // Only run on mount
@@ -377,7 +367,7 @@ export default function Inventory() {
     const handleColumnToggle = (columnId: ColumnId) => {
         setVisibleColumns(prev => {
             const next = new Set(prev);
-            
+
             if (next.has(columnId)) {
                 next.delete(columnId);
                 // Update column order by removing the hidden column
@@ -395,7 +385,7 @@ export default function Inventory() {
                     return newOrder;
                 });
             }
-            
+
             localStorage.setItem('inventoryColumns', JSON.stringify(Array.from(next)));
             return next;
         });
@@ -416,16 +406,16 @@ export default function Inventory() {
             const compressed = localStorage.getItem('inventoryData');
             if (!compressed) return null;
             const data = decompressData(compressed);
-            
+
             // Find the most recent update time from the cached data
             const mostRecentUpdate = data.reduce((latest: Date, item: InventoryItem) => {
                 const itemDate = new Date(item.Atualizacao);
                 return latest > itemDate ? latest : itemDate;
             }, new Date(0));
-            
+
             // Set the last update time
             setLastUpdate(mostRecentUpdate);
-            
+
             return data;
         } catch (error) {
             console.error('Error loading from localStorage:', error);
@@ -436,7 +426,7 @@ export default function Inventory() {
     const fetchInventoryData = async (force: boolean = false) => {
         setError(null);
         setIsLoading(true);
-        
+
         try {
             if (!force) {
                 const cachedData = loadFromLocalStorage();
@@ -462,19 +452,19 @@ export default function Inventory() {
             }
 
             const newData = await response.json();
-            
+
             if (!Array.isArray(newData)) {
                 throw new Error('Invalid data format received');
             }
-            
+
             // Get the most recent update time from the data
             const mostRecentUpdate = newData.reduce((latest, item) => {
                 const itemDate = new Date(item.Atualizacao);
                 return latest > itemDate ? latest : itemDate;
             }, new Date(0));
-            
+
             saveToLocalStorage(newData);
-            
+
             setData(newData);
             setFilteredData(newData);
             setLastUpdate(mostRecentUpdate);
@@ -493,29 +483,29 @@ export default function Inventory() {
     }, []);
 
     const handleRefresh = async () => {
-        setIsRefreshing(true)
-        await fetchInventoryData(true)
-    }
+        setIsRefreshing(true);
+        await fetchInventoryData(true);
+    };
 
     // Modifique a função getUniqueGroups
     const getUniqueGroups = useCallback((items: InventoryItem[]): string[] => {
         // Primeiro filtra os itens com estoque
         const itemsWithStock = items.filter(item => item.StkTotal > 0);
-        
+
         // Cria um Map para contar SKUs únicos por grupo
         const groupCountMap = new Map<string, Set<string>>();
-        
+
         // Conta SKUs únicos por grupo
         itemsWithStock.forEach(item => {
             const group = item.NmGrupoProduto;
             const cdChamada = item.CdChamada;
-            
+
             if (!groupCountMap.has(group)) {
                 groupCountMap.set(group, new Set());
             }
             groupCountMap.get(group)?.add(cdChamada);
         });
-        
+
         // Converte para array com formato "(count) GroupName" e ordena
         return Array.from(groupCountMap.entries())
             .map(([group, skus]) => `(${skus.size}) ${group}`)
@@ -531,14 +521,14 @@ export default function Inventory() {
     useEffect(() => {
         if (data.length > 0 && !selectedGroups.includes(ALL_GROUPS)) {
             const availableGroups = getUniqueGroups(data);
-            
+
             // Filtra os grupos selecionados para manter apenas os que ainda existem
             const validGroups = selectedGroups.filter(group => availableGroups.includes(group));
-            
+
             // Se não sobrar nenhum grupo válido, volta para "Todos os grupos"
             if (validGroups.length === 0) {
                 setSelectedGroups([ALL_GROUPS]);
-                
+
                 // Atualiza a URL
                 const params = new URLSearchParams(searchParams);
                 params.delete('groups');
@@ -549,7 +539,7 @@ export default function Inventory() {
             } else if (validGroups.length !== selectedGroups.length) {
                 // Se alguns grupos foram removidos, atualiza a seleção
                 setSelectedGroups(validGroups);
-                
+
                 // Atualiza a URL
                 const params = new URLSearchParams(searchParams);
                 params.set('groups', encodeURIComponent(JSON.stringify(validGroups)));
@@ -561,245 +551,301 @@ export default function Inventory() {
         }
     }, [data, selectedGroups, getUniqueGroups, searchParams, searchTerm, router]);
 
-    // Modify the useEffect that handles search/filtering to include group filtering
-    useEffect(() => {
-        if (data.length > 0) {
-            const options = {
-                keys: Array.from(visibleColumns),
-                threshold: 0.0,
-                ignoreLocation: true,
-                useExtendedSearch: true,
-                findAllMatches: true,
-                includeMatches: true,
-                minMatchCharLength: 2,
-            };
+    // Create optimized search strings for each item
+const getSearchString = useCallback((item: InventoryItem): string => {
+    // Only include the most relevant fields for search to improve performance
+    const searchFields = ['CdChamada', 'NmProduto', 'NmFornecedorPrincipal', 'NmGrupoProduto'];
+    
+    return searchFields.map(field => {
+        const value = item[field as keyof InventoryItem];
+        if (value === null || value === undefined) return '';
+        return String(value).toLowerCase();
+    }).join(' ');
+}, []);
 
-            searchIndexRef.current = {
-                fuse: new Fuse(data, options),
-                lastData: data
-            };
-            
-            // Aplique todos os filtros em sequência
-            let filtered = data;
-            
-            // 1. Filtro de grupo
-            if (!selectedGroups.includes(ALL_GROUPS)) {
-                filtered = filtered.filter(item => 
-                    selectedGroups.some(group => {
-                        // Remove a contagem do nome do grupo para comparação
-                        const cleanGroup = group.replace(/^\(\d+\)\s*/, '');
-                        return item.NmGrupoProduto === cleanGroup;
-                    })
-                );
-            }
-            
-            // 2. Filtro de estoque
-            if (showOnlyInStock) {
-                filtered = filtered.filter(item => item.StkTotal > 0);
-            }
-            
-            // 3. Filtro de busca
-            if (searchTerm) {
-                const searchTerms = searchTerm.trim().toLowerCase().split(/\s+/);
-                filtered = filtered.filter(item => {
-                    const itemString = Array.from(visibleColumns)
-                        .map(columnId => {
-                            const value = item[columnId];
-                            if (value === null || value === undefined) return '';
-                            return String(value);
-                        })
-                        .join(' ')
-                        .toLowerCase();
+// Process and memoize search terms
+const processedSearchTerms = useMemo(() => {
+    if (!searchTerm.trim()) {
+        return { includedTerms: [], excludedTerms: [] };
+    }
+    
+    const terms = searchTerm
+        .trim()
+        .toLowerCase()
+        .split(/\s+/)
+        .filter(term => term.length >= 2);
+    
+    return {
+        includedTerms: terms.filter(term => !term.startsWith('-')),
+        excludedTerms: terms
+            .filter(term => term.startsWith('-'))
+            .map(term => term.slice(1))
+            .filter(term => term.length >= 2)
+    };
+}, [searchTerm]);
 
-                    return searchTerms.every(term => itemString.includes(term));
-                });
-            }
-            
-            setFilteredData(filtered);
-        }
-    }, [data, visibleColumns, searchTerm, selectedGroups, showOnlyInStock]);
+// Create searchable data whenever the base data changes
+useEffect(() => {
+    if (data.length > 0) {
+        // Create searchable data once and reuse it for all searches
+        const newSearchableData = data.map(item => ({
+            item,
+            searchString: getSearchString(item)
+        }));
+        
+        setSearchableData(newSearchableData);
+    }
+}, [data, getSearchString]);
 
-    // Update the debouncedSearch to be memoized with useCallback
+// Unified filter function that handles all filtering in one pass
+const getFilteredData = useCallback(() => {
+    if (!searchableData.length) return [];
+    
+    // Start with all searchable items
+    let results = searchableData;
+    
+    // Apply group filter
+    if (!selectedGroups.includes(ALL_GROUPS)) {
+        results = results.filter(({ item }) =>
+            selectedGroups.some(group => {
+                // Remove the count from the group name for comparison
+                const cleanGroup = group.replace(/^\(\d+\)\s*/, '');
+                return item.NmGrupoProduto === cleanGroup;
+            })
+        );
+    }
+    
+    // Apply stock filter
+    if (showOnlyInStock) {
+        results = results.filter(({ item }) => item.StkTotal > 0);
+    }
+    
+    // Apply search filter if there are search terms
+    if (processedSearchTerms.includedTerms.length > 0 || processedSearchTerms.excludedTerms.length > 0) {
+        results = results.filter(({ searchString }) => {
+            // Check if all included terms are present
+            const hasAllIncludedTerms = processedSearchTerms.includedTerms.length === 0 ||
+                processedSearchTerms.includedTerms.every(term => searchString.includes(term));
+            
+            // Check if any excluded terms are present
+            const hasNoExcludedTerms = processedSearchTerms.excludedTerms.length === 0 ||
+                !processedSearchTerms.excludedTerms.some(term => searchString.includes(term));
+            
+            // Item matches if it has all included terms AND none of the excluded terms
+            return hasAllIncludedTerms && hasNoExcludedTerms;
+        });
+    }
+    
+    // Return the actual items, not the searchable items
+    return results.map(({ item }) => item);
+}, [searchableData, selectedGroups, showOnlyInStock, processedSearchTerms]);
+
+// Update filtered data whenever filters change
+useEffect(() => {
+    // Skip if no data is available yet
+    if (data.length === 0) return;
+    
+    setIsSearching(true);
+    setSearchProgress(0);
+    
+    // Use timeout to avoid blocking the main thread
+    const timeoutId = setTimeout(() => {
+        const filtered = getFilteredData();
+        setFilteredData(filtered);
+        setIsSearching(false);
+        setSearchProgress(100);
+    }, 0);
+    
+    return () => clearTimeout(timeoutId);
+}, [data.length, getFilteredData]);
+
+    // Optimized debouncedSearch using our precomputed searchable data
     const debouncedSearch = useCallback(
         useDebouncedCallback((searchValue: string) => {
-            // Show a loading indicator during search
+            // Don't search if the searchable data isn't ready
+            if (searchableData.length === 0) {
+                setIsSearching(false);
+                return;
+            }
+
+            // Show loading indicator
             setIsSearching(true);
-            
-            // Use a more aggressive debounce on mobile
+            setSearchProgress(0);
+
+            // Run search in the next tick to prevent UI freezing
             setTimeout(() => {
-                // Start with all data
-                let filtered = data;
-
-                // 1. Aplicar filtro de estoque primeiro
-                if (showOnlyInStock) {
-                    filtered = filtered.filter(item => item.StkTotal > 0);
-                }
-
-                // 2. Se não há termo de busca, retorna os dados filtrados até aqui
+                // If search is empty, just apply filters without search
                 if (!searchValue.trim()) {
-                    setFilteredData(filtered);
+                    // Apply filters without search term
+                    let filtered = searchableData;
+                
+                    // Apply group filter
+                    if (!selectedGroups.includes(ALL_GROUPS)) {
+                        filtered = filtered.filter(({ item }) =>
+                            selectedGroups.some(group => {
+                                const cleanGroup = group.replace(/^\(\d+\)\s*/, '');
+                                return item.NmGrupoProduto === cleanGroup;
+                            })
+                        );
+                    }
+                    
+                    // Apply stock filter
+                    if (showOnlyInStock) {
+                        filtered = filtered.filter(({ item }) => item.StkTotal > 0);
+                    }
+                    
+                    setFilteredData(filtered.map(({ item }) => item));
                     setIsSearching(false);
+                    setSearchProgress(100);
                     return;
                 }
 
-                // 3. Split and normalize search terms, separating include and exclude terms
+                // Process search terms
                 const terms = searchValue
                     .trim()
                     .toLowerCase()
                     .split(/\s+/)
-                    .filter(term => term.length >= 2); // Ignore terms shorter than 2 characters
+                    .filter(term => term.length >= 2);
 
-                const includedTerms: string[] = [];
-                const excludedTerms: string[] = [];
+                const includedTerms = terms.filter(term => !term.startsWith('-'));
+                const excludedTerms = terms
+                    .filter(term => term.startsWith('-'))
+                    .map(term => term.slice(1))
+                    .filter(term => term.length >= 2);
 
-                terms.forEach(term => {
-                    if (term.startsWith('-')) {
-                        const cleanTerm = term.slice(1); // Remove the '-' prefix
-                        if (cleanTerm.length >= 2) { // Only add if term is still long enough
-                            excludedTerms.push(cleanTerm);
-                        }
-                    } else {
-                        includedTerms.push(term);
-                    }
-                });
-
-                // Create a memoized search string builder
-                const getSearchString = (item: InventoryItem) => {
-                    if (!item) return '';
-                    
-                    // Priorize certain fields for better matching
-                    const priorityFields = ['CdChamada', 'NmProduto', 'NmGrupoProduto'];
-                    const otherFields = Array.from(visibleColumns).filter(field => !priorityFields.includes(field));
-                    
-                    // Concatenate priority fields first
-                    const searchString = [
-                        ...priorityFields.map(field => {
-                            const value = item[field as keyof InventoryItem];
-                            if (value === null || value === undefined) return '';
-                            return String(value).toLowerCase();
-                        }),
-                        ...otherFields.map(field => {
-                            const value = item[field as keyof InventoryItem];
-                            if (value === null || value === undefined) return '';
-                            
-                            if (field === 'Atualizacao' || field === 'DataInicio' || field === 'DataFim') {
-                                if (!value) return '';
-                                return new Date(value as string).toLocaleString('pt-BR', { timeZone: 'UTC' });
-                            }
-                            
-                            if (field.startsWith('VlPreco') || field === 'PrecoPromo' || field === 'PrecoDe') {
-                                return (value as number).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                            }
-                            
-                            if (field.startsWith('QtEstoque') || field === 'StkTotal') {
-                                return (value as number).toLocaleString('pt-BR');
-                            }
-                            
-                            return String(value);
+                // First, apply non-search filters to reduce the dataset we need to search
+                let filtered = searchableData;
+                
+                // Apply group filter first
+                if (!selectedGroups.includes(ALL_GROUPS)) {
+                    filtered = filtered.filter(({ item }) =>
+                        selectedGroups.some(group => {
+                            const cleanGroup = group.replace(/^\(\d+\)\s*/, '');
+                            return item.NmGrupoProduto === cleanGroup;
                         })
-                    ].join(' ').toLowerCase();
+                    );
+                }
+                
+                // Apply stock filter
+                if (showOnlyInStock) {
+                    filtered = filtered.filter(({ item }) => item.StkTotal > 0);
+                }
 
-                    return searchString;
+                // Use batch processing for smoother UI on large datasets
+                const totalItems = filtered.length;
+                const batchSize = isMobile ? 100 : 500; // Larger batch size since we pre-computed searchStrings
+                const results: InventoryItem[] = [];
+                
+                // Progress tracking
+                const updateProgress = (processed: number) => {
+                    const progress = Math.floor((processed / totalItems) * 100);
+                    setSearchProgress(progress);
                 };
 
-                // 4. Batch process items for better performance
-                const batchSize = isMobile ? 25 : 100; // Smaller batch size for mobile
-                const results: InventoryItem[] = [];
-                let processedCount = 0;
-                
-                // Use a more efficient approach with requestAnimationFrame for smoother UI
+                // Use the new batch processing approach
                 const processBatch = (startIndex: number) => {
-                    const endIndex = Math.min(startIndex + batchSize, filtered.length);
-                    const batch = filtered.slice(startIndex, endIndex);
-                    
-                    const batchResults = batch.filter(item => {
-                        const searchString = getSearchString(item);
-                        
-                        // Check if all included terms are present
-                        const hasAllIncludedTerms = includedTerms.length === 0 || 
-                            includedTerms.every(term => searchString.includes(term));
-                        
-                        // Check if any excluded terms are present
-                        const hasNoExcludedTerms = excludedTerms.length === 0 || 
-                            !excludedTerms.some(term => searchString.includes(term));
-                        
-                        // Item matches if it has all included terms AND none of the excluded terms
-                        return hasAllIncludedTerms && hasNoExcludedTerms;
-                    });
-                    
-                    results.push(...batchResults);
-                    processedCount = endIndex;
-                    
-                    // Update progress for UI feedback
-                    setSearchProgress(Math.floor((endIndex / filtered.length) * 100));
-                    
-                    // If we're on mobile, update results progressively for better UX
-                    if (isMobile && results.length > 0 && (endIndex % (batchSize * 2) === 0 || endIndex === filtered.length)) {
-                        setFilteredData([...results]);
-                    }
-                    
-                    // Continue processing if there are more items
-                    if (endIndex < filtered.length) {
-                        // Use requestAnimationFrame to avoid blocking the UI
-                        requestAnimationFrame(() => processBatch(endIndex));
-                    } else {
+                    if (startIndex >= totalItems) {
                         // All done
                         setFilteredData(results);
                         setIsSearching(false);
                         setSearchProgress(100);
+                        return;
                     }
+
+                    const endIndex = Math.min(startIndex + batchSize, totalItems);
+                    const batch = filtered.slice(startIndex, endIndex);
+
+                    // Process this batch
+                    for (let i = 0; i < batch.length; i++) {
+                        const { item, searchString } = batch[i];
+                        
+                        // Check if all included terms are present
+                        const hasAllIncludedTerms = includedTerms.length === 0 ||
+                            includedTerms.every(term => searchString.includes(term));
+                        
+                        // Check if any excluded terms are present
+                        const hasNoExcludedTerms = excludedTerms.length === 0 ||
+                            !excludedTerms.some(term => searchString.includes(term));
+                        
+                        // Item matches if it has all included terms AND none of the excluded terms
+                        if (hasAllIncludedTerms && hasNoExcludedTerms) {
+                            results.push(item);
+                        }
+                    }
+
+                    // Update progress
+                    updateProgress(endIndex);
+                    
+                    // On mobile, update results progressively
+                    if (isMobile && results.length > 0) {
+                        setFilteredData([...results]);
+                    }
+
+                    // Process next batch using requestAnimationFrame for smoother UI
+                    requestAnimationFrame(() => processBatch(endIndex));
                 };
-                
+
                 // Start processing
                 processBatch(0);
-                
             }, 0);
-        }, isMobile ? 600 : 300), // Increase debounce time for mobile
-        [data, visibleColumns, isMobile, showOnlyInStock]
+        }, isMobile ? 300 : 150), // Reduced debounce time since search is faster now
+        [searchableData, selectedGroups, showOnlyInStock, isMobile]
     );
 
     // Update search term and trigger search
     const handleSearch = (value: string) => {
         setSearchTerm(value);
-        
-        // If the search term is very short, don't trigger search yet
-        if (value.length < 2) {
-            setIsSearching(false);
-            if (value.length === 0) {
-                // Reset to all data if search is cleared
-                const filtered = showOnlyInStock ? data.filter(item => item.StkTotal > 0) : data;
-                setFilteredData(filtered);
-            }
-            return;
-        }
-        
-        const params = new URLSearchParams(searchParams);
-        if (value) {
-            params.set('q', value);
-        } else {
-            params.delete('q');
-        }
-        
-        // Mantém os grupos selecionados na URL
+
+        // Create a new URLSearchParams object to avoid reference issues
+        const params = new URLSearchParams(searchParams.toString());
+
+        // Handle groups parameter consistently regardless of search value
         if (selectedGroups.length === 1 && selectedGroups[0] === ALL_GROUPS) {
             params.delete('groups');
         } else {
             params.set('groups', encodeURIComponent(JSON.stringify(selectedGroups)));
         }
-        
-        router.replace(`/inventory?${params.toString()}`);
-        
-        // Show immediate feedback that search is starting
-        setIsSearching(true);
-        setSearchProgress(0);
-        
+
+        // If search is cleared, remove the 'q' parameter
+        if (!value || value.length === 0) {
+            console.log("Search cleared, removing 'q' parameter");
+            params.delete('q');
+
+            // Use replace to update URL without adding to history
+            const newUrl = `/inventory${params.toString() ? `?${params.toString()}` : ''}`;
+            console.log("New URL after clearing search:", newUrl);
+
+            // Use replace with scroll: false to update URL without scrolling or adding to history
+            router.replace(newUrl, { scroll: false });
+
+            // The filtered data will be updated by our effect instead of doing it here
+            return;
+        }
+
+        // If the search term is very short, don't trigger search yet
+        if (value.length < 2) {
+            // Still update URL even for short searches
+            params.set('q', value);
+            const newUrl = `/inventory?${params.toString()}`;
+            router.replace(newUrl, { scroll: false });
+            
+            // Don't set searching to false here, let the debounced function handle it
+            return;
+        }
+
+        params.set('q', value);
+        const newUrl = `/inventory?${params.toString()}`;
+        console.log("New URL after search:", newUrl);
+        router.replace(newUrl, { scroll: false });
+
+        // Use the optimized debounced search
         debouncedSearch(value);
     };
 
     // Format cell value for display (move outside component for better performance)
     const formatCellValue = useCallback((value: any, columnId: ColumnId): string => {
         if (value === null || value === undefined) return '-';
-        
+
         if (columnId === 'Atualizacao' || columnId === 'DataInicio' || columnId === 'DataFim') {
             if (!value) return '-';
             return new Date(value).toLocaleString('pt-BR', {
@@ -811,20 +857,20 @@ export default function Inventory() {
                 timeZone: 'UTC'
             });
         }
-        
+
         if (columnId.startsWith('VlPreco') || columnId === 'PrecoPromo' || columnId === 'PrecoDe') {
             return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         }
-        
+
         if (columnId.startsWith('QtEstoque') || columnId === 'StkTotal') {
             return value.toLocaleString('pt-BR');
         }
-        
+
         // Handle NmFornecedorPrincipal specifically if needed
         if (columnId === 'NmFornecedorPrincipal') {
             return String(value || '-');
         }
-        
+
         return String(value);
     }, []);
 
@@ -833,13 +879,13 @@ export default function Inventory() {
         const checkMobile = () => {
             setIsMobile(window.innerWidth < 640);
         };
-        
+
         // Checa inicialmente
         checkMobile();
-        
+
         // Adiciona listener para mudanças de tamanho
         window.addEventListener('resize', checkMobile);
-        
+
         // Cleanup
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
@@ -850,7 +896,7 @@ export default function Inventory() {
         if (columnSizing[columnId]) {
             return columnSizing[columnId];
         }
-        
+
         switch (columnId) {
             case 'CdChamada':
                 return 70;
@@ -891,10 +937,10 @@ export default function Inventory() {
     // First, define loadProductImage
     const loadProductImage = useCallback(async (cdChamada: string) => {
         if (!cdChamada) return;
-        
+
         // Check cache inside the function instead of using it as a dependency
         if (imageCache[cdChamada] !== undefined) return;
-        
+
         const imageUrl = await getProductImage(cdChamada);
         setImageCache(prev => ({
             ...prev,
@@ -909,11 +955,11 @@ export default function Inventory() {
             {
                 id: 'imagem',
                 header: 'Imagem',
-                cell: ({ row }) => {
+                cell: ({ row }: { row: any }) => {
                     const cdChamada = row.getValue('CdChamada') as string;
                     const productName = row.getValue('NmProduto') as string;
                     const imageUrl = imageCache[cdChamada];
-                    
+
                     const handleClick = () => {
                         if (imageUrl) {
                             // If there's an image, show preview
@@ -923,10 +969,10 @@ export default function Inventory() {
                             setSelectedProduct({ code: cdChamada, name: productName });
                         }
                     };
-                    
+
                     return (
                         <>
-                            <div 
+                            <div
                                 className="w-12 h-12 relative cursor-pointer"
                                 onClick={handleClick}
                             >
@@ -950,15 +996,14 @@ export default function Inventory() {
                 size: 60,
                 minSize: 60,
                 maxSize: 60,
-            }
-        ].concat(
-            Array.from(visibleColumns).map(columnId => ({
+            },
+            ...Array.from(visibleColumns).map(columnId => ({
                 id: columnId,
                 accessorKey: columnId,
                 header: ({ column }: { column: any }) => {
                     const columnDef = columnDefinitions[columnId];
                     const label = columnDef?.label || columnId;
-                    
+
                     return (
                         <div className="flex items-center gap-2">
                             <span>{label}</span>
@@ -975,12 +1020,12 @@ export default function Inventory() {
                                 )}
                             </button>
                         </div>
-                    )
+                    );
                 },
                 cell: ({ getValue, row }: { getValue: () => any, row: any }) => {
-                    const value = getValue()
-                    const formattedValue = formatCellValue(value, columnId)
-                    
+                    const value = getValue();
+                    const formattedValue = formatCellValue(value, columnId);
+
                     if (columnId === 'CdChamada') {
                         try {
                             // Create URL with current state
@@ -989,13 +1034,18 @@ export default function Inventory() {
                             // Create a minimal state object if needed
                             const stateParam = savedState ? `&inventoryPageState=${encodeURIComponent(savedState)}` : '';
                             const returnUrl = `/inventory?${currentParams.toString()}${stateParam}`;
-                            
+
                             return (
                                 <Link
                                     href={`/produto/${value.trim()}?returnUrl=${encodeURIComponent(returnUrl)}`}
                                     className="text-blue-500 hover:text-blue-700 underline"
                                 >
-                                    {formattedValue}
+                                    {searchTerm && typeof formattedValue === 'string' ? (
+                                        <HighlightedText
+                                            text={formattedValue}
+                                            searchTerms={searchTerm.trim().toLowerCase().split(/\s+/)}
+                                        />
+                                    ) : formattedValue}
                                 </Link>
                             );
                         } catch (error) {
@@ -1003,7 +1053,7 @@ export default function Inventory() {
                             return formattedValue;
                         }
                     }
-                    
+
                     // Truncate supplier name with ellipsis
                     if (columnId === 'NmFornecedorPrincipal' && typeof formattedValue === 'string') {
                         return (
@@ -1012,24 +1062,26 @@ export default function Inventory() {
                             </div>
                         );
                     }
-                    
-                    if (searchTerm && typeof formattedValue === 'string') {
+
+                    // Only highlight search terms in the fields we're actually searching
+                    if (searchTerm && typeof formattedValue === 'string' &&
+                        ['CdChamada', 'NmProduto', 'NmFornecedorPrincipal', 'NmGrupoProduto'].includes(columnId)) {
                         return (
-                            <HighlightedText 
+                            <HighlightedText
                                 text={formattedValue}
                                 searchTerms={searchTerm.trim().toLowerCase().split(/\s+/)}
                             />
-                        )
+                        );
                     }
-                    
-                    return formattedValue
+
+                    return formattedValue;
                 },
                 sortingFn: (rowA: any, rowB: any, columnId: string) => {
-                    const a = rowA.getValue(columnId)
-                    const b = rowB.getValue(columnId)
+                    const a = rowA.getValue(columnId);
+                    const b = rowB.getValue(columnId);
 
                     if (
-                        columnId.startsWith('QtEstoque_') || 
+                        columnId.startsWith('QtEstoque_') ||
                         columnId === 'StkTotal' ||
                         columnId.startsWith('VlPreco') ||
                         columnId === 'PrecoPromo' ||
@@ -1046,21 +1098,21 @@ export default function Inventory() {
                         columnId === 'DataInicio' ||
                         columnId === 'DataFim'
                     ) {
-                        const dateA = a ? new Date(a as string) : new Date(0)
-                        const dateB = b ? new Date(b as string) : new Date(0)
-                        return dateA.getTime() - dateB.getTime()
+                        const dateA = a ? new Date(a as string) : new Date(0);
+                        const dateB = b ? new Date(b as string) : new Date(0);
+                        return dateA.getTime() - dateB.getTime();
                     }
 
                     // For string comparison, handle null/undefined values
                     const strA = a === null || a === undefined ? '' : String(a);
                     const strB = b === null || b === undefined ? '' : String(b);
-                    return strA.localeCompare(strB, 'pt-BR')
+                    return strA.localeCompare(strB, 'pt-BR');
                 },
                 size: getColumnSize(columnId),
                 minSize: columnId === 'NmProduto' ? 150 : 80,
                 maxSize: columnId === 'NmProduto' ? 600 : 400,
             }))
-        ),
+        ],
         state: {
             pagination: {
                 pageIndex,
@@ -1075,11 +1127,11 @@ export default function Inventory() {
         onColumnOrderChange: (updater: any) => {
             const newOrder = typeof updater === 'function' ? updater(columnOrder) : updater;
             // Preserve exact order, only filter out non-visible columns
-            const validOrder = newOrder.filter(id => visibleColumns.has(id as ColumnId));
-            
+            const validOrder = newOrder.filter((id: string) => visibleColumns.has(id as ColumnId));
+
             // Only add missing visible columns at the end
-            const missingColumns = Array.from(visibleColumns).filter(id => !validOrder.includes(id));
-            
+            const missingColumns = Array.from(visibleColumns).filter((id: string) => !validOrder.includes(id));
+
             const finalOrder = [...validOrder, ...missingColumns];
             setColumnOrder(finalOrder);
             localStorage.setItem('inventoryColumnOrder', JSON.stringify(finalOrder));
@@ -1092,8 +1144,8 @@ export default function Inventory() {
         getPaginationRowModel: getPaginationRowModel(),
         onPaginationChange: (updater: any) => {
             if (typeof updater === 'function') {
-                const newState = updater({ pageIndex, pageSize })
-                setPageIndex(newState.pageIndex)
+                const newState = updater({ pageIndex, pageSize });
+                setPageIndex(newState.pageIndex);
             }
         },
         pageCount: Math.ceil(filteredData.length / pageSize),
@@ -1121,57 +1173,57 @@ export default function Inventory() {
     const table = useReactTable(tableConfig);
 
     // Update the loadVisibleImages function
-    // Effect for loading images when page changes
+    // Effect for loading images when page changes or filtered data changes
     useEffect(() => {
         let mounted = true;
-        let controller = new AbortController();
-        
+        const controller = new AbortController();
+
         const loadVisibleImages = async () => {
             if (!mounted) return;
-            
+
             // Get paginated data directly from the current page
             const paginatedData = table.getPaginationRowModel().rows;
-            
+
             if (!paginatedData.length) return;
-            
+
             // Create a batch of promises for all uncached images on this page
             const uncachedProducts = paginatedData
                 .map(row => row.getValue('CdChamada') as string)
                 .filter(cdChamada => cdChamada && imageCache[cdChamada] === undefined);
-                
+
             if (uncachedProducts.length === 0) return;
-            
-            console.log(`Loading ${uncachedProducts.length} images for page ${pageIndex+1}`);
-            
-            try {    
+
+            console.log(`Loading ${uncachedProducts.length} images for page ${pageIndex + 1}`);
+
+            try {
                 // Process images in batches to avoid overwhelming the network
                 const batchSize = 5;
-                let updatedImages = {} as Record<string, string | null>;
-                
+                const updatedImages = {} as Record<string, string | null>;
+
                 for (let i = 0; i < uncachedProducts.length; i += batchSize) {
                     if (!mounted) break;
-                    
+
                     const batch = uncachedProducts.slice(i, i + batchSize);
                     const batchPromises = batch.map(async cdChamada => {
                         try {
                             const imageUrl = await getProductImage(cdChamada);
                             return { cdChamada, imageUrl, error: null };
                         } catch (error: any) {
-                            return { 
-                                cdChamada, 
-                                imageUrl: null, 
-                                error: error?.message?.includes('contains 0 rows') ? 'no_image' : error 
+                            return {
+                                cdChamada,
+                                imageUrl: null,
+                                error: error?.message?.includes('contains 0 rows') ? 'no_image' : error
                             };
                         }
                     });
-                    
+
                     const batchResults = await Promise.all(batchPromises);
-                    
+
                     // Update cache after each batch for better UX
                     batchResults.forEach(({ cdChamada, imageUrl }) => {
                         updatedImages[cdChamada] = imageUrl;
                     });
-                    
+
                     if (mounted) {
                         setImageCache(prev => ({ ...prev, ...updatedImages }));
                     }
@@ -1181,21 +1233,31 @@ export default function Inventory() {
             }
         };
 
-        if (!isLoading) {
-            loadVisibleImages();
-        }
-        
+        // Debounce the image loading to avoid excessive API calls during rapid search/filter changes
+        const timeoutId = setTimeout(() => {
+            if (!isLoading) {
+                loadVisibleImages();
+            }
+        }, 150);
+
         // Cleanup function to prevent memory leaks
         return () => {
             mounted = false;
             controller.abort();
+            clearTimeout(timeoutId);
         };
-    }, [table, pageIndex, isLoading]); // pageSize and imageCache handled by table
+    }, [
+        table, 
+        pageIndex, 
+        isLoading, 
+        // Add filteredData as a dependency to reload images when search results change
+        filteredData.length 
+    ]); // imageCache handled by table
 
     // Add this function to handle column reordering
     const handleColumnReorder = useCallback((draggedColumnId: string, targetColumnId: string) => {
         const allColumnIds = Object.keys(columnDefinitions);
-        
+
         if (!allColumnIds.includes(draggedColumnId) || !allColumnIds.includes(targetColumnId)) {
             return;
         }
@@ -1204,22 +1266,22 @@ export default function Inventory() {
             // Remove any duplicates first
             const uniqueOrder = Array.from(new Set(currentOrder));
             const newOrder = [...uniqueOrder];
-            
+
             // Get correct indices
             const currentIndex = newOrder.indexOf(draggedColumnId);
             const targetIndex = newOrder.indexOf(targetColumnId);
-            
+
             if (currentIndex !== -1 && targetIndex !== -1) {
                 // Remove from current position
                 newOrder.splice(currentIndex, 1);
                 // Insert at new position
                 newOrder.splice(targetIndex, 0, draggedColumnId);
-                
+
                 // Save the new order immediately
                 localStorage.setItem('inventoryColumnOrder', JSON.stringify(newOrder));
                 return newOrder;
             }
-            
+
             return currentOrder;
         });
     }, []);
@@ -1227,7 +1289,7 @@ export default function Inventory() {
     // Update the handleHideColumn function
     const handleHideColumn = (columnId: string) => {
         if (visibleColumns.size <= 1) return; // Prevent hiding all columns
-        
+
         setVisibleColumns(prev => {
             const next = new Set(prev);
             next.delete(columnId as ColumnId);
@@ -1235,7 +1297,7 @@ export default function Inventory() {
             localStorage.setItem('inventoryColumns', JSON.stringify(Array.from(next)));
             return next;
         });
-        
+
         // Update column order and save it
         setColumnOrder(current => {
             const newOrder = current.filter(id => id !== columnId);
@@ -1249,7 +1311,7 @@ export default function Inventory() {
         setSelectedGroups(current => {
             // Calculate new selection
             let newSelection: string[];
-            
+
             // If selecting "All groups"
             if (group === ALL_GROUPS) {
                 newSelection = [ALL_GROUPS];
@@ -1275,22 +1337,22 @@ export default function Inventory() {
     // Add this effect to handle URL updates when selectedGroups changes
     useEffect(() => {
         const params = new URLSearchParams(searchParams);
-        
+
         if (selectedGroups.length === 1 && selectedGroups[0] === ALL_GROUPS) {
             params.delete('groups');
         } else {
             // Remove the count from group names before saving to URL
-            const cleanGroups = selectedGroups.map(g => 
+            const cleanGroups = selectedGroups.map(g =>
                 g === ALL_GROUPS ? g : g.replace(/^\(\d+\)\s*/, '')
             );
             params.set('groups', encodeURIComponent(JSON.stringify(cleanGroups)));
         }
-        
+
         // Keep search parameter if it exists
         if (searchTerm) {
             params.set('q', searchTerm);
         }
-        
+
         // Update URL
         router.replace(`${pathname}?${params.toString()}`, { scroll: false });
     }, [selectedGroups, searchTerm, searchParams, router, pathname]);
@@ -1321,7 +1383,7 @@ export default function Inventory() {
     };
 
     if (isLoading) {
-        return <InventoryLoading />
+        return <InventoryLoading />;
     }
 
     return (
@@ -1343,7 +1405,7 @@ export default function Inventory() {
                                 )} />
                                 Atualizar
                             </Button>
-                            <ColumnSelector 
+                            <ColumnSelector
                                 visibleColumns={visibleColumns}
                                 onColumnChange={handleColumnToggle}
                             />
@@ -1371,8 +1433,8 @@ export default function Inventory() {
                                                     role="combobox"
                                                     className="w-[250px] justify-between"
                                                 >
-                                                    {selectedGroups.includes(ALL_GROUPS) 
-                                                        ? "Todos os grupos" 
+                                                    {selectedGroups.includes(ALL_GROUPS)
+                                                        ? "Todos os grupos"
                                                         : `${selectedGroups.length} grupo(s)`}
                                                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                                 </Button>
@@ -1390,8 +1452,8 @@ export default function Inventory() {
                                                                 <Check
                                                                     className={cn(
                                                                         "mr-2 h-4 w-4",
-                                                                        selectedGroups.includes(ALL_GROUPS) 
-                                                                            ? "opacity-100" 
+                                                                        selectedGroups.includes(ALL_GROUPS)
+                                                                            ? "opacity-100"
                                                                             : "opacity-0"
                                                                     )}
                                                                 />
@@ -1406,8 +1468,8 @@ export default function Inventory() {
                                                                     <Check
                                                                         className={cn(
                                                                             "mr-2 h-4 w-4",
-                                                                            selectedGroups.includes(group) 
-                                                                                ? "opacity-100" 
+                                                                            selectedGroups.includes(group)
+                                                                                ? "opacity-100"
                                                                                 : "opacity-0"
                                                                         )}
                                                                     />
@@ -1419,14 +1481,14 @@ export default function Inventory() {
                                                 </Command>
                                             </PopoverContent>
                                         </Popover>
-                                        <Button
-                                            variant={showOnlyInStock ? "default" : "outline"}
-                                            size="sm"
-                                            onClick={handleStockFilterChange}
-                                            className="whitespace-nowrap"
-                                        >
-                                            {showOnlyInStock ? "Com Estoque" : "Todos"}
-                                        </Button>
+                                        <Switch
+                                            checked={showOnlyInStock}
+                                            onCheckedChange={handleStockFilterChange}
+                                            className="mr-0 mt-2"
+                                        />
+                                        <span className="text-sm mt-2">
+                                            {showOnlyInStock ? "Stk" : "Stk"}
+                                        </span>
                                         <div className="flex items-center border rounded-md">
                                             <Button
                                                 variant={viewMode === 'table' ? "default" : "ghost"}
@@ -1448,17 +1510,57 @@ export default function Inventory() {
                                     </div>
                                     {/* Second row/group with search input */}
                                     <div className="relative w-full sm:w-96">
-                                        <Input
-                                            placeholder="Buscar em todos os campos..."
-                                            value={searchTerm}
-                                            onChange={(e) => handleSearch(e.target.value)}
-                                            className="w-full text-xs sm:text-sm"
-                                        />
+                                        <div className="relative">
+                                            <Input
+                                                placeholder="Buscar em todos os campos..."
+                                                value={searchTerm}
+                                                onChange={(e) => handleSearch(e.target.value)}
+                                                className="w-full text-xs sm:text-sm pr-10"
+                                            />
+                                            {searchTerm && (
+                                                <button 
+                                                    className="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-600"
+                                                    onClick={() => {
+                                                        console.log("Clear search button clicked");
+                                                        
+                                                        // Clear the search input - this will trigger the handleSearch function with empty value
+                                                        setSearchTerm('');
+                                                        
+                                                        // Create a new URLSearchParams object
+                                                        const params = new URLSearchParams();
+                                                        
+                                                        // Only add non-search parameters if needed
+                                                        if (!selectedGroups.includes(ALL_GROUPS)) {
+                                                            params.set('groups', encodeURIComponent(JSON.stringify(selectedGroups)));
+                                                        }
+                                                        
+                                                        // Construct the URL
+                                                        const newUrl = `/inventory${params.toString() ? `?${params.toString()}` : ''}`;
+                                                        
+                                                        // Use router.replace for consistent behavior with the rest of the app
+                                                        router.replace(newUrl, { scroll: false });
+                                                        
+                                                        // The filtered data will be updated by our effect
+                                                        setIsSearching(true);
+                                                        setSearchProgress(0);
+                                                        
+                                                        // Manually trigger search with empty value to apply filters
+                                                        debouncedSearch('');
+                                                    }}
+                                                    aria-label="Clear search"
+                                                    type="button"
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                    </svg>
+                                                </button>
+                                            )}
+                                        </div>
                                         {isSearching && (
                                             <div className="absolute -bottom-6 left-0 right-0">
                                                 <div className="w-full bg-gray-200 rounded-full h-1.5">
-                                                    <div 
-                                                        className="bg-blue-600 h-1.5 rounded-full transition-all duration-300 ease-in-out" 
+                                                    <div
+                                                        className="bg-blue-600 h-1.5 rounded-full transition-all duration-300 ease-in-out"
                                                         style={{ width: `${searchProgress}%` }}
                                                     ></div>
                                                 </div>
@@ -1479,7 +1581,7 @@ export default function Inventory() {
                                     <TableHeader>
                                         <TableRow>
                                             {table.getFlatHeaders().map((header) => (
-                                                <TableHead 
+                                                <TableHead
                                                     key={header.id}
                                                     className={cn(
                                                         "whitespace-nowrap px-2 first:pl-4 last:pr-4 relative select-none group text-xs font-medium",
@@ -1495,24 +1597,24 @@ export default function Inventory() {
                                                             <div
                                                                 draggable
                                                                 onDragStart={(e) => {
-                                                                    e.dataTransfer.setData('text/plain', header.column.id)
-                                                                    e.currentTarget.classList.add('dragging')
+                                                                    e.dataTransfer.setData('text/plain', header.column.id);
+                                                                    e.currentTarget.classList.add('dragging');
                                                                 }}
                                                                 onDragEnd={(e) => {
-                                                                    e.currentTarget.classList.remove('dragging')
+                                                                    e.currentTarget.classList.remove('dragging');
                                                                 }}
                                                                 onDragOver={(e) => {
-                                                                    e.preventDefault()
-                                                                    e.currentTarget.classList.add('drop-target')
+                                                                    e.preventDefault();
+                                                                    e.currentTarget.classList.add('drop-target');
                                                                 }}
                                                                 onDragLeave={(e) => {
-                                                                    e.currentTarget.classList.remove('drop-target')
+                                                                    e.currentTarget.classList.remove('drop-target');
                                                                 }}
                                                                 onDrop={(e) => {
-                                                                    e.preventDefault()
-                                                                    e.currentTarget.classList.remove('drop-target')
-                                                                    const draggedColumnId = e.dataTransfer.getData('text/plain')
-                                                                    handleColumnReorder(draggedColumnId, header.column.id)
+                                                                    e.preventDefault();
+                                                                    e.currentTarget.classList.remove('drop-target');
+                                                                    const draggedColumnId = e.dataTransfer.getData('text/plain');
+                                                                    handleColumnReorder(draggedColumnId, header.column.id);
                                                                 }}
                                                                 className="cursor-move py-2 flex items-center gap-2"
                                                             >
@@ -1567,14 +1669,14 @@ export default function Inventory() {
                                     </TableHeader>
                                     <TableBody>
                                         {table.getRowModel().rows.map((row) => (
-                                            <TableRow 
+                                            <TableRow
                                                 key={row.id}
                                                 className={cn(
                                                     (row.original && row.original.StkTotal !== undefined && row.original.StkTotal <= 0) && "text-gray-400 bg-gray-50"
                                                 )}
                                             >
                                                 {row.getVisibleCells().map((cell) => (
-                                                    <TableCell 
+                                                    <TableCell
                                                         key={cell.id}
                                                         className={cn(
                                                             "px-4 py-2 text-xs",
@@ -1607,16 +1709,16 @@ export default function Inventory() {
                                     const price = row.getValue('VlPreco_Empresa59') as number;
                                     const fornecedor = row.getValue('NmFornecedorPrincipal') as string;
                                     const hasNoStock = stock <= 0;
-                                    
+
                                     return (
-                                        <div 
+                                        <div
                                             key={row.id}
                                             className={cn(
                                                 "bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow",
                                                 hasNoStock && "bg-gray-50"
                                             )}
                                         >
-                                            <div 
+                                            <div
                                                 className="relative aspect-square cursor-pointer"
                                                 onClick={() => {
                                                     if (imageUrl) {
@@ -1654,7 +1756,7 @@ export default function Inventory() {
                                                     {productName}
                                                 </Link>
                                                 <div className="flex items-center gap-1">
-                                                    <span 
+                                                    <span
                                                         className={cn(
                                                             "inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-light truncate max-w-[200px]",
                                                             hasNoStock ? "bg-gray-200 text-gray-600" : "bg-gray-300 text-black"
@@ -1674,9 +1776,9 @@ export default function Inventory() {
                                                         "font-medium",
                                                         hasNoStock ? "text-gray-400" : "text-gray-900"
                                                     )}>
-                                                        {price?.toLocaleString('pt-BR', { 
-                                                            style: 'currency', 
-                                                            currency: 'BRL' 
+                                                        {price?.toLocaleString('pt-BR', {
+                                                            style: 'currency',
+                                                            currency: 'BRL'
                                                         })}
                                                     </span>
                                                 </div>
@@ -1739,7 +1841,7 @@ export default function Inventory() {
 
                 {lastUpdate && (
                     <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 bg-black text-white px-6 py-3 rounded-full shadow-lg flex flex-col items-center">
-                        
+
                         <span className="text-sm font-medium">
                             {new Date(lastUpdate).toLocaleString('pt-BR', {
                                 day: '2-digit',
@@ -1760,7 +1862,7 @@ export default function Inventory() {
                         imageUrl={selectedImage}
                     />
                 )}
-                
+
                 {selectedProduct && (
                     <ManageProductImagesModal
                         isOpen={!!selectedProduct}
@@ -1772,5 +1874,5 @@ export default function Inventory() {
                 )}
             </div>
         </PermissionGuard>
-    )
+    );
 }
