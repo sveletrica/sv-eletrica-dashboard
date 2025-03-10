@@ -1062,10 +1062,24 @@ useEffect(() => {
                             </div>
                         );
                     }
+                    
+                    // Truncate group name with ellipsis
+                    if (columnId === 'NmGrupoProduto' && typeof formattedValue === 'string') {
+                        return (
+                            <div className="truncate w-full" title={formattedValue}>
+                                {searchTerm && formattedValue ? (
+                                    <HighlightedText
+                                        text={formattedValue}
+                                        searchTerms={searchTerm.trim().toLowerCase().split(/\s+/)}
+                                    />
+                                ) : formattedValue}
+                            </div>
+                        );
+                    }
 
                     // Only highlight search terms in the fields we're actually searching
                     if (searchTerm && typeof formattedValue === 'string' &&
-                        ['CdChamada', 'NmProduto', 'NmFornecedorPrincipal', 'NmGrupoProduto'].includes(columnId)) {
+                        ['CdChamada', 'NmProduto', 'NmFornecedorPrincipal'].includes(columnId)) {
                         return (
                             <HighlightedText
                                 text={formattedValue}
