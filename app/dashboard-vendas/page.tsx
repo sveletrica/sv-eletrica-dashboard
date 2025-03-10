@@ -10,15 +10,15 @@ import {
   ChartLegend,
   ChartLegendContent
 } from "../../components/ui/chart";
-import { 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  Legend, 
-  ResponsiveContainer, 
-  PieChart, 
-  Pie, 
+import {
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
   Cell,
   BarChart,
   Bar
@@ -28,9 +28,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ExternalLink } from 'lucide-react';
 import { FERIADOS } from '../../app/config/feriados';
-import { 
-  getMetaGeral, 
-  getMetaFilial 
+import {
+  getMetaGeral,
+  getMetaFilial
 } from '../../app/config/metas';
 
 // Define interfaces for the data
@@ -99,10 +99,10 @@ export default function DashboardVendas() {
   const [totalVendas, setTotalVendas] = useState(0);
   const [totalMargem, setTotalMargem] = useState(0);
   const [activeView, setActiveView] = useState('overview');
-  
+
   // Obter o mês atual (formato '01', '02', etc.)
   const currentMonth = (new Date().getMonth() + 1).toString().padStart(2, '0');
-  
+
   // Novos estados para filtros de ano e mês
   const [anos, setAnos] = useState<string[]>([]);
   const [selectedAno, setSelectedAno] = useState<string>(new Date().getFullYear().toString());
@@ -150,11 +150,11 @@ export default function DashboardVendas() {
           throw new Error('Failed to fetch years');
         }
         const data = await response.json();
-        
+
         // Ordenar anos em ordem decrescente
         const sortedAnos = [...data].sort((a, b) => b.localeCompare(a));
         setAnos(sortedAnos);
-        
+
         // Definir o ano atual como padrão se disponível
         const currentYear = new Date().getFullYear().toString();
         if (sortedAnos.includes(currentYear)) {
@@ -177,7 +177,7 @@ export default function DashboardVendas() {
       try {
         // Construir URL com todos os filtros
         let url = `/api/vendedores/mensal?`;
-        
+
         const params = new URLSearchParams();
         if (selectedFilial !== 'all') {
           params.append('branch', selectedFilial);
@@ -188,15 +188,15 @@ export default function DashboardVendas() {
         if (selectedMes !== 'all') {
           params.append('month', selectedMes);
         }
-        
+
         url += params.toString();
-        
+
         const response = await fetch(url);
-        
+
         if (!response.ok) {
           throw new Error('Failed to fetch sales data');
         }
-        
+
         const responseData = await response.json();
         setData(responseData);
         processData(responseData);
@@ -222,7 +222,7 @@ export default function DashboardVendas() {
     data.forEach(item => {
       // Skip invalid data
       if (!item.nmrepresentantevenda || !item.nmempresacurtovenda) return;
-      
+
       // Parse margem from string (e.g., "1,14%" to 1.14) with null check
       let margemValue = 0;
       if (item.margem) {
@@ -232,13 +232,13 @@ export default function DashboardVendas() {
           console.warn('Error parsing margem:', item.margem);
         }
       }
-      
+
       // Agrupar SV FILIAL e SV MATRIZ como "Corporativo"
       let filialNome = item.nmempresacurtovenda;
       if (filialNome === "SV FILIAL" || filialNome === "SV MATRIZ") {
         filialNome = "Corporativo";
       }
-      
+
       // Update vendedor data
       if (!vendedoresMap.has(item.nmrepresentantevenda)) {
         vendedoresMap.set(item.nmrepresentantevenda, {
@@ -251,9 +251,9 @@ export default function DashboardVendas() {
           }
         });
       }
-      
+
       const vendedor = vendedoresMap.get(item.nmrepresentantevenda)!;
-      
+
       // Add filial data for this vendedor
       if (!vendedor.filiais[filialNome]) {
         vendedor.filiais[filialNome] = {
@@ -262,15 +262,15 @@ export default function DashboardVendas() {
           margem: 0
         };
       }
-      
+
       // Update filial data with null checks
       vendedor.filiais[filialNome].vlfaturamento += item.vlfaturamento || 0;
       vendedor.filiais[filialNome].vltotalcustoproduto += item.vltotalcustoproduto || 0;
-      
+
       // Update vendedor totals
       vendedor.total.vlfaturamento += item.vlfaturamento || 0;
       vendedor.total.vltotalcustoproduto += item.vltotalcustoproduto || 0;
-      
+
       // Update filial performance
       if (!filiaisMap.has(filialNome)) {
         filiaisMap.set(filialNome, {
@@ -281,16 +281,16 @@ export default function DashboardVendas() {
           vendedores: 0
         });
       }
-      
+
       const filial = filiaisMap.get(filialNome)!;
       filial.vlfaturamento += item.vlfaturamento || 0;
       filial.vltotalcustoproduto += item.vltotalcustoproduto || 0;
-      
+
       // Update global totals
       totalVendas += item.vlfaturamento || 0;
       totalCusto += item.vltotalcustoproduto || 0;
     });
-    
+
     // Calculate margins for vendedores
     vendedoresMap.forEach(vendedor => {
       // Calculate margin for each filial
@@ -298,23 +298,23 @@ export default function DashboardVendas() {
         const filial = vendedor.filiais[filialNome];
         filial.margem = calculateMargem(filial.vlfaturamento, filial.vltotalcustoproduto);
       });
-      
+
       // Calculate total margin
       vendedor.total.margem = calculateMargem(vendedor.total.vlfaturamento, vendedor.total.vltotalcustoproduto);
     });
-    
+
     // Calculate margins for filiais and count unique vendedores
     const vendedoresPorFilial = new Map<string, Set<string>>();
-    
+
     data.forEach(item => {
       if (!item.nmempresacurtovenda) return;
-      
+
       // Agrupar SV FILIAL e SV MATRIZ como "Corporativo"
       let filialNome = item.nmempresacurtovenda;
       if (filialNome === "SV FILIAL" || filialNome === "SV MATRIZ") {
         filialNome = "Corporativo";
       }
-      
+
       if (!vendedoresPorFilial.has(filialNome)) {
         vendedoresPorFilial.set(filialNome, new Set());
       }
@@ -322,42 +322,42 @@ export default function DashboardVendas() {
         vendedoresPorFilial.get(filialNome)!.add(item.nmrepresentantevenda);
       }
     });
-    
+
     filiaisMap.forEach((filial, nome) => {
       filial.margem = calculateMargem(filial.vlfaturamento, filial.vltotalcustoproduto);
       filial.vendedores = vendedoresPorFilial.get(nome)?.size || 0;
     });
-    
+
     // Sort vendedores by total sales
     const sortedVendedores = Array.from(vendedoresMap.values())
       .sort((a, b) => b.total.vlfaturamento - a.total.vlfaturamento);
-    
+
     // Sort filiais by total sales
     const sortedFiliais = Array.from(filiaisMap.values())
       .sort((a, b) => b.vlfaturamento - a.vlfaturamento);
-    
+
     // Calculate total margin
     const totalMargemValue = calculateMargem(totalVendas, totalCusto);
-    
+
     setVendedoresPerformance(sortedVendedores);
     setFiliaisPerformance(sortedFiliais);
     setTotalVendas(totalVendas);
     setTotalMargem(totalMargemValue);
   };
-  
+
   // Calculate margin using the same formula as in the existing code
   const calculateMargem = (faturamento: number, custo: number): number => {
     if (faturamento === 0) return 0;
     return ((faturamento - (faturamento * 0.268 + custo)) / faturamento) * 100;
   };
-  
+
   // Get background color based on margin
   const getMarginBackgroundColor = (margin: number) => {
     if (margin >= 5) return 'bg-green-50 dark:bg-green-900/20';
     if (margin >= 0) return 'bg-yellow-50 dark:bg-yellow-900/20';
     return 'bg-red-50 dark:bg-red-900/20';
   };
-  
+
   // Get text color based on margin
   const getMarginTextColor = (margin: number) => {
     if (margin >= 5) return 'text-green-600 dark:text-green-400';
@@ -378,15 +378,15 @@ export default function DashboardVendas() {
     if (diasUteisInfo.diasUteisDecorridos === 0 || diasUteisInfo.diasUteisRestantes === 0) {
       return { projecao: faturamentoAtual, percentualMeta: 0, meta: 0 };
     }
-    
+
     const mediaPorDiaUtil = faturamentoAtual / diasUteisInfo.diasUteisDecorridos;
-    
+
     // Verificar se hoje é o último dia útil do mês
-    const ehUltimoDiaUtil = diasUteisInfo.diasUteisRestantes === 1 && 
-                            diasUteisInfo.diasUteisDecorridos + diasUteisInfo.diasUteisRestantes === diasUteisInfo.diasUteisTotais;
-    
+    const ehUltimoDiaUtil = diasUteisInfo.diasUteisRestantes === 1 &&
+      diasUteisInfo.diasUteisDecorridos + diasUteisInfo.diasUteisRestantes === diasUteisInfo.diasUteisTotais;
+
     let projecao = faturamentoAtual;
-    
+
     if (ehUltimoDiaUtil) {
       // Se hoje é o último dia útil, calculamos a projeção considerando que ainda temos
       // parte do dia para faturar. Assumimos que o faturamento do dia será proporcional
@@ -395,7 +395,7 @@ export default function DashboardVendas() {
       const horaAtual = agora.getHours() + (agora.getMinutes() / 60);
       const jornadaTrabalho = 9; // Considerando uma jornada de 9h (8h às 17h)
       const percentualDiaDecorrido = Math.min(horaAtual / jornadaTrabalho, 1);
-      
+
       // Se já estamos fora do horário comercial, consideramos o dia como completo
       if (horaAtual >= jornadaTrabalho) {
         projecao = faturamentoAtual;
@@ -409,17 +409,17 @@ export default function DashboardVendas() {
       // Caso normal: projeção baseada na média diária e dias restantes
       projecao = faturamentoAtual + (mediaPorDiaUtil * diasUteisInfo.diasUteisRestantes);
     }
-    
+
     const meta = getMetaFilial(filialNome, selectedAno, selectedMes);
     const percentualMeta = meta > 0 ? (projecao / meta) * 100 : 0;
-    
+
     return { projecao, percentualMeta, meta };
   };
 
   // Formatar o título do período selecionado
   const getPeriodoTitle = () => {
     let periodo = '';
-    
+
     if (selectedMes !== 'all' && selectedAno !== 'all') {
       const mesNome = MESES.find(m => m.value === selectedMes)?.label;
       periodo = `${mesNome} de ${selectedAno}`;
@@ -431,7 +431,7 @@ export default function DashboardVendas() {
     } else {
       periodo = 'Todo o Período';
     }
-    
+
     return periodo;
   };
 
@@ -440,54 +440,54 @@ export default function DashboardVendas() {
     // Data atual
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
-    
+
     // Verificar se estamos olhando para o mês atual ou um mês passado/futuro
     const anoAtual = hoje.getFullYear().toString();
     const mesAtual = (hoje.getMonth() + 1).toString().padStart(2, '0');
-    
+
     // Se selectedAno ou selectedMes for 'all', usamos o mês atual para cálculos
     const anoParaCalculo = selectedAno === 'all' ? anoAtual : selectedAno;
     const mesParaCalculo = selectedMes === 'all' ? mesAtual : selectedMes;
-    
+
     // Verificar se o mês selecionado é passado, atual ou futuro
     const ehMesPassado = new Date(parseInt(anoParaCalculo), parseInt(mesParaCalculo) - 1, 1) < new Date(parseInt(anoAtual), parseInt(mesAtual) - 1, 1);
     const ehMesFuturo = new Date(parseInt(anoParaCalculo), parseInt(mesParaCalculo) - 1, 1) > new Date(parseInt(anoAtual), parseInt(mesAtual), 0);
     const ehMesAtual = !ehMesPassado && !ehMesFuturo;
-    
+
     // Primeiro dia do mês selecionado
     const primeiroDiaMes = new Date(parseInt(anoParaCalculo), parseInt(mesParaCalculo) - 1, 1);
     primeiroDiaMes.setHours(0, 0, 0, 0);
-    
+
     // Último dia do mês selecionado
     const ultimoDiaMes = new Date(parseInt(anoParaCalculo), parseInt(mesParaCalculo), 0);
     ultimoDiaMes.setHours(0, 0, 0, 0);
-    
+
     // Arrays para armazenar os dias
     const diasUteisTotais: string[] = [];
     const diasUteisDecorridos: string[] = [];
     const diasUteisRestantes: string[] = [];
-    
+
     // Calcular todos os dias úteis do mês
     const dataIteracaoTotal = new Date(primeiroDiaMes);
     while (dataIteracaoTotal <= ultimoDiaMes) {
       const dataFormatada = dataIteracaoTotal.toISOString().split('T')[0];
-      
+
       // Verifica se é dia útil (não é fim de semana)
       if (dataIteracaoTotal.getDay() !== 0 && dataIteracaoTotal.getDay() !== 6) {
         // Verifica se não é feriado
         if (!feriados.includes(dataFormatada)) {
           diasUteisTotais.push(dataFormatada);
-          
+
           // Se for mês passado, todos os dias são decorridos
           // Se for mês atual, dias até ontem são decorridos, o dia de hoje é considerado restante
           // Se for mês futuro, nenhum dia é decorrido
           if (ehMesPassado) {
             diasUteisDecorridos.push(dataFormatada);
           } else if (ehMesAtual) {
-            const ehHoje = dataIteracaoTotal.getDate() === hoje.getDate() && 
-                          dataIteracaoTotal.getMonth() === hoje.getMonth() && 
-                          dataIteracaoTotal.getFullYear() === hoje.getFullYear();
-            
+            const ehHoje = dataIteracaoTotal.getDate() === hoje.getDate() &&
+              dataIteracaoTotal.getMonth() === hoje.getMonth() &&
+              dataIteracaoTotal.getFullYear() === hoje.getFullYear();
+
             if (ehHoje) {
               // O dia atual é sempre considerado como restante, pois ainda não acabou
               diasUteisRestantes.push(dataFormatada);
@@ -501,11 +501,11 @@ export default function DashboardVendas() {
           }
         }
       }
-      
+
       // Avança para o próximo dia
       dataIteracaoTotal.setDate(dataIteracaoTotal.getDate() + 1);
     }
-    
+
     return {
       diasUteisTotais: diasUteisTotais.length,
       diasUteisDecorridos: diasUteisDecorridos.length,
@@ -527,15 +527,15 @@ export default function DashboardVendas() {
   useEffect(() => {
     if (diasUteisInfo.diasUteisDecorridos > 0) {
       const mediaPorDiaUtil = totalVendas / diasUteisInfo.diasUteisDecorridos;
-      
+
       // Verificar se hoje é o último dia útil do mês
       const hoje = new Date();
-      const ehUltimoDiaUtil = diasUteisInfo.diasUteisRestantes === 1 && 
-                              diasUteisInfo.diasUteisDecorridos + diasUteisInfo.diasUteisRestantes === diasUteisInfo.diasUteisTotais;
-      
+      const ehUltimoDiaUtil = diasUteisInfo.diasUteisRestantes === 1 &&
+        diasUteisInfo.diasUteisDecorridos + diasUteisInfo.diasUteisRestantes === diasUteisInfo.diasUteisTotais;
+
       // Só calcular projeção se houver dias úteis restantes
       let projecaoFaturamento = totalVendas;
-      
+
       if (diasUteisInfo.diasUteisRestantes > 0) {
         if (ehUltimoDiaUtil) {
           // Se hoje é o último dia útil, calculamos a projeção considerando que ainda temos
@@ -545,7 +545,7 @@ export default function DashboardVendas() {
           const horaAtual = agora.getHours() + (agora.getMinutes() / 60);
           const jornadaTrabalho = 9; // Considerando uma jornada de 9h (8h às 17h)
           const percentualDiaDecorrido = Math.min(horaAtual / jornadaTrabalho, 1);
-          
+
           // Se já estamos fora do horário comercial, consideramos o dia como completo
           if (horaAtual >= jornadaTrabalho) {
             projecaoFaturamento = totalVendas;
@@ -560,7 +560,7 @@ export default function DashboardVendas() {
           projecaoFaturamento = totalVendas + (mediaPorDiaUtil * diasUteisInfo.diasUteisRestantes);
         }
       }
-      
+
       setDiasUteisInfo(prev => ({
         ...prev,
         mediaPorDiaUtil,
@@ -637,7 +637,7 @@ export default function DashboardVendas() {
           <h1 className="text-3xl font-bold tracking-tight">
             Dashboard de Vendas
           </h1>
-          
+
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium">Filial:</span>
@@ -654,7 +654,7 @@ export default function DashboardVendas() {
                 ))}
               </select>
             </div>
-            
+
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium">Ano:</span>
               <select
@@ -670,7 +670,7 @@ export default function DashboardVendas() {
                 ))}
               </select>
             </div>
-            
+
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium">Mês:</span>
               <select
@@ -712,7 +712,7 @@ export default function DashboardVendas() {
               <div className={`text-sm font-medium ${getMarginTextColor(totalMargem)}`}>
                 Margem: {totalMargem.toFixed(2)}%
               </div>
-              
+
               {/* Informação sobre a meta de faturamento */}
               <div className="mt-2 pt-2 border-t">
                 {(() => {
@@ -726,7 +726,7 @@ export default function DashboardVendas() {
                           currency: 'BRL'
                         })}</span>
                       </div>
-                      
+
                       {totalVendas < metaGeral ? (
                         <div className="flex justify-between text-sm">
                           <span>Falta atingir:</span>
@@ -744,10 +744,10 @@ export default function DashboardVendas() {
                           })}</span>
                         </div>
                       )}
-                      
+
                       <div className="mt-1">
                         <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-                          <div className="bg-blue-600 h-2.5 rounded-full" 
+                          <div className="bg-blue-600 h-2.5 rounded-full"
                             style={{ width: `${Math.min(100, (totalVendas / metaGeral) * 100)}%` }}
                           ></div>
                         </div>
@@ -761,7 +761,7 @@ export default function DashboardVendas() {
                   );
                 })()}
               </div>
-              
+
               {/* Informação sobre projeção de faturamento */}
               <div className="mt-2 pt-2 border-t">
                 <div className="flex justify-between text-sm">
@@ -779,29 +779,29 @@ export default function DashboardVendas() {
                   </div>
                 )}
                 {/* Mostrar mensagem especial quando hoje é o último dia útil */}
-                {diasUteisInfo.diasUteisRestantes === 1 && 
-                 diasUteisInfo.diasUteisDecorridos + diasUteisInfo.diasUteisRestantes === diasUteisInfo.diasUteisTotais && (
-                  <>
-                    <div className="text-xs text-blue-600 dark:text-blue-400 mt-1 italic">
-                      Hoje é o último dia útil do mês
-                    </div>
-                    {(() => {
-                      const agora = new Date();
-                      const horaAtual = agora.getHours() + (agora.getMinutes() / 60);
-                      const jornadaTrabalho = 9; // Considerando uma jornada de 9h (8h às 17h)
-                      const percentualDiaDecorrido = Math.min(horaAtual / jornadaTrabalho, 1) * 100;
-                      
-                      return (
-                        <div className="flex justify-between text-xs mt-1">
-                          <span>Progresso do dia:</span>
-                          <span className={percentualDiaDecorrido >= 100 ? 'text-green-600 dark:text-green-400' : ''}>
-                            {percentualDiaDecorrido.toFixed(0)}%
-                          </span>
-                        </div>
-                      );
-                    })()}
-                  </>
-                )}
+                {diasUteisInfo.diasUteisRestantes === 1 &&
+                  diasUteisInfo.diasUteisDecorridos + diasUteisInfo.diasUteisRestantes === diasUteisInfo.diasUteisTotais && (
+                    <>
+                      <div className="text-xs text-blue-600 dark:text-blue-400 mt-1 italic">
+                        Hoje é o último dia útil do mês
+                      </div>
+                      {(() => {
+                        const agora = new Date();
+                        const horaAtual = agora.getHours() + (agora.getMinutes() / 60);
+                        const jornadaTrabalho = 9; // Considerando uma jornada de 9h (8h às 17h)
+                        const percentualDiaDecorrido = Math.min(horaAtual / jornadaTrabalho, 1) * 100;
+
+                        return (
+                          <div className="flex justify-between text-xs mt-1">
+                            <span>Progresso do dia:</span>
+                            <span className={percentualDiaDecorrido >= 100 ? 'text-green-600 dark:text-green-400' : ''}>
+                              {percentualDiaDecorrido.toFixed(0)}%
+                            </span>
+                          </div>
+                        );
+                      })()}
+                    </>
+                  )}
                 {diasUteisInfo.diasUteisDecorridos > 0 && (
                   <div className="flex justify-between text-sm">
                     <span>Média por dia útil:</span>
@@ -817,8 +817,8 @@ export default function DashboardVendas() {
                     <>
                       <div className="flex justify-between text-sm font-medium mt-1">
                         <span>Projeção mensal:</span>
-                        <span className={diasUteisInfo.projecaoFaturamento >= metaGeral ? 
-                          'text-green-600 dark:text-green-400' : 
+                        <span className={diasUteisInfo.projecaoFaturamento >= metaGeral ?
+                          'text-green-600 dark:text-green-400' :
                           'text-yellow-600 dark:text-yellow-400'
                         }>
                           {diasUteisInfo.projecaoFaturamento.toLocaleString('pt-BR', {
@@ -827,11 +827,11 @@ export default function DashboardVendas() {
                           })}
                         </span>
                       </div>
-                      
+
                       {/* Barra de progresso da projeção */}
                       <div className="mt-1">
                         <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-                          <div 
+                          <div
                             className={`h-2.5 rounded-full ${diasUteisInfo.projecaoFaturamento >= metaGeral ? 'bg-green-600' : 'bg-yellow-600'}`}
                             style={{ width: `${Math.min(100, (diasUteisInfo.projecaoFaturamento / metaGeral) * 100)}%` }}
                           ></div>
@@ -871,7 +871,7 @@ export default function DashboardVendas() {
                     {filial.vendedores} vendedores
                   </div>
                 </div>
-                
+
                 {/* Meta e projeção para a filial */}
                 {(() => {
                   const metaFilial = getMetaFilial(filial.nome, selectedAno, selectedMes);
@@ -884,7 +884,7 @@ export default function DashboardVendas() {
                           currency: 'BRL'
                         })}</span>
                       </div>
-                      
+
                       {filial.vlfaturamento < metaFilial ? (
                         <div className="flex justify-between text-sm">
                           <span>Falta atingir:</span>
@@ -902,11 +902,11 @@ export default function DashboardVendas() {
                           })}</span>
                         </div>
                       )}
-                      
+
                       <div className="mt-1">
                         <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-                          <div 
-                            className="bg-blue-600 h-2.5 rounded-full" 
+                          <div
+                            className="bg-blue-600 h-2.5 rounded-full"
                             style={{ width: `${Math.min(100, (filial.vlfaturamento / metaFilial) * 100)}%` }}
                           ></div>
                         </div>
@@ -916,7 +916,7 @@ export default function DashboardVendas() {
                           </span>
                         </div>
                       </div>
-                      
+
                       {/* Informação sobre dias úteis */}
                       <div className="mt-2 pt-2 border-t">
                         <div className="flex justify-between text-sm">
@@ -943,31 +943,31 @@ export default function DashboardVendas() {
                           </div>
                         )}
                       </div>
-                      
+
                       {/* Projeção para a filial */}
                       {diasUteisInfo.diasUteisDecorridos > 0 && diasUteisInfo.diasUteisRestantes > 0 && (
                         <>
                           {/* Mostrar mensagem especial quando hoje é o último dia útil */}
-                          {diasUteisInfo.diasUteisRestantes === 1 && 
-                           diasUteisInfo.diasUteisDecorridos + diasUteisInfo.diasUteisRestantes === diasUteisInfo.diasUteisTotais && (
-                            <div className="text-xs text-blue-600 dark:text-blue-400 mt-1 italic">
-                              Hoje é o último dia útil do mês
-                            </div>
-                          )}
-                          
+                          {diasUteisInfo.diasUteisRestantes === 1 &&
+                            diasUteisInfo.diasUteisDecorridos + diasUteisInfo.diasUteisRestantes === diasUteisInfo.diasUteisTotais && (
+                              <div className="text-xs text-blue-600 dark:text-blue-400 mt-1 italic">
+                                Hoje é o último dia útil do mês
+                              </div>
+                            )}
+
                           {(() => {
                             const { projecao, percentualMeta } = calcularProjecaoFilial(
-                              filial.vlfaturamento, 
-                              filial.nome, 
+                              filial.vlfaturamento,
+                              filial.nome,
                               diasUteisInfo
                             );
-                            
+
                             return (
                               <div className="mt-2 pt-2 border-t">
                                 <div className="flex justify-between text-sm font-medium">
                                   <span>Projeção mensal:</span>
-                                  <span className={projecao >= metaFilial ? 
-                                    'text-green-600 dark:text-green-400' : 
+                                  <span className={projecao >= metaFilial ?
+                                    'text-green-600 dark:text-green-400' :
                                     'text-yellow-600 dark:text-yellow-400'
                                   }>
                                     {projecao.toLocaleString('pt-BR', {
@@ -976,10 +976,10 @@ export default function DashboardVendas() {
                                     })}
                                   </span>
                                 </div>
-                                
+
                                 <div className="mt-1">
                                   <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-                                    <div 
+                                    <div
                                       className={`h-2.5 rounded-full ${projecao >= metaFilial ? 'bg-green-600' : 'bg-yellow-600'}`}
                                       style={{ width: `${Math.min(100, percentualMeta)}%` }}
                                     ></div>
@@ -1023,7 +1023,7 @@ export default function DashboardVendas() {
             Filiais
           </button>
         </div>
-        
+
         {activeView === 'overview' && (
           <div className="space-y-4">
             <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
@@ -1038,7 +1038,7 @@ export default function DashboardVendas() {
                     {branchChartData.length > 0 ? (
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
-                          <Tooltip 
+                          <Tooltip
                             formatter={(value) => [
                               new Intl.NumberFormat('pt-BR', {
                                 style: 'currency',
@@ -1047,9 +1047,9 @@ export default function DashboardVendas() {
                               'Faturamento'
                             ]}
                           />
-                          <Legend 
-                            layout="vertical" 
-                            verticalAlign="middle" 
+                          <Legend
+                            layout="vertical"
+                            verticalAlign="middle"
                             align="right"
                           />
                           <Pie
@@ -1087,48 +1087,50 @@ export default function DashboardVendas() {
                 <CardContent>
                   <div className="h-[300px]">
                     {topSalespeopleData.length > 0 ? (
-                      <ChartContainer 
-                        config={topSalespeopleChartConfig}
-                        className="h-[300px]"
-                      >
-                        <BarChart
-                          data={topSalespeopleData}
-                          layout="vertical"
-                          margin={{ top: 5, right: 30, left: 80, bottom: 5 }}
+                      <ResponsiveContainer width="100%" height="100%">
+                        <ChartContainer
+                          config={topSalespeopleChartConfig}
+                          className="h-[300px]"
                         >
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis type="number" 
-                            tickFormatter={(value) => 
-                              new Intl.NumberFormat('pt-BR', {
-                                notation: 'compact',
-                                compactDisplay: 'short',
-                                style: 'currency',
-                                currency: 'BRL'
-                              }).format(value)
-                            }
-                          />
-                          <YAxis 
-                            type="category" 
-                            dataKey="name" 
-                            width={80}
-                            tick={{ fontSize: 12 }}
-                          />
-                          <ChartTooltip 
-                            content={
-                              <ChartTooltipContent 
-                                formatter={(value) => [
-                                  new Intl.NumberFormat('pt-BR', {
-                                    style: 'currency',
-                                    currency: 'BRL'
-                                  }).format(Number(value)),
-                                  'Faturamento'
-                                ]}
-                              />
-                            }
-                          />
-                          <Bar dataKey="value" fill="#2563eb" />
-                        </BarChart>
-                      </ChartContainer>
+                          <BarChart
+                            data={topSalespeopleData}
+                            layout="vertical"
+                            margin={{ top: 5, right: 30, left: 80, bottom: 5 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis type="number"
+                              tickFormatter={(value) =>
+                                new Intl.NumberFormat('pt-BR', {
+                                  notation: 'compact',
+                                  compactDisplay: 'short',
+                                  style: 'currency',
+                                  currency: 'BRL'
+                                }).format(value)
+                              }
+                            />
+                            <YAxis
+                              type="category"
+                              dataKey="name"
+                              width={80}
+                              tick={{ fontSize: 12 }}
+                            />
+                            <ChartTooltip
+                              content={
+                                <ChartTooltipContent
+                                  formatter={(value) => [
+                                    new Intl.NumberFormat('pt-BR', {
+                                      style: 'currency',
+                                      currency: 'BRL'
+                                    }).format(Number(value)),
+                                    'Faturamento'
+                                  ]}
+                                />
+                              }
+                            />
+                            <Bar dataKey="value" fill="#2563eb" />
+                          </BarChart>
+                        </ChartContainer>
+                      </ResponsiveContainer>
                     ) : (
                       <div className="flex items-center justify-center h-full">
                         <p className="text-muted-foreground">Nenhum dado disponível para o período selecionado</p>
@@ -1140,14 +1142,14 @@ export default function DashboardVendas() {
             </div>
           </div>
         )}
-        
+
         {activeView === 'vendedores' && (
           <div className="space-y-4">
             {vendedoresPerformance.length > 0 ? (
               <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                 {vendedoresPerformance.map(vendedor => (
-                  <Card 
-                    key={vendedor.nome} 
+                  <Card
+                    key={vendedor.nome}
                     className={`${getMarginBackgroundColor(vendedor.total.margem)} cursor-pointer hover:shadow-md transition-shadow relative group`}
                     onClick={() => {
                       // Abrir em uma nova aba/página
@@ -1205,7 +1207,7 @@ export default function DashboardVendas() {
             )}
           </div>
         )}
-        
+
         {activeView === 'filiais' && (
           <div className="space-y-4">
             {filiaisPerformance.length > 0 ? (
@@ -1240,7 +1242,7 @@ export default function DashboardVendas() {
                         <span>Vendedores:</span>
                         <span>{filial.vendedores}</span>
                       </div>
-                      
+
                       {/* Meta e projeção para a filial */}
                       {(() => {
                         const metaFilial = getMetaFilial(filial.nome, selectedAno, selectedMes);
@@ -1253,7 +1255,7 @@ export default function DashboardVendas() {
                                 currency: 'BRL'
                               })}</span>
                             </div>
-                            
+
                             {filial.vlfaturamento < metaFilial ? (
                               <div className="flex justify-between text-sm">
                                 <span>Falta atingir:</span>
@@ -1271,11 +1273,11 @@ export default function DashboardVendas() {
                                 })}</span>
                               </div>
                             )}
-                            
+
                             <div className="mt-1">
                               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-                                <div 
-                                  className="bg-blue-600 h-2.5 rounded-full" 
+                                <div
+                                  className="bg-blue-600 h-2.5 rounded-full"
                                   style={{ width: `${Math.min(100, (filial.vlfaturamento / metaFilial) * 100)}%` }}
                                 ></div>
                               </div>
@@ -1285,7 +1287,7 @@ export default function DashboardVendas() {
                                 </span>
                               </div>
                             </div>
-                            
+
                             {/* Informação sobre dias úteis */}
                             <div className="mt-2 pt-2 border-t">
                               <div className="flex justify-between text-sm">
@@ -1312,31 +1314,31 @@ export default function DashboardVendas() {
                                 </div>
                               )}
                             </div>
-                            
+
                             {/* Projeção para a filial */}
                             {diasUteisInfo.diasUteisDecorridos > 0 && diasUteisInfo.diasUteisRestantes > 0 && (
                               <>
                                 {/* Mostrar mensagem especial quando hoje é o último dia útil */}
-                                {diasUteisInfo.diasUteisRestantes === 1 && 
-                                 diasUteisInfo.diasUteisDecorridos + diasUteisInfo.diasUteisRestantes === diasUteisInfo.diasUteisTotais && (
-                                  <div className="text-xs text-blue-600 dark:text-blue-400 mt-1 italic">
-                                    Hoje é o último dia útil do mês
-                                  </div>
-                                )}
-                                
+                                {diasUteisInfo.diasUteisRestantes === 1 &&
+                                  diasUteisInfo.diasUteisDecorridos + diasUteisInfo.diasUteisRestantes === diasUteisInfo.diasUteisTotais && (
+                                    <div className="text-xs text-blue-600 dark:text-blue-400 mt-1 italic">
+                                      Hoje é o último dia útil do mês
+                                    </div>
+                                  )}
+
                                 {(() => {
                                   const { projecao, percentualMeta } = calcularProjecaoFilial(
-                                    filial.vlfaturamento, 
-                                    filial.nome, 
+                                    filial.vlfaturamento,
+                                    filial.nome,
                                     diasUteisInfo
                                   );
-                                  
+
                                   return (
                                     <div className="mt-2 pt-2 border-t">
                                       <div className="flex justify-between text-sm font-medium">
                                         <span>Projeção mensal:</span>
-                                        <span className={projecao >= metaFilial ? 
-                                          'text-green-600 dark:text-green-400' : 
+                                        <span className={projecao >= metaFilial ?
+                                          'text-green-600 dark:text-green-400' :
                                           'text-yellow-600 dark:text-yellow-400'
                                         }>
                                           {projecao.toLocaleString('pt-BR', {
@@ -1345,10 +1347,10 @@ export default function DashboardVendas() {
                                           })}
                                         </span>
                                       </div>
-                                      
+
                                       <div className="mt-1">
                                         <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-                                          <div 
+                                          <div
                                             className={`h-2.5 rounded-full ${projecao >= metaFilial ? 'bg-green-600' : 'bg-yellow-600'}`}
                                             style={{ width: `${Math.min(100, percentualMeta)}%` }}
                                           ></div>
