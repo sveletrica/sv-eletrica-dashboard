@@ -1272,10 +1272,7 @@ export default function DailySales() {
                                                             
                                                             if (!cell) return null;
                                                             
-                                                            const rendered = flexRender(col.cell, { 
-                                                                row, 
-                                                                cell
-                                                            });
+                                                            const rendered = flexRender(col.cell, cell.getContext());
                                                             return typeof rendered === 'string' ? rendered : null;
                                                         }
                                                         : undefined
