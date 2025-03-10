@@ -1268,13 +1268,25 @@ useEffect(() => {
         filteredData.length 
     ]); // imageCache handled by table
 
-    // Add this function to handle column reordering
+    // Enhanced function to handle column reordering with better mobile support
     const handleColumnReorder = useCallback((draggedColumnId: string, targetColumnId: string) => {
         const allColumnIds = Object.keys(columnDefinitions);
 
         if (!allColumnIds.includes(draggedColumnId) || !allColumnIds.includes(targetColumnId)) {
             return;
         }
+        
+        // If on mobile, use the new order immediately and scroll to make it visible
+        const scrollToColumnAfterReorder = (columnId: string) => {
+            if (isMobile && tableContainerRef.current) {
+                setTimeout(() => {
+                    const columnHeader = tableContainerRef.current.querySelector(`[data-column-id="${columnId}"]`);
+                    if (columnHeader) {
+                        columnHeader.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                    }
+                }, 100);
+            }
+        };
 
         setColumnOrder(currentOrder => {
             // Remove any duplicates first
@@ -1293,12 +1305,18 @@ useEffect(() => {
 
                 // Save the new order immediately
                 localStorage.setItem('inventoryColumnOrder', JSON.stringify(newOrder));
+                
+                // On mobile, provide some visual feedback
+                if (isMobile) {
+                    scrollToColumnAfterReorder(draggedColumnId);
+                }
+                
                 return newOrder;
             }
 
             return currentOrder;
         });
-    }, []);
+    }, [isMobile]);
 
     // Update the handleHideColumn function
     const handleHideColumn = (columnId: string) => {
@@ -1597,6 +1615,7 @@ useEffect(() => {
                                             {table.getFlatHeaders().map((header) => (
                                                 <TableHead
                                                     key={header.id}
+                                                    data-column-id={header.column.id}
                                                     className={cn(
                                                         "whitespace-nowrap px-2 first:pl-4 last:pr-4 relative select-none group text-xs font-medium",
                                                         header.column.getCanResize() && "resize-handle"
@@ -1609,28 +1628,42 @@ useEffect(() => {
                                                     <ContextMenu>
                                                         <ContextMenuTrigger>
                                                             <div
-                                                                draggable
+                                                                draggable={!isMobile} // Disable dragging on mobile
                                                                 onDragStart={(e) => {
+                                                                    if (isMobile) return; // Prevent drag start on mobile
                                                                     e.dataTransfer.setData('text/plain', header.column.id);
                                                                     e.currentTarget.classList.add('dragging');
                                                                 }}
                                                                 onDragEnd={(e) => {
+                                                                    if (isMobile) return;
                                                                     e.currentTarget.classList.remove('dragging');
                                                                 }}
                                                                 onDragOver={(e) => {
+                                                                    if (isMobile) return;
                                                                     e.preventDefault();
                                                                     e.currentTarget.classList.add('drop-target');
                                                                 }}
                                                                 onDragLeave={(e) => {
+                                                                    if (isMobile) return;
                                                                     e.currentTarget.classList.remove('drop-target');
                                                                 }}
                                                                 onDrop={(e) => {
+                                                                    if (isMobile) return;
                                                                     e.preventDefault();
                                                                     e.currentTarget.classList.remove('drop-target');
                                                                     const draggedColumnId = e.dataTransfer.getData('text/plain');
                                                                     handleColumnReorder(draggedColumnId, header.column.id);
                                                                 }}
-                                                                className="cursor-move py-2 flex items-center gap-2"
+                                                                className={cn(
+                                                                    "py-2 flex items-center gap-2",
+                                                                    !isMobile && "cursor-move"
+                                                                )}
+                                                                onTouchStart={(e) => {
+                                                                    // Record the column being touched for potential reordering
+                                                                    if (isMobile) {
+                                                                        // Touch events are handled via context menu on mobile
+                                                                    }
+                                                                }}
                                                             >
                                                                 {flexRender(
                                                                     header.column.columnDef.header,
@@ -1657,6 +1690,40 @@ useEffect(() => {
                                                                 <ArrowUpDown className="mr-2 h-4 w-4" />
                                                                 Remover Ordenação
                                                             </ContextMenuItem>
+                                                            <ContextMenuSeparator />
+                                                            {isMobile && (
+                                                                <>
+                                                                    <ContextMenuSeparator />
+                                                                    <ContextMenuItem
+                                                                        onClick={() => {
+                                                                            // Move column left
+                                                                            const currentIndex = columnOrder.indexOf(header.column.id);
+                                                                            if (currentIndex > 0) {
+                                                                                const targetId = columnOrder[currentIndex - 1];
+                                                                                handleColumnReorder(header.column.id, targetId);
+                                                                            }
+                                                                        }}
+                                                                        disabled={columnOrder.indexOf(header.column.id) <= 0}
+                                                                    >
+                                                                        <span className="mr-2">⬅️</span>
+                                                                        Mover para esquerda
+                                                                    </ContextMenuItem>
+                                                                    <ContextMenuItem
+                                                                        onClick={() => {
+                                                                            // Move column right
+                                                                            const currentIndex = columnOrder.indexOf(header.column.id);
+                                                                            if (currentIndex < columnOrder.length - 1) {
+                                                                                const targetId = columnOrder[currentIndex + 1];
+                                                                                handleColumnReorder(targetId, header.column.id);
+                                                                            }
+                                                                        }}
+                                                                        disabled={columnOrder.indexOf(header.column.id) >= columnOrder.length - 1}
+                                                                    >
+                                                                        <span className="mr-2">➡️</span>
+                                                                        Mover para direita
+                                                                    </ContextMenuItem>
+                                                                </>
+                                                            )}
                                                             <ContextMenuSeparator />
                                                             <ContextMenuItem
                                                                 onClick={() => handleHideColumn(header.column.id)}

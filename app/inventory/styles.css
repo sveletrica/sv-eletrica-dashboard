@@ -47,10 +47,13 @@
 
 .dragging {
     opacity: 0.5;
+    background-color: #f0f9ff;
+    z-index: 20;
 }
 
 .drop-target {
     position: relative;
+    background-color: rgba(0, 120, 212, 0.05);
 }
 
 .drop-target::before {
@@ -104,3 +107,29 @@ td > div, th > div {
 .dark [data-sorted="true"] {
     background-color: rgba(255, 255, 255, 0.02);
 } 
+
+/* Mobile-specific styles */
+@media (max-width: 640px) {
+    /* Improved tap targets on mobile */
+    .context-menu-trigger {
+        padding: 8px 4px;
+    }
+    
+    /* Make table headers slightly larger on mobile for easier tapping */
+    th {
+        padding: 8px 4px;
+        font-size: 12px;
+    }
+    
+    /* Visual feedback for column reordering on mobile */
+    th[data-column-id].active,
+    th[data-column-id]:active {
+        background-color: rgba(0, 120, 212, 0.1);
+    }
+    
+    /* Style for "Move left/right" menu items on mobile */
+    .move-column-option {
+        padding: 10px;
+        font-size: 14px;
+    }
+}
