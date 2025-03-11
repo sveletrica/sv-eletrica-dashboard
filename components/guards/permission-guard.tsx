@@ -6,7 +6,7 @@ import { useEffect } from 'react'
 import { toast } from 'sonner'
 
 interface PermissionGuardProps {
-    permission: 'inventory' | 'sales' | 'quotations' | 'clients' | 'tags' | 'admin'
+    permission: 'inventory' | 'sales' | 'quotations' | 'clients' | 'tags' | 'admin' | 'requisicoes' | 'simulations'
     children: React.ReactNode
 }
 

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { ContactRound, Home, BarChart2, Package, Menu, X, ShoppingCart, BarChart3, CalendarDays, TrendingUp, ChevronLeft, Calculator, LogOut, LogIn, User } from 'lucide-react';
+import { ContactRound, Home, BarChart2, Package, Menu, X, ShoppingCart, BarChart3, CalendarDays, TrendingUp, ChevronLeft, Calculator, LogOut, LogIn, User, ClipboardCheck } from 'lucide-react';
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from 'react';
@@ -45,6 +45,12 @@ const sidebarLinks = [
         label: 'Simulações',
         icon: Calculator,
         permission: 'simulations' as const,
+    },
+    {
+        href: '/requisicao',
+        label: 'Requisições',
+        icon: ClipboardCheck,
+        permission: 'requisicoes' as const,
     },
     {
         href: '/produto',

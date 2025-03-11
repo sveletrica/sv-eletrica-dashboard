@@ -16,6 +16,7 @@ interface User {
         tags: boolean
         admin: boolean
         simulations: boolean
+        requisicoes: boolean
     }
 }
 

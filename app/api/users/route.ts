@@ -59,6 +59,18 @@ export async function POST(request: Request) {
         const hashedPassword = await bcrypt.hash(body.password, 10)
         console.log('Hashed password:', hashedPassword) // For debugging
 
+        // Ensure all permission fields are present
+        const permissions = {
+            inventory: !!body.permissions?.inventory,
+            sales: !!body.permissions?.sales,
+            quotations: !!body.permissions?.quotations,
+            clients: !!body.permissions?.clients,
+            tags: !!body.permissions?.tags,
+            admin: !!body.permissions?.admin,
+            simulations: !!body.permissions?.simulations,
+            requisicoes: !!body.permissions?.requisicoes
+        };
+
         // Insert new user
         const { data, error } = await supabase
             .from('users')
@@ -66,7 +78,7 @@ export async function POST(request: Request) {
                 name: body.name,
                 email: body.email,
                 password: hashedPassword,
-                permissions: body.permissions
+                permissions: permissions
             }])
             .select()
             .single()

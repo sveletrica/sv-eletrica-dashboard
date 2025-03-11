@@ -27,6 +27,7 @@ interface User {
         tags: boolean
         admin: boolean
         simulations: boolean
+        requisicoes: boolean
     }
 }
 
@@ -41,7 +42,8 @@ const permissionLabels: Record<keyof User['permissions'], string> = {
     clients: 'Clientes',
     tags: 'Tags',
     admin: 'Admin',
-    simulations: 'Simulações'
+    simulations: 'Simulações',
+    requisicoes: 'Requisições'
 }
 
 export default function Users() {
@@ -57,7 +59,8 @@ export default function Users() {
             clients: false,
             tags: false,
             admin: false,
-            simulations: false
+            simulations: false,
+            requisicoes: false
         }
     })
     const [editingUser, setEditingUser] = useState<User | null>(null)
@@ -130,7 +133,8 @@ export default function Users() {
                     clients: false,
                     tags: false,
                     admin: false,
-                    simulations: false
+                    simulations: false,
+                    requisicoes: false
                 }
             })
         } catch (err) {

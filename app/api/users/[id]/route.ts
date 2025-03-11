@@ -30,7 +30,8 @@ export async function PUT(
             clients: !!body.permissions?.clients,
             tags: !!body.permissions?.tags,
             admin: !!body.permissions?.admin,
-            simulations: !!body.permissions?.simulations
+            simulations: !!body.permissions?.simulations,
+            requisicoes: !!body.permissions?.requisicoes
         }
 
         // Check if email is already taken by another user
