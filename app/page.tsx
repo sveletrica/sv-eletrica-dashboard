@@ -2,7 +2,6 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "../components/ui/card";
 import { MonthlySalesMetrics } from "../components/monthly-sales-metrics";
 import React from "react";
-import { Separator } from "@/components/ui/separator";
 import { BarChart3, Package, CalendarDays, TrendingUp, ArrowRight } from "lucide-react";
 
 // Add async to the function to enable data fetching
@@ -17,6 +16,7 @@ export default async function Dashboard() {
   };
   
   let totalStockItems = 0;
+  let totalStockValue = "R$ 0,00";
   let variationColorClass = 'text-gray-600';
   
   try {
@@ -28,6 +28,16 @@ export default async function Dashboard() {
     if (stockResponse.ok) {
       const stockData = await stockResponse.json();
       totalStockItems = stockData.totalItems || 0;
+    }
+    
+    // Fetch total stock value
+    const stockValueResponse = await fetch(`${process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` : 'http://localhost:3000'}/api/total-stock-value`, {
+      cache: 'no-store'
+    });
+    
+    if (stockValueResponse.ok) {
+      const stockValueData = await stockValueResponse.json();
+      totalStockValue = stockValueData.formattedValue || "R$ 0,00";
     }
 
     // Fetch data from the webhook
@@ -116,12 +126,12 @@ export default async function Dashboard() {
             <CardContent>
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Items</p>
+                  <p className="text-sm text-muted-foreground">Total Skus</p>
                   <p className="font-bold text-2xl">{totalStockItems.toLocaleString()}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Tagged Items</p>
-                  <p className="font-bold text-2xl">900</p>
+                  <p className="text-sm text-muted-foreground">Valor Total</p>
+                  <p className="font-bold text-2xl">{totalStockValue}</p>
                 </div>
               </div>
               <p className="text-sm text-muted-foreground">Ferramenta para gerenciar o estoque de produtos.</p>

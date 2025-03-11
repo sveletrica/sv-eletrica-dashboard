@@ -474,16 +474,66 @@ export function MonthlySalesMetrics() {
   if (loading) {
     return (
       <div className="col-span-2 space-y-4">
+        {/* Header with month name and navigation buttons */}
         <div className="flex justify-between items-center">
-          <div className="animate-pulse h-6 bg-muted rounded w-24"></div>
+          <div className="space-y-2">
+            <div className="animate-pulse h-4 bg-slate-200 rounded w-32"></div>
+            <div className="animate-pulse h-8 bg-slate-200 rounded w-40"></div>
+            <div className="animate-pulse h-3 bg-slate-200 rounded w-48 mt-1"></div>
+          </div>
           <div className="flex gap-2">
-            <div className="w-8 h-8 rounded bg-muted"></div>
-            <div className="w-8 h-8 rounded bg-muted"></div>
+            <div className="w-8 h-8 rounded bg-slate-200 animate-pulse"></div>
+            <div className="w-8 h-8 rounded bg-slate-200 animate-pulse"></div>
           </div>
         </div>
-        <div className="space-y-2">
-          <div className="animate-pulse h-6 bg-muted rounded w-32"></div>
-          <div className="animate-pulse h-6 bg-muted rounded w-24"></div>
+        
+        {/* Previous month comparison */}
+        <div className="space-y-3 pt-2">
+          <div className="flex items-center gap-2">
+            <div className="animate-pulse h-4 bg-slate-200 rounded w-24"></div>
+            <div className="animate-pulse h-4 bg-slate-200 rounded w-16"></div>
+          </div>
+          
+          {/* Previous year comparison */}
+          <div className="flex items-center gap-2">
+            <div className="animate-pulse h-4 bg-slate-200 rounded w-36"></div>
+            <div className="animate-pulse h-4 bg-slate-200 rounded w-16"></div>
+          </div>
+          
+          {/* Projection section */}
+          <div className="mt-4 pt-4 border-t border-slate-200">
+            <div className="animate-pulse h-4 bg-slate-200 rounded w-32 mb-2"></div>
+            <div className="flex justify-between items-center">
+              <div className="animate-pulse h-6 bg-slate-200 rounded w-24"></div>
+              <div className="animate-pulse h-6 bg-slate-200 rounded w-16"></div>
+            </div>
+          </div>
+          <div className="mt-4 pt-4 border-t border-slate-200">
+            <div className="animate-pulse h-4 bg-slate-200 rounded w-32 mb-2"></div>
+            <div className="flex justify-between items-center">
+              <div className="animate-pulse h-6 bg-slate-200 rounded w-24"></div>
+              <div className="animate-pulse h-6 bg-slate-200 rounded w-16"></div>
+            </div>
+          </div>
+          <div className="mt-4 pt-4 border-t border-slate-200">
+            <div className="animate-pulse h-4 bg-slate-200 rounded w-32 mb-2"></div>
+            <div className="flex justify-between items-center">
+              <div className="animate-pulse h-6 bg-slate-200 rounded w-24"></div>
+              <div className="animate-pulse h-6 bg-slate-200 rounded w-16"></div>
+            </div>
+          </div>
+          
+          {/* Toggle button */}
+          <div className="flex items-center justify-center mt-3">
+            <div className="animate-pulse h-8 bg-slate-200 rounded w-48"></div>
+          </div>
+          <div className="mt-4 pt-4 border-t border-slate-200">
+            <div className="animate-pulse h-4 bg-slate-200 rounded w-32 mb-2"></div>
+            <div className="flex justify-between items-center">
+              <div className="animate-pulse h-6 bg-slate-200 rounded w-24"></div>
+              <div className="animate-pulse h-6 bg-slate-200 rounded w-16"></div>
+            </div>
+          </div>
         </div>
       </div>
     )
