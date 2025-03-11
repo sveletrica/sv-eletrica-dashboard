@@ -350,7 +350,10 @@ export default function RequisicaoPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {FILIAIS_NOMES.map((filialNome) => {
+                      {FILIAIS_NOMES.filter(filialNome => {
+                        const estoque = produto.stock[filialNome] || 0;
+                        return estoque > 0;
+                      }).map((filialNome) => {
                         const estoque = produto.stock[filialNome] || 0;
                         const giro = produto.giro[filialNome] || 0;
                         
@@ -410,6 +413,37 @@ export default function RequisicaoPage() {
                     </TableBody>
                   </Table>
                 </div>
+                
+                {/* Observação sobre filiais com estoque zerado */}
+                {(() => {
+                  const filiaisZeradas = FILIAIS_NOMES.filter(filialNome => {
+                    const estoque = produto.stock[filialNome] || 0;
+                    return estoque === 0;
+                  });
+                  
+                  if (filiaisZeradas.length > 0) {
+                    return (
+                      <div className="mt-2 p-3 bg-gray-100 dark:bg-gray-800 rounded-md text-sm">
+                        <p className="text-muted-foreground flex items-center">
+                          <AlertTriangle className="h-4 w-4 mr-2 text-yellow-500" />
+                          <span>
+                            <strong>Filiais com estoque zerado:</strong>{" "}
+                            {filiaisZeradas.map((filialNome, index) => {
+                              const giro = produto.giro[filialNome] || 0;
+                              return (
+                                <span key={filialNome}>
+                                  {index > 0 && ", "}
+                                  {filialNome} ({giro.toFixed(1)}/mês)
+                                </span>
+                              );
+                            })}
+                          </span>
+                        </p>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
                 
                 <div className="mt-4 p-4 bg-muted/30 rounded-md">
                   <h3 className="font-medium mb-2 flex items-center">
