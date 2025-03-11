@@ -5,7 +5,55 @@ import React from "react";
 import { Separator } from "@/components/ui/separator";
 import { BarChart3, Package, CalendarDays, TrendingUp, ArrowRight } from "lucide-react";
 
-export default function Dashboard() {
+// Add async to the function to enable data fetching
+export default async function Dashboard() {
+  // Default values in case the API call fails
+  let salesData = {
+    DataHoje: new Date().toLocaleDateString('pt-BR'),
+    TotalFaturamentoHoje: "R$ 0,00",
+    DataOntem: new Date(Date.now() - 86400000).toLocaleDateString('pt-BR'),
+    TotalFaturamentoOntem: "R$ 0,00",
+    VariacaoPercentual: "0%"
+  };
+  
+  let variationColorClass = 'text-gray-600';
+  
+  try {
+    // Fetch data from the webhook
+    const response = await fetch('https://wh.sveletrica.com/webhook/vendadiatotal', { 
+      cache: 'no-store'  // Always fetch fresh data
+    });
+    
+    if (!response.ok) {
+      throw new Error(`API responded with status: ${response.status}`);
+    }
+    
+    const apiData = await response.json();
+    
+    // Check if the API returned data in the expected format
+    if (apiData) {
+      // Handle both possible formats: single object or array of objects
+      if (Array.isArray(apiData) && apiData.length > 0) {
+        salesData = apiData[0];
+      } else if (typeof apiData === 'object' && apiData.DataHoje) {
+        // The API returned a single object directly
+        salesData = apiData;
+      } else {
+        console.error('API returned unexpected data format:', apiData);
+      }
+      
+      // Determine if the variation is positive or negative for styling
+      // Ensure we're working with strings since the API returns string values
+      const isPositiveVariation = !String(salesData.VariacaoPercentual).includes('-');
+      variationColorClass = isPositiveVariation ? 'text-green-600' : 'text-red-600';
+    } else {
+      console.error('API returned unexpected data format:', apiData);
+    }
+  } catch (error) {
+    console.error('Error fetching sales data:', error);
+    // We'll use the default values set above
+  }
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
       <header className="mb-8">
@@ -39,11 +87,6 @@ export default function Dashboard() {
               Ver Detalhes <ArrowRight className="ml-1 h-4 w-4" />
             </Link>
           </CardFooter>
-          <Link 
-            href="/vendas-mes" 
-            className="absolute inset-0 z-10"
-            aria-label="View Vendas Mensais"
-          />
         </Card>
 
         {/* Coluna da Direita - Stack Vertical */}
@@ -80,14 +123,9 @@ export default function Dashboard() {
                 Acessar Estoques <ArrowRight className="ml-1 h-4 w-4" />
               </Link>
             </CardFooter>
-            <Link
-              href="/inventory"
-              className="absolute inset-0 z-10"
-              aria-label="View Estoque"
-            />
           </Card>
 
-          {/* Card Vendas Diárias */}
+          {/* Card Vendas Diárias - Updated with real data */}
           <Card className="group transition-all duration-300 hover:shadow-md border-l-4 border-l-green-500 flex-1">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
@@ -101,12 +139,12 @@ export default function Dashboard() {
             <CardContent>
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
-                  <p className="text-sm text-muted-foreground">Hoje</p>
-                  <p className="font-bold text-2xl">R$ 4.2K</p>
+                  <p className="text-sm text-muted-foreground">Hoje ({salesData.DataHoje})</p>
+                  <p className="font-bold text-2xl">{salesData.TotalFaturamentoHoje}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">vs Ontem</p>
-                  <p className="font-bold text-2xl text-green-600">+5%</p>
+                  <p className="text-sm text-muted-foreground">vs Ontem ({salesData.DataOntem})</p>
+                  <p className={`font-bold text-2xl ${variationColorClass}`}>{salesData.VariacaoPercentual}</p>
                 </div>
               </div>
               <p className="text-sm text-muted-foreground">Monitore atividades e métricas de desempenho das vendas diárias.</p>
@@ -119,11 +157,6 @@ export default function Dashboard() {
                 Ver Vendas Diárias <ArrowRight className="ml-1 h-4 w-4" />
               </Link>
             </CardFooter>
-            <Link
-              href="/vendas-dia"
-              className="absolute inset-0 z-10"
-              aria-label="View Vendas Diárias"
-            />
           </Card>
 
           {/* Card Dashboard de Vendas */}
@@ -158,11 +191,6 @@ export default function Dashboard() {
                 Ver Dashboard <ArrowRight className="ml-1 h-4 w-4" />
               </Link>
             </CardFooter>
-            <Link
-              href="/dashboard-vendas"
-              className="absolute inset-0 z-10"
-              aria-label="View Dashboard de Vendas"
-            />
           </Card>
         </div>
       </div>
