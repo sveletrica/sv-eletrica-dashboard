@@ -16,9 +16,20 @@ export default async function Dashboard() {
     VariacaoPercentual: "0%"
   };
   
+  let totalStockItems = 0;
   let variationColorClass = 'text-gray-600';
   
   try {
+    // Fetch total stock items
+    const stockResponse = await fetch(`${process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` : 'http://localhost:3000'}/api/total-stock-items`, {
+      cache: 'no-store'
+    });
+    
+    if (stockResponse.ok) {
+      const stockData = await stockResponse.json();
+      totalStockItems = stockData.totalItems || 0;
+    }
+
     // Fetch data from the webhook
     const response = await fetch('https://wh.sveletrica.com/webhook/vendadiatotal', { 
       cache: 'no-store'  // Always fetch fresh data
@@ -106,7 +117,7 @@ export default async function Dashboard() {
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Total Items</p>
-                  <p className="font-bold text-2xl">2,500</p>
+                  <p className="font-bold text-2xl">{totalStockItems.toLocaleString()}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Tagged Items</p>
