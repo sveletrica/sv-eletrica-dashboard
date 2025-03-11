@@ -569,30 +569,74 @@ const ProductImageCard = ({ productName }: { productName: string }) => {
     );
 };
 
-// Add this helper function at the top level
+// Função para calcular o giro médio dos 3 meses anteriores completos
 const calculateGiro3M = (salesData: ProductSale[], selectedFilial: string | null): number => {
-    // Get current date to calculate last 3 months
-    const now = new Date();
-    const threeMonthsAgo = new Date();
-    threeMonthsAgo.setMonth(now.getMonth() - 3);
+    // Verificar se temos dados de vendas
+    if (!salesData || salesData.length === 0) {
+        console.log('Sem dados de vendas para calcular o giro');
+        return 0;
+    }
 
-    // Filter sales by last 3 months
+    // Calcular o período dos 3 meses anteriores completos (excluindo o mês atual)
+    const now = new Date();
+    
+    // Primeiro dia do mês atual
+    const firstDayCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    
+    // Último dia do mês anterior (fim do período)
+    const endDate = new Date(firstDayCurrentMonth);
+    endDate.setDate(endDate.getDate() - 1);
+    
+    // Primeiro dia de 3 meses atrás (início do período)
+    const startDate = new Date(endDate);
+    startDate.setMonth(startDate.getMonth() - 2); // Já estamos no mês anterior, então -2 para pegar 3 meses completos
+    startDate.setDate(1); // Primeiro dia do mês
+    
+    console.log(`Período de análise: ${startDate.toLocaleDateString('pt-BR')} até ${endDate.toLocaleDateString('pt-BR')}`);
+
+    // Filter sales by last 3 complete months
     const last3MonthsSales = salesData.filter(sale => {
-        const [day, month, year] = sale.dtemissao.split('/').map(Number);
-        const saleDate = new Date(year, month - 1, day);
-        return saleDate >= threeMonthsAgo && saleDate <= now;
+        try {
+            const [day, month, year] = sale.dtemissao.split('/').map(Number);
+            const saleDate = new Date(year, month - 1, day);
+            return saleDate >= startDate && saleDate <= endDate;
+        } catch (error) {
+            console.error(`Erro ao processar data de venda: ${sale.dtemissao}`, error);
+            return false;
+        }
     });
+
+    // Normalização de nomes de filiais para comparação
+    const normalizarNomeFilial = (nome: string): string => {
+        // Remove acentos, espaços e converte para maiúsculas
+        return nome.normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+            .replace(/\s+/g, '')            // Remove espaços
+            .toUpperCase();                 // Converte para maiúsculas
+    };
 
     // Filter by filial if selected
     const filteredSales = selectedFilial
-        ? last3MonthsSales.filter(sale => sale.nmempresacurtovenda === selectedFilial)
+        ? last3MonthsSales.filter(sale => {
+            if (!sale.nmempresacurtovenda) return false;
+            const saleEmpresaNormalizada = normalizarNomeFilial(sale.nmempresacurtovenda);
+            const filialNormalizada = normalizarNomeFilial(selectedFilial);
+            return saleEmpresaNormalizada.includes(filialNormalizada) || 
+                   filialNormalizada.includes(saleEmpresaNormalizada);
+        })
         : last3MonthsSales;
 
+    console.log(`Total de vendas no período: ${filteredSales.length}`);
+    
     // Calculate total quantity
     const totalQuantity = filteredSales.reduce((sum, sale) => sum + sale.qtbrutaproduto, 0);
+    console.log(`Quantidade total vendida: ${totalQuantity}`);
 
     // Calculate monthly average (divide by 3 for 3 months)
-    return totalQuantity / 3;
+    const giroMensal = totalQuantity / 3;
+    console.log(`Giro mensal calculado: ${giroMensal.toFixed(2)} (baseado nos 3 meses anteriores completos)`);
+
+    return giroMensal;
 };
 
 // Create a wrapper component for the main content
