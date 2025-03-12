@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "../compone
 import { MonthlySalesMetrics } from "../components/monthly-sales-metrics";
 import React from "react";
 import { BarChart3, Package, CalendarDays, TrendingUp, ArrowRight } from "lucide-react";
+import { createClient } from '@supabase/supabase-js';
 
 // Add async to the function to enable data fetching
 export default async function Dashboard() {
@@ -20,24 +21,52 @@ export default async function Dashboard() {
   let variationColorClass = 'text-gray-600';
   
   try {
-    // Fetch total stock items
-    const stockResponse = await fetch(`${process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` : 'http://localhost:3000'}/api/total-stock-items`, {
-      cache: 'no-store'
-    });
+    // For Next.js server components, we can directly call our database functions
+    // instead of making HTTP requests to our own API routes
     
-    if (stockResponse.ok) {
-      const stockData = await stockResponse.json();
-      totalStockItems = stockData.totalItems || 0;
+    // Create Supabase client (same as in the API routes)
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+      process.env.SUPABASE_SERVICE_ROLE_KEY as string
+    );
+    
+    // Get total stock items
+    const { count: totalItems, error: stockError } = await supabase
+      .from('DBestoque')
+      .select('CdChamada', { count: 'exact', head: true })
+      .gt('StkTotal', 0)
+      .limit(1);
+    
+    if (stockError) {
+      console.error('Supabase Error (Stock Items):', stockError);
+    } else {
+      totalStockItems = totalItems || 0;
     }
     
-    // Fetch total stock value
-    const stockValueResponse = await fetch(`${process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` : 'http://localhost:3000'}/api/total-stock-value`, {
-      cache: 'no-store'
-    });
+    // Get total stock value
+    const { data: stockValueData, error: stockValueError } = await supabase
+      .from('mvw_mssql_etiquetasio_estoques')
+      .select('stktotal, vlprecoreposicao')
+      .gt('stktotal', 0);
     
-    if (stockValueResponse.ok) {
-      const stockValueData = await stockValueResponse.json();
-      totalStockValue = stockValueData.formattedValue || "R$ 0,00";
+    if (stockValueError) {
+      console.error('Supabase Error (Stock Value):', stockValueError);
+    } else if (stockValueData && stockValueData.length > 0) {
+      // Calculate the total value
+      const totalValue = stockValueData.reduce((sum: number, item: { stktotal: number; vlprecoreposicao: number }) => {
+        if (item.stktotal && item.vlprecoreposicao) {
+          return sum + (item.stktotal * item.vlprecoreposicao);
+        }
+        return sum;
+      }, 0);
+      
+      // Format the value in Brazilian currency with compact notation for millions
+      totalStockValue = new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+        notation: 'compact',
+        maximumFractionDigits: 1
+      }).format(totalValue);
     }
 
     // Fetch data from the webhook

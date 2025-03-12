@@ -34,6 +34,16 @@ interface ProductGiroData {
   atualizacao?: string; // Data de atualização do estoque
 }
 
+// Interface para os dados de pedidos de compra
+interface PurchaseOrderData {
+  dtemissao: string;
+  nmcomprador: string;
+  codpedido: string;
+  qtemaberto: number;
+  dtentrega: string;
+  codproduto: string;
+}
+
 // Lista de nomes de filiais para exibição
 const FILIAIS_NOMES = [
   'SV MATRIZ',
@@ -117,6 +127,7 @@ export default function RequisicaoPage() {
   const [error, setError] = useState<string | null>(null);
   const [quantidadeRequisitada, setQuantidadeRequisitada] = useState<{ [key: string]: number | string }>({});
   const [lastUpdateDate, setLastUpdateDate] = useState<string | undefined>(undefined);
+  const [purchaseOrdersData, setPurchaseOrdersData] = useState<{ [key: string]: PurchaseOrderData[] }>({});
   
   // Função para analisar produtos
   const analisarProdutos = async () => {
@@ -126,6 +137,7 @@ export default function RequisicaoPage() {
     setIsLoading(true);
     setProgress(0);
     setLastUpdateDate(undefined);
+    setPurchaseOrdersData({});
     
     try {
       // Obter lista de códigos de produtos
@@ -200,6 +212,11 @@ export default function RequisicaoPage() {
         toast.success(`${data.totalEncontrados} produtos analisados com sucesso`);
       }
       
+      // Fetch purchase orders data for each product
+      if (data.resultados && data.resultados.length > 0) {
+        await fetchPurchaseOrdersData(data.resultados.map((produto: ProductGiroData) => produto.cdproduto));
+      }
+      
     } catch (err) {
       const error = err as Error;
       setError(error.message);
@@ -216,6 +233,32 @@ export default function RequisicaoPage() {
       ...prev,
       [cdproduto]: quantidade
     }));
+  };
+  
+  // Função para buscar dados de pedidos de compra para cada produto
+  const fetchPurchaseOrdersData = async (productCodes: string[]) => {
+    try {
+      const purchaseOrders: { [key: string]: PurchaseOrderData[] } = {};
+      
+      // Fetch purchase orders for each product code
+      for (const code of productCodes) {
+        const response = await fetch(`/api/compras?codproduto=${encodeURIComponent(code)}`);
+        
+        if (!response.ok) {
+          console.error(`Failed to fetch purchase orders for product ${code}`);
+          continue;
+        }
+        
+        const data = await response.json();
+        if (data.data && Array.isArray(data.data)) {
+          purchaseOrders[code] = data.data;
+        }
+      }
+      
+      setPurchaseOrdersData(purchaseOrders);
+    } catch (error) {
+      console.error('Error fetching purchase orders data:', error);
+    }
   };
   
   // Voltar para a página anterior
@@ -613,6 +656,43 @@ export default function RequisicaoPage() {
                     }
                   })()}
                 </div>
+                
+                {/* Seção de Pedidos de Compra */}
+                {purchaseOrdersData[produto.cdproduto] && purchaseOrdersData[produto.cdproduto].length > 0 && (
+                  <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-md">
+                    <h3 className="font-medium mb-2 flex items-center">
+                      <Package className="h-4 w-4 mr-2 text-blue-500" />
+                      Pedidos de Compra em Aberto
+                    </h3>
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Data de Emissão</TableHead>
+                            <TableHead>Comprador</TableHead>
+                            <TableHead>Código do Pedido</TableHead>
+                            <TableHead className="text-right">Quantidade</TableHead>
+                            <TableHead>Previsão de Entrega</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {purchaseOrdersData[produto.cdproduto].map((order, index) => (
+                            <TableRow key={`${order.codpedido}-${index}`} className={cn(roboto.className, "text-xs sm:text-sm")}>
+                              <TableCell>{formatDate(order.dtemissao)}</TableCell>
+                              <TableCell>{order.nmcomprador}</TableCell>
+                              <TableCell className="font-mono">{order.codpedido}</TableCell>
+                              <TableCell className="text-right">{order.qtemaberto.toLocaleString()}</TableCell>
+                              <TableCell>{formatDate(order.dtentrega)}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Total de {purchaseOrdersData[produto.cdproduto].length} pedido(s) de compra em aberto para este produto.
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}
