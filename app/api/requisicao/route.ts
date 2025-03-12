@@ -16,6 +16,7 @@ interface StockData {
     QtEstoque_Empresa20?: number;
     QtEstoque_Empresa59?: number;
     StkTotal: number;
+    Atualizacao: string;
 }
 
 // Interface para os dados de vendas
@@ -252,7 +253,8 @@ export async function POST(request: Request) {
                     nmfornecedorprincipal: stock.NmFornecedorPrincipal,
                     stock: stockByFilial,
                     giro: giroData,
-                    viabilidade: viabilidadeData
+                    viabilidade: viabilidadeData,
+                    atualizacao: stock.Atualizacao
                 });
             } catch (err) {
                 console.error(`Erro ao processar produto ${codigo}:`, err);

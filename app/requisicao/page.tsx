@@ -31,6 +31,7 @@ interface ProductGiroData {
   viabilidade: {
     [key: string]: 'alta' | 'media' | 'baixa' | 'indisponivel';
   };
+  atualizacao?: string; // Data de atualização do estoque
 }
 
 // Lista de nomes de filiais para exibição
@@ -83,6 +84,28 @@ const roboto = Roboto({
   display: 'swap',
 });
 
+// Função para formatar a data no formato dd-mm-yyyy hh:mm
+const formatDate = (dateString: string | undefined): string => {
+  if (!dateString) return 'Data não disponível';
+  
+  try {
+    const date = new Date(dateString);
+    
+    // Usar métodos UTC para evitar conversão de fuso horário
+    const day = date.getUTCDate().toString().padStart(2, '0');
+    const month = (date.getUTCMonth() + 1).toString().padStart(2, '0');
+    const year = date.getUTCFullYear();
+    
+    const hours = date.getUTCHours().toString().padStart(2, '0');
+    const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+    
+    return `${day}-${month}-${year} ${hours}:${minutes}`;
+  } catch (error) {
+    console.error('Erro ao formatar data:', error);
+    return 'Data inválida';
+  }
+};
+
 export default function RequisicaoPage() {
   const router = useRouter();
   const [inputMode, setInputMode] = useState<'single' | 'multiple'>('single');
@@ -93,6 +116,7 @@ export default function RequisicaoPage() {
   const [productsData, setProductsData] = useState<ProductGiroData[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [quantidadeRequisitada, setQuantidadeRequisitada] = useState<{ [key: string]: number | string }>({});
+  const [lastUpdateDate, setLastUpdateDate] = useState<string | undefined>(undefined);
   
   // Função para analisar produtos
   const analisarProdutos = async () => {
@@ -101,6 +125,7 @@ export default function RequisicaoPage() {
     setProductsData([]);
     setIsLoading(true);
     setProgress(0);
+    setLastUpdateDate(undefined);
     
     try {
       // Obter lista de códigos de produtos
@@ -122,7 +147,9 @@ export default function RequisicaoPage() {
       // Inicializar quantidades requisitadas
       const novasQuantidades: { [key: string]: number } = {};
       produtosCodigos.forEach(codigo => {
-        novasQuantidades[codigo] = quantidadeRequisitada[codigo] || 1;
+        const currentValue = quantidadeRequisitada[codigo];
+        // Garantir que o valor é um número
+        novasQuantidades[codigo] = typeof currentValue === 'number' ? currentValue : 1;
       });
       setQuantidadeRequisitada(novasQuantidades);
       
@@ -151,6 +178,19 @@ export default function RequisicaoPage() {
       }
       
       setProductsData(data.resultados);
+      
+      // Encontrar a data de atualização mais recente
+      if (data.resultados.length > 0) {
+        const dates = data.resultados
+          .map((produto: ProductGiroData) => produto.atualizacao)
+          .filter(Boolean)
+          .map((dateStr: string) => new Date(dateStr).getTime());
+        
+        if (dates.length > 0) {
+          const mostRecentDate = new Date(Math.max(...dates)).toISOString();
+          setLastUpdateDate(mostRecentDate);
+        }
+      }
       
       if (data.totalEncontrados === 0) {
         toast.error('Nenhum produto encontrado com os códigos informados');
@@ -186,17 +226,26 @@ export default function RequisicaoPage() {
   return (
     <PermissionGuard permission="requisicoes">
       <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center mb-6">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleBack}
-            className="mr-2"
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Voltar
-          </Button>
-          <h1 className="text-2xl font-bold">Análise de Requisição de Produtos</h1>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleBack}
+              className="mr-2"
+            >
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              Voltar
+            </Button>
+            <h1 className="text-2xl font-bold">Análise de Requisição de Produtos</h1>
+          </div>
+          
+          {lastUpdateDate && (
+            <div className="text-sm text-muted-foreground flex items-center">
+              <span className="mr-1">Última atualização:</span>
+              <span className="font-medium">{formatDate(lastUpdateDate)}</span>
+            </div>
+          )}
         </div>
       
       <Card className="mb-6">
