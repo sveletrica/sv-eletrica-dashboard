@@ -672,7 +672,7 @@ export default function RequisicaoPage() {
                             <TableHead>Comprador</TableHead>
                             <TableHead>Código do Pedido</TableHead>
                             <TableHead className="text-right">Quantidade</TableHead>
-                            <TableHead>Previsão de Entrega</TableHead>
+                            <TableHead>Previsão de Faturamento</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
