@@ -14,6 +14,12 @@ import { toast } from 'sonner';
 import { Roboto } from 'next/font/google';
 import { Progress } from "@/components/ui/progress";
 import { PermissionGuard } from '@/components/guards/permission-guard';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // Interface para os dados de produto com análise de giro
 
@@ -114,6 +120,29 @@ const formatDate = (dateString: string | undefined): string => {
   } catch (error) {
     console.error('Erro ao formatar data:', error);
     return 'Data inválida';
+  }
+};
+
+// Add this helper function to calculate days overdue
+const getDaysOverdue = (dateString: string | undefined): number | null => {
+  if (!dateString) return null;
+  
+  try {
+    const deliveryDate = new Date(dateString);
+    const today = new Date();
+    
+    // Reset time part for accurate day comparison
+    deliveryDate.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+    
+    // Calculate difference in milliseconds and convert to days
+    const diffTime = today.getTime() - deliveryDate.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    return diffDays > 0 ? diffDays : null;
+  } catch (error) {
+    console.error('Erro ao calcular dias em atraso:', error);
+    return null;
   }
 };
 
@@ -674,7 +703,7 @@ export default function RequisicaoPage() {
                             <TableHead>Código do Pedido</TableHead>
                             <TableHead className="text-right">Quantidade</TableHead>
                             <TableHead>Status</TableHead>
-                            <TableHead>Data</TableHead>
+                            <TableHead>Dt Faturamento</TableHead>
                             <TableHead>Nota Fiscal</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -701,12 +730,34 @@ export default function RequisicaoPage() {
                                       <Check className="h-4 w-4 mr-1" />
                                       Faturado
                                     </div>
-                                  ) : (
-                                    <div className="flex items-center text-amber-600 dark:text-amber-400 font-medium">
-                                      <AlertTriangle className="h-4 w-4 mr-1" />
-                                      Em aberto
-                                    </div>
-                                  )}
+                                  ) : (() => {
+                                    const daysOverdue = getDaysOverdue(order.dtentrega);
+                                    
+                                    if (daysOverdue !== null) {
+                                      return (
+                                        <TooltipProvider>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <div className="flex items-center text-red-600 dark:text-red-400 font-medium cursor-help">
+                                                <XCircle className="h-4 w-4 mr-1" />
+                                                Atrasado
+                                              </div>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                              <p>{daysOverdue} {daysOverdue === 1 ? 'dia' : 'dias'} em atraso</p>
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
+                                      );
+                                    } else {
+                                      return (
+                                        <div className="flex items-center text-amber-600 dark:text-amber-400 font-medium">
+                                          <AlertTriangle className="h-4 w-4 mr-1" />
+                                          Em aberto
+                                        </div>
+                                      );
+                                    }
+                                  })()}
                                 </TableCell>
                                 <TableCell>
                                   {formatDate(order.dtentrega)}
