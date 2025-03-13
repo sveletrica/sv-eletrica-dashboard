@@ -3,107 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "../compone
 import { MonthlySalesMetrics } from "../components/monthly-sales-metrics";
 import React from "react";
 import { BarChart3, Package, CalendarDays, TrendingUp, ArrowRight } from "lucide-react";
-import { createClient } from '@supabase/supabase-js';
+import { StockDataLoader } from "./components/dashboard/StockDataLoader";
+import { SalesDataLoader } from "./components/dashboard/SalesDataLoader";
 
-// Add async to the function to enable data fetching
-export default async function Dashboard() {
-  // Default values in case the API call fails
-  let salesData = {
-    DataHoje: new Date().toLocaleDateString('pt-BR'),
-    TotalFaturamentoHoje: "R$ 0,00",
-    DataOntem: new Date(Date.now() - 86400000).toLocaleDateString('pt-BR'),
-    TotalFaturamentoOntem: "R$ 0,00",
-    VariacaoPercentual: "0%"
-  };
-  
-  let totalStockItems = 0;
-  let totalStockValue = "R$ 0,00";
-  let variationColorClass = 'text-gray-600';
-  
-  try {
-    // For Next.js server components, we can directly call our database functions
-    // instead of making HTTP requests to our own API routes
-    
-    // Create Supabase client (same as in the API routes)
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL as string,
-      process.env.SUPABASE_SERVICE_ROLE_KEY as string
-    );
-    
-    // Get total stock items
-    const { count: totalItems, error: stockError } = await supabase
-      .from('DBestoque')
-      .select('CdChamada', { count: 'exact', head: true })
-      .gt('StkTotal', 0)
-      .limit(1);
-    
-    if (stockError) {
-      console.error('Supabase Error (Stock Items):', stockError);
-    } else {
-      totalStockItems = totalItems || 0;
-    }
-    
-    // Get total stock value
-    const { data: stockValueData, error: stockValueError } = await supabase
-      .from('mvw_mssql_etiquetasio_estoques')
-      .select('stktotal, vlprecoreposicao')
-      .gt('stktotal', 0);
-    
-    if (stockValueError) {
-      console.error('Supabase Error (Stock Value):', stockValueError);
-    } else if (stockValueData && stockValueData.length > 0) {
-      // Calculate the total value
-      const totalValue = stockValueData.reduce((sum: number, item: { stktotal: number; vlprecoreposicao: number }) => {
-        if (item.stktotal && item.vlprecoreposicao) {
-          return sum + (item.stktotal * item.vlprecoreposicao);
-        }
-        return sum;
-      }, 0);
-      
-      // Format the value in Brazilian currency with compact notation for millions
-      totalStockValue = new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL',
-        notation: 'compact',
-        maximumFractionDigits: 1
-      }).format(totalValue);
-    }
-
-    // Fetch data from the webhook
-    const response = await fetch('https://wh.sveletrica.com/webhook/vendadiatotal', { 
-      cache: 'no-store'  // Always fetch fresh data
-    });
-    
-    if (!response.ok) {
-      throw new Error(`API responded with status: ${response.status}`);
-    }
-    
-    const apiData = await response.json();
-    
-    // Check if the API returned data in the expected format
-    if (apiData) {
-      // Handle both possible formats: single object or array of objects
-      if (Array.isArray(apiData) && apiData.length > 0) {
-        salesData = apiData[0];
-      } else if (typeof apiData === 'object' && apiData.DataHoje) {
-        // The API returned a single object directly
-        salesData = apiData;
-      } else {
-        console.error('API returned unexpected data format:', apiData);
-      }
-      
-      // Determine if the variation is positive or negative for styling
-      // Ensure we're working with strings since the API returns string values
-      const isPositiveVariation = !String(salesData.VariacaoPercentual).includes('-');
-      variationColorClass = isPositiveVariation ? 'text-green-600' : 'text-red-600';
-    } else {
-      console.error('API returned unexpected data format:', apiData);
-    }
-  } catch (error) {
-    console.error('Error fetching sales data:', error);
-    // We'll use the default values set above
-  }
-
+// Changed to a client component for immediate rendering
+export default function Dashboard() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
       <header className="mb-8">
@@ -153,16 +57,7 @@ export default async function Dashboard() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Skus</p>
-                  <p className="font-bold text-2xl">{totalStockItems.toLocaleString()}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Valor Total</p>
-                  <p className="font-bold text-2xl">{totalStockValue}</p>
-                </div>
-              </div>
+              <StockDataLoader />
               <p className="text-sm text-muted-foreground">Ferramenta para gerenciar o estoque de produtos.</p>
             </CardContent>
             <CardFooter className="pt-0 mt-auto">
@@ -175,7 +70,7 @@ export default async function Dashboard() {
             </CardFooter>
           </Card>
 
-          {/* Card Vendas Diárias - Updated with real data */}
+          {/* Card Vendas Diárias */}
           <Card className="group transition-all duration-300 hover:shadow-md border-l-4 border-l-green-500 flex-1">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
@@ -187,16 +82,7 @@ export default async function Dashboard() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Hoje ({salesData.DataHoje})</p>
-                  <p className="font-bold text-2xl">{salesData.TotalFaturamentoHoje}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">vs Ontem ({salesData.DataOntem})</p>
-                  <p className={`font-bold text-2xl ${variationColorClass}`}>{salesData.VariacaoPercentual}</p>
-                </div>
-              </div>
+              <SalesDataLoader />
               <p className="text-sm text-muted-foreground">Monitore atividades e métricas de desempenho das vendas diárias.</p>
             </CardContent>
             <CardFooter className="pt-0 mt-auto">

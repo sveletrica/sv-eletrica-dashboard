@@ -3,37 +3,16 @@ import React from 'react';
 import { useState, useEffect } from 'react';
 import { PermissionGuard } from '../../components/guards/permission-guard';
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent
-} from "../../components/ui/chart";
-import {
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  BarChart,
-  Bar,
-  LineChart,
-  Line
-} from 'recharts';
 import Loading from '../vendas-dia/loading';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ExternalLink } from 'lucide-react';
 import { FERIADOS } from '../../app/config/feriados';
 import {
   getMetaGeral,
   getMetaFilial
 } from '../../app/config/metas';
+import { OverviewTab } from '../components/dashboard/OverviewTab';
+import { VendedoresTab } from '../components/dashboard/VendedoresTab';
+import { FiliaisTab } from '../components/dashboard/FiliaisTab';
 
 // Define interfaces for the data
 interface VendedorMensal {
@@ -436,7 +415,6 @@ export default function DashboardVendas() {
     
     // Create array with all days in the month
     const allDaysData: AccumulatedRevenueData[] = [];
-    let currentDate = new Date(firstDay);
     let accumulatedTarget = 0;
     
     // Map to store actual revenue by date
@@ -462,12 +440,12 @@ export default function DashboardVendas() {
     today.setHours(0, 0, 0, 0);
     
     // Generate data for each day of the month
-    while (currentDate <= lastDay) {
-      const dateStr = currentDate.toISOString().split('T')[0];
-      const isWeekend = currentDate.getDay() === 0 || currentDate.getDay() === 6;
+    for (let day = new Date(firstDay); day <= lastDay; day.setDate(day.getDate() + 1)) {
+      const dateStr = day.toISOString().split('T')[0];
+      const isWeekend = day.getDay() === 0 || day.getDay() === 6;
       
       // Verificar se a data está no mês correto
-      const currentMonth = currentDate.getMonth() + 1; // +1 porque getMonth() retorna 0-11
+      const currentMonth = day.getMonth() + 1; // +1 porque getMonth() retorna 0-11
       const selectedMonthNum = parseInt(selectedMes);
       
       // Só adicionar se a data estiver no mês selecionado
@@ -485,9 +463,6 @@ export default function DashboardVendas() {
           is_weekend: isWeekend
         });
       }
-      
-      // Move to next day
-      currentDate.setDate(currentDate.getDate() + 1);
     }
     
     console.log(`Gerados ${allDaysData.length} dias para o gráfico, primeiro dia: ${allDaysData[0]?.date}, último dia: ${allDaysData[allDaysData.length-1]?.date}`);
@@ -1232,496 +1207,34 @@ export default function DashboardVendas() {
         </div>
 
         {activeView === 'overview' && (
-          <div className="space-y-4">
-            <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm font-medium">
-                    Faturamento por Filial
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[350px] w-full">
-                    {branchChartData.length > 0 ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
-                          <Tooltip
-                            formatter={(value) => [
-                              new Intl.NumberFormat('pt-BR', {
-                                style: 'currency',
-                                currency: 'BRL'
-                              }).format(Number(value)),
-                              'Faturamento'
-                            ]}
-                          />
-                          <Legend
-                            layout="vertical"
-                            verticalAlign="middle"
-                            align="right"
-                          />
-                          <Pie
-                            data={branchChartData}
-                            cx="40%"
-                            cy="50%"
-                            labelLine={true}
-                            outerRadius={80}
-                            fill="#8884d8"
-                            dataKey="value"
-                            nameKey="name"
-                            label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
-                          >
-                            {branchChartData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.fill} />
-                            ))}
-                          </Pie>
-                        </PieChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <div className="flex items-center justify-center h-full">
-                        <p className="text-muted-foreground">Nenhum dado disponível para o período selecionado</p>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm font-medium">
-                    Top 10 Vendedores
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[300px]">
-                    {topSalespeopleData.length > 0 ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <ChartContainer
-                          config={topSalespeopleChartConfig}
-                          className="h-[300px]"
-                        >
-                          <BarChart
-                            data={topSalespeopleData}
-                            layout="vertical"
-                            margin={{ top: 5, right: 30, left: 80, bottom: 5 }}
-                          >
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis type="number"
-                              tickFormatter={(value) =>
-                                new Intl.NumberFormat('pt-BR', {
-                                  notation: 'compact',
-                                  compactDisplay: 'short',
-                                  style: 'currency',
-                                  currency: 'BRL'
-                                }).format(value)
-                              }
-                            />
-                            <YAxis
-                              type="category"
-                              dataKey="name"
-                              width={80}
-                              tick={{ fontSize: 12 }}
-                            />
-                            <ChartTooltip
-                              content={
-                                <ChartTooltipContent
-                                  formatter={(value) => {
-                                    const formattedValue = new Intl.NumberFormat('pt-BR', {
-                                      style: 'currency',
-                                      currency: 'BRL'
-                                    }).format(Number(value));
-
-                                    return [formattedValue];
-                                  }}
-                                />
-                              }
-                            />
-                            <Bar dataKey="value" fill="#2563eb" />
-                          </BarChart>
-                        </ChartContainer>
-                      </ResponsiveContainer>
-                    ) : (
-                      <div className="flex items-center justify-center h-full">
-                        <p className="text-muted-foreground">Nenhum dado disponível para o período selecionado</p>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* New Accumulated Revenue Chart */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm font-medium">
-                  Projeção de Faturamento Acumulado
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[350px] w-full">
-                  {accumulatedRevenueData.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <ChartContainer
-                        config={{
-                          accumulated_revenue: {
-                            label: 'Faturado',
-                            color: '#82ca9d'
-                          },
-                          accumulated_target: {
-                            label: 'Meta',
-                            color: '#8884d8'
-                          },
-                          forecast_revenue: {
-                            label: 'Previsão',
-                            color: '#FFBB28'
-                          }
-                        }}
-                      >
-                        <LineChart
-                          data={accumulatedRevenueData}
-                          margin={{ top: 20, right: 30, left: 20, bottom: 10 }}
-                        >
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis 
-                            dataKey="date" 
-                            tickFormatter={(value) => {
-                              const date = new Date(value);
-                              return date.getDate().toString().padStart(2, '0');
-                            }}
-                          />
-                          <YAxis 
-                            tickFormatter={(value) => 
-                              new Intl.NumberFormat('pt-BR', {
-                                notation: 'compact',
-                                compactDisplay: 'short',
-                                style: 'currency',
-                                currency: 'BRL'
-                              }).format(value)
-                            }
-                          />
-                          <ChartTooltip
-                            content={
-                              <ChartTooltipContent
-                                formatter={(value, name) => {
-                                  let label = '';
-                                  switch(String(name)) {
-                                    case 'accumulated_revenue':
-                                      label = 'Faturado';
-                                      break;
-                                    case 'accumulated_target':
-                                      label = 'Meta';
-                                      break;
-                                    case 'forecast_revenue':
-                                      label = 'Previsão';
-                                      break;
-                                    default:
-                                      label = String(name);
-                                  }
-                                  
-                                  const formattedValue = new Intl.NumberFormat('pt-BR', {
-                                    style: 'currency',
-                                    currency: 'BRL'
-                                  }).format(Number(value));
-
-                                  return [formattedValue, label];
-                                }}
-                                labelFormatter={(label) => {
-                                  const date = new Date(label);
-                                  return date.toLocaleDateString('pt-BR');
-                                }}
-                              />
-                            }
-                          />
-                          <Legend 
-                            formatter={(value) => {
-                              if (value === 'accumulated_revenue') return 'Faturado';
-                              if (value === 'accumulated_target') return 'Meta';
-                              if (value === 'forecast_revenue') return 'Previsão';
-                              return value;
-                            }}
-                          />
-                          <Line 
-                            type="monotone" 
-                            dataKey="accumulated_target" 
-                            stroke="#8884d8" 
-                            name="Meta"
-                            strokeWidth={2}
-                            dot={{ r: 2 }}
-                            activeDot={{ r: 5, strokeWidth: 1 }}
-                          />
-                          <Line 
-                            type="monotone" 
-                            dataKey="forecast_revenue" 
-                            stroke="#FFBB28" 
-                            name="Previsão"
-                            strokeWidth={2}
-                            dot={{ r: 2 }}
-                            activeDot={{ r: 5, strokeWidth: 1 }}
-                            strokeDasharray="5 5"
-                          />
-                          <Line 
-                            type="monotone" 
-                            dataKey="accumulated_revenue" 
-                            stroke="#82ca9d" 
-                            name="Faturado"
-                            strokeWidth={2}
-                            dot={{ r: 2 }}
-                            activeDot={{ r: 5, strokeWidth: 1 }}
-                          />
-                        </LineChart>
-                      </ChartContainer>
-                    </ResponsiveContainer>
-                  ) : (
-                    <div className="flex items-center justify-center h-full">
-                      <p className="text-muted-foreground">Nenhum dado disponível para o período selecionado</p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <OverviewTab 
+            branchChartData={branchChartData}
+            topSalespeopleData={topSalespeopleData}
+            topSalespeopleChartConfig={topSalespeopleChartConfig}
+            accumulatedRevenueData={accumulatedRevenueData}
+          />
         )}
 
         {activeView === 'vendedores' && (
-          <div className="space-y-4">
-            {vendedoresPerformance.length > 0 ? (
-              <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                {vendedoresPerformance.map(vendedor => (
-                  <Card
-                    key={vendedor.nome}
-                    className={`${getMarginBackgroundColor(vendedor.total.margem)} cursor-pointer hover:shadow-md transition-shadow relative group`}
-                    onClick={() => {
-                      // Abrir em uma nova aba/página
-                      window.open(`/vendedor/${encodeURIComponent(vendedor.nome)}`, '_blank');
-                    }}
-                  >
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium flex justify-between items-center">
-                        <span className="truncate" title={vendedor.nome}>{vendedor.nome}</span>
-                        <span className={getMarginTextColor(vendedor.total.margem)}>
-                          {vendedor.total.margem.toFixed(2)}%
-                        </span>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-xl font-bold mb-2">
-                        {vendedor.total.vlfaturamento.toLocaleString('pt-BR', {
-                          style: 'currency',
-                          currency: 'BRL'
-                        })}
-                      </div>
-                      <div className="space-y-1">
-                        {Object.entries(vendedor.filiais)
-                          .sort(([, a], [, b]) => b.vlfaturamento - a.vlfaturamento)
-                          .map(([filialNome, filialData]) => (
-                            <div key={filialNome} className="flex justify-between text-sm font-bold">
-                              <span className="truncate" title={filialNome}>{filialNome}:</span>
-                              <span className={getMarginTextColor(filialData.margem)}>
-                                {new Intl.NumberFormat('pt-BR', {
-                                  notation: 'compact',
-                                  compactDisplay: 'short',
-                                  style: 'currency',
-                                  currency: 'BRL'
-                                }).format(filialData.vlfaturamento)}
-                                {' '}({filialData.margem.toFixed(1)}%)
-                              </span>
-                            </div>
-                          ))}
-                      </div>
-                    </CardContent>
-                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <ExternalLink size={14} className="text-muted-foreground" />
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <Card>
-                <CardContent className="p-6">
-                  <p className="text-center text-muted-foreground">
-                    Nenhum dado disponível para o período selecionado
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-          </div>
+          <VendedoresTab 
+            vendedoresPerformance={vendedoresPerformance}
+            getMarginBackgroundColor={getMarginBackgroundColor}
+            getMarginTextColor={getMarginTextColor}
+          />
         )}
 
         {activeView === 'filiais' && (
-          <div className="space-y-4">
-            {filiaisPerformance.length > 0 ? (
-              <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                {filiaisPerformance.map(filial => (
-                  <Card key={filial.nome} className={getMarginBackgroundColor(filial.margem)}>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium flex justify-between items-center">
-                        <span>{filial.nome}</span>
-                        <span className={getMarginTextColor(filial.margem)}>
-                          {filial.margem.toFixed(2)}%
-                        </span>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-xl font-bold mb-2">
-                        {filial.vlfaturamento.toLocaleString('pt-BR', {
-                          style: 'currency',
-                          currency: 'BRL'
-                        })}
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span>Custo:</span>
-                        <span>
-                          {filial.vltotalcustoproduto.toLocaleString('pt-BR', {
-                            style: 'currency',
-                            currency: 'BRL'
-                          })}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span>Vendedores:</span>
-                        <span>{filial.vendedores}</span>
-                      </div>
-
-                      {/* Meta e projeção para a filial */}
-                      {(() => {
-                        const monthFormatted = selectedMes.padStart(2, '0');
-                        const metaFilial = getMetaFilial(filial.nome, selectedAno, monthFormatted);
-                        return metaFilial > 0 && (
-                          <div className="mt-2 pt-2 border-t">
-                            <div className="flex justify-between text-sm">
-                              <span>Meta mensal:</span>
-                              <span>{metaFilial.toLocaleString('pt-BR', {
-                                style: 'currency',
-                                currency: 'BRL'
-                              })}</span>
-                            </div>
-
-                            {filial.vlfaturamento < metaFilial ? (
-                              <div className="flex justify-between text-sm">
-                                <span>Falta atingir:</span>
-                                <span className="font-medium">{(metaFilial - filial.vlfaturamento).toLocaleString('pt-BR', {
-                                  style: 'currency',
-                                  currency: 'BRL'
-                                })}</span>
-                              </div>
-                            ) : (
-                              <div className="flex justify-between text-sm">
-                                <span>Meta superada:</span>
-                                <span className="font-medium text-green-600 dark:text-green-400">{(filial.vlfaturamento - metaFilial).toLocaleString('pt-BR', {
-                                  style: 'currency',
-                                  currency: 'BRL'
-                                })}</span>
-                              </div>
-                            )}
-
-                            <div className="mt-1">
-                              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-                                <div
-                                  className="bg-blue-600 h-2.5 rounded-full"
-                                  style={{ width: `${Math.min(100, (filial.vlfaturamento / metaFilial) * 100)}%` }}
-                                ></div>
-                              </div>
-                              <div className="flex justify-end mt-1">
-                                <span className={`text-xs font-medium ${getProgressColor((filial.vlfaturamento / metaFilial) * 100)}`}>
-                                  {((filial.vlfaturamento / metaFilial) * 100).toFixed(1)}%
-                                </span>
-                              </div>
-                            </div>
-
-                            {/* Informação sobre dias úteis */}
-                            <div className="mt-2 pt-2 border-t">
-                              <div className="flex justify-between text-sm">
-                                <span>Dias úteis totais:</span>
-                                <span>{diasUteisInfo.diasUteisTotais}</span>
-                              </div>
-                              <div className="flex justify-between text-sm">
-                                <span>Dias úteis decorridos:</span>
-                                <span>{diasUteisInfo.diasUteisDecorridos}</span>
-                              </div>
-                              {diasUteisInfo.diasUteisRestantes > 0 && (
-                                <div className="flex justify-between text-sm">
-                                  <span>Dias úteis restantes:</span>
-                                  <span>{diasUteisInfo.diasUteisRestantes}</span>
-                                </div>
-                              )}
-                              {diasUteisInfo.diasUteisDecorridos > 0 && (
-                                <div className="flex justify-between text-sm">
-                                  <span>Média por dia útil:</span>
-                                  <span>{(filial.vlfaturamento / diasUteisInfo.diasUteisDecorridos).toLocaleString('pt-BR', {
-                                    style: 'currency',
-                                    currency: 'BRL'
-                                  })}</span>
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Projeção para a filial */}
-                            {diasUteisInfo.diasUteisDecorridos > 0 && diasUteisInfo.diasUteisRestantes > 0 && (
-                              <>
-                                {/* Mostrar mensagem especial quando hoje é o último dia útil */}
-                                {diasUteisInfo.diasUteisRestantes === 1 &&
-                                  diasUteisInfo.diasUteisDecorridos + diasUteisInfo.diasUteisRestantes === diasUteisInfo.diasUteisTotais && (
-                                    <div className="text-xs text-blue-600 dark:text-blue-400 mt-1 italic">
-                                      Hoje é o último dia útil do mês
-                                    </div>
-                                  )}
-
-                                {(() => {
-                                  const { projecao, percentualMeta } = calcularProjecaoFilial(
-                                    filial.vlfaturamento,
-                                    filial.nome,
-                                    diasUteisInfo
-                                  );
-
-                                  return (
-                                    <div className="mt-2 pt-2 border-t">
-                                      <div className="flex justify-between text-sm font-medium">
-                                        <span>Projeção mensal:</span>
-                                        <span className={projecao >= metaFilial ?
-                                          'text-green-600 dark:text-green-400' :
-                                          'text-yellow-600 dark:text-yellow-400'
-                                        }>
-                                          {projecao.toLocaleString('pt-BR', {
-                                            style: 'currency',
-                                            currency: 'BRL'
-                                          })}
-                                        </span>
-                                      </div>
-
-                                      <div className="mt-1">
-                                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-                                          <div
-                                            className={`h-2.5 rounded-full ${projecao >= metaFilial ? 'bg-green-600' : 'bg-yellow-600'}`}
-                                            style={{ width: `${Math.min(100, percentualMeta)}%` }}
-                                          ></div>
-                                        </div>
-                                        <div className="flex justify-end mt-1">
-                                          <span className={`text-xs font-medium ${getProgressColor(percentualMeta)}`}>
-                                            {percentualMeta.toFixed(1)}%
-                                          </span>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  );
-                                })()}
-                              </>
-                            )}
-                          </div>
-                        );
-                      })()}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <Card>
-                <CardContent className="p-6">
-                  <p className="text-center text-muted-foreground">
-                    Nenhum dado disponível para o período selecionado
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-          </div>
+          <FiliaisTab 
+            filiaisPerformance={filiaisPerformance}
+            getMarginBackgroundColor={getMarginBackgroundColor}
+            getMarginTextColor={getMarginTextColor}
+            getProgressColor={getProgressColor}
+            diasUteisInfo={diasUteisInfo}
+            calcularProjecaoFilial={calcularProjecaoFilial}
+            getMetaFilial={getMetaFilial}
+            selectedAno={selectedAno}
+            selectedMes={selectedMes}
+          />
         )}
       </div>
     </PermissionGuard>
