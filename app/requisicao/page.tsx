@@ -673,33 +673,50 @@ export default function RequisicaoPage() {
                             <TableHead>Comprador</TableHead>
                             <TableHead>Código do Pedido</TableHead>
                             <TableHead className="text-right">Quantidade</TableHead>
-                            <TableHead>
-                              {/* Change the header text based on whether any order has a description starting with "NF" */}
-                              {purchaseOrdersData[produto.cdproduto].some(order => order.descricao?.startsWith("NF")) 
-                                ? "Faturado em" 
-                                : "Previsão de Faturamento"}
-                            </TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Data</TableHead>
                             <TableHead>Nota Fiscal</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {purchaseOrdersData[produto.cdproduto].map((order, index) => (
-                            <TableRow key={`${order.codpedido}-${index}`} className={cn(roboto.className, "text-xs sm:text-sm")}>
-                              <TableCell>{formatDate(order.dtemissao)}</TableCell>
-                              <TableCell>{order.nmcomprador}</TableCell>
-                              <TableCell className="font-mono">{order.codpedido}</TableCell>
-                              <TableCell className="text-right">{order.qtemaberto.toLocaleString()}</TableCell>
-                              <TableCell>
-                                {formatDate(order.dtentrega)}
-                                {order.descricao?.startsWith("NF") && (
-                                  <Check className="h-4 w-4 inline-block ml-1 text-green-500" />
+                          {purchaseOrdersData[produto.cdproduto].map((order, index) => {
+                            const isFaturado = order.descricao?.startsWith("NF");
+                            
+                            return (
+                              <TableRow 
+                                key={`${order.codpedido}-${index}`} 
+                                className={cn(
+                                  roboto.className, 
+                                  "text-xs sm:text-sm",
+                                  isFaturado ? "bg-green-50 dark:bg-green-900/10" : ""
                                 )}
-                              </TableCell>
-                              <TableCell>
-                                {order.descricao?.startsWith("NF") ? order.descricao : ""}
-                              </TableCell>
-                            </TableRow>
-                          ))}
+                              >
+                                <TableCell>{formatDate(order.dtemissao)}</TableCell>
+                                <TableCell>{order.nmcomprador}</TableCell>
+                                <TableCell className="font-mono">{order.codpedido}</TableCell>
+                                <TableCell className="text-right">{order.qtemaberto.toLocaleString()}</TableCell>
+                                <TableCell>
+                                  {isFaturado ? (
+                                    <div className="flex items-center text-green-600 dark:text-green-400 font-medium">
+                                      <Check className="h-4 w-4 mr-1" />
+                                      Faturado
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center text-amber-600 dark:text-amber-400 font-medium">
+                                      <AlertTriangle className="h-4 w-4 mr-1" />
+                                      Em aberto
+                                    </div>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {formatDate(order.dtentrega)}
+                                </TableCell>
+                                <TableCell>
+                                  {isFaturado ? order.descricao : "-"}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
                         </TableBody>
                       </Table>
                     </div>
