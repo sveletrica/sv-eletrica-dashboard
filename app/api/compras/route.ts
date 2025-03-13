@@ -20,7 +20,7 @@ export async function GET(request: Request) {
         // Query the purchase orders for the specified product
         const { data, error } = await supabase
             .from('mvw_mssql_pedidocompras')
-            .select('dtemissao, nmcomprador, codpedido, qtemaberto, dtentrega, codproduto')
+            .select('dtemissao, nmcomprador, codpedido, qtemaberto, dtentrega, codproduto, descricao')
             .eq('codproduto', codproduto)
             .order('dtemissao', { ascending: false })
 

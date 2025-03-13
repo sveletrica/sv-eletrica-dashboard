@@ -42,6 +42,7 @@ interface PurchaseOrderData {
   qtemaberto: number;
   dtentrega: string;
   codproduto: string;
+  descricao: string;
 }
 
 // Lista de nomes de filiais para exibição
@@ -672,7 +673,13 @@ export default function RequisicaoPage() {
                             <TableHead>Comprador</TableHead>
                             <TableHead>Código do Pedido</TableHead>
                             <TableHead className="text-right">Quantidade</TableHead>
-                            <TableHead>Previsão de Faturamento</TableHead>
+                            <TableHead>
+                              {/* Change the header text based on whether any order has a description starting with "NF" */}
+                              {purchaseOrdersData[produto.cdproduto].some(order => order.descricao?.startsWith("NF")) 
+                                ? "Faturado em" 
+                                : "Previsão de Faturamento"}
+                            </TableHead>
+                            <TableHead>Nota Fiscal</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -682,7 +689,15 @@ export default function RequisicaoPage() {
                               <TableCell>{order.nmcomprador}</TableCell>
                               <TableCell className="font-mono">{order.codpedido}</TableCell>
                               <TableCell className="text-right">{order.qtemaberto.toLocaleString()}</TableCell>
-                              <TableCell>{formatDate(order.dtentrega)}</TableCell>
+                              <TableCell>
+                                {formatDate(order.dtentrega)}
+                                {order.descricao?.startsWith("NF") && (
+                                  <Check className="h-4 w-4 inline-block ml-1 text-green-500" />
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {order.descricao?.startsWith("NF") ? order.descricao : ""}
+                              </TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
