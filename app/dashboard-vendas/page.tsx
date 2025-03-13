@@ -21,7 +21,9 @@ import {
   Pie,
   Cell,
   BarChart,
-  Bar
+  Bar,
+  LineChart,
+  Line
 } from 'recharts';
 import Loading from '../vendas-dia/loading';
 import Link from 'next/link';
@@ -67,6 +69,19 @@ interface FilialPerformance {
   vendedores: number
 }
 
+interface DailySales {
+  data_emissao: string;
+  faturamento_total: number;
+}
+
+interface AccumulatedRevenueData {
+  date: string;
+  accumulated_revenue: number;
+  accumulated_target: number;
+  forecast_revenue: number;
+  is_weekend: boolean;
+}
+
 // Colors for charts
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658', '#8dd1e1'];
 
@@ -99,6 +114,8 @@ export default function DashboardVendas() {
   const [totalVendas, setTotalVendas] = useState(0);
   const [totalMargem, setTotalMargem] = useState(0);
   const [activeView, setActiveView] = useState('overview');
+  const [dailySalesData, setDailySalesData] = useState<DailySales[]>([]);
+  const [accumulatedRevenueData, setAccumulatedRevenueData] = useState<AccumulatedRevenueData[]>([]);
 
   // Obter o mês atual (formato '01', '02', etc.)
   const currentMonth = (new Date().getMonth() + 1).toString().padStart(2, '0');
@@ -210,6 +227,49 @@ export default function DashboardVendas() {
 
     fetchData();
   }, [selectedFilial, selectedAno, selectedMes]);
+
+  // Fetch daily sales data for the accumulated revenue chart
+  useEffect(() => {
+    const fetchDailySalesData = async () => {
+      try {
+        // Fetch data for any month/year selection
+        const url = `/api/vendedores/diario?year=${selectedAno}&month=${selectedMes}`;
+        console.log('Fetching daily sales data from:', url);
+        
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error('Failed to fetch daily sales data');
+        }
+        const data = await response.json();
+        console.log('Received daily sales data:', data.data ? data.data.length : 0, 'records');
+        
+        // Log some sample data to check date format
+        if (data.data && data.data.length > 0) {
+          console.log('Sample data points:', data.data.slice(0, 3));
+        }
+        
+        setDailySalesData(data.data || []);
+        
+        // Get the monthly target
+        const monthFormatted = selectedMes.padStart(2, '0');
+        const monthlyTarget = getMetaGeral(selectedAno, monthFormatted);
+        console.log('Getting meta for year:', selectedAno, 'month:', monthFormatted);
+        console.log('Monthly Target:', monthlyTarget);
+        
+        // Process the data for the accumulated revenue chart
+        if (diasUteisInfo.diasUteisTotais > 0) {
+          processAccumulatedRevenueData(data.data || []);
+        }
+      } catch (error) {
+        console.error('Error fetching daily sales data:', error);
+      }
+    };
+
+    // Wait for diasUteisInfo to be calculated before fetching data
+    if (diasUteisInfo.diasUteisTotais > 0) {
+      fetchDailySalesData();
+    }
+  }, [selectedAno, selectedMes, diasUteisInfo.diasUteisTotais]);
 
   // Process the data to get performance metrics
   const processData = (data: VendedorMensal[]) => {
@@ -343,6 +403,150 @@ export default function DashboardVendas() {
     setFiliaisPerformance(sortedFiliais);
     setTotalVendas(totalVendas);
     setTotalMargem(totalMargemValue);
+  };
+
+  // Process daily sales data to create accumulated revenue chart data
+  const processAccumulatedRevenueData = (data: DailySales[]) => {
+    if (!data || data.length === 0) return;
+
+    // Get the target for the current month
+    const monthFormatted = selectedMes.padStart(2, '0');
+    const monthlyTarget = getMetaGeral(selectedAno, monthFormatted);
+    
+    // Get the first and last day of the month
+    const year = parseInt(selectedAno);
+    const month = parseInt(selectedMes);
+    
+    // Corrigir a criação das datas do primeiro e último dia do mês
+    // month - 1 porque os meses em JS são 0-indexed (0 = Janeiro, 11 = Dezembro)
+    const firstDay = new Date(year, month - 1, 1);
+    
+    // Último dia do mês: primeiro dia do próximo mês menos 1 dia
+    const lastDay = new Date(year, month, 0);
+    
+    console.log(`Processando dados para ${monthFormatted}/${selectedAno}`);
+    console.log('Primeiro dia do mês:', firstDay.toLocaleDateString('pt-BR'));
+    console.log('Último dia do mês:', lastDay.toLocaleDateString('pt-BR'));
+    
+    // Calculate business days in the month
+    const businessDays = diasUteisInfo.diasUteisTotais;
+    
+    // Daily target (only for business days)
+    const dailyTarget = businessDays > 0 ? monthlyTarget / businessDays : 0;
+    
+    // Create array with all days in the month
+    const allDaysData: AccumulatedRevenueData[] = [];
+    let currentDate = new Date(firstDay);
+    let accumulatedTarget = 0;
+    
+    // Map to store actual revenue by date
+    const revenueByDate = new Map<string, number>();
+    data.forEach(item => {
+      // Verificar se a data está no formato correto e pertence ao mês selecionado
+      if (item.data_emissao) {
+        const dataEmissao = new Date(item.data_emissao);
+        const mesEmissao = dataEmissao.getMonth() + 1; // +1 porque getMonth() retorna 0-11
+        const selectedMonthNum = parseInt(selectedMes);
+        
+        // Só adicionar se a data estiver no mês selecionado
+        if (mesEmissao === selectedMonthNum) {
+          revenueByDate.set(item.data_emissao, item.faturamento_total);
+        }
+      }
+    });
+    
+    console.log(`Dados de receita filtrados: ${revenueByDate.size} dias com faturamento`);
+    
+    // Find the current date to determine which days are in the past
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Generate data for each day of the month
+    while (currentDate <= lastDay) {
+      const dateStr = currentDate.toISOString().split('T')[0];
+      const isWeekend = currentDate.getDay() === 0 || currentDate.getDay() === 6;
+      
+      // Verificar se a data está no mês correto
+      const currentMonth = currentDate.getMonth() + 1; // +1 porque getMonth() retorna 0-11
+      const selectedMonthNum = parseInt(selectedMes);
+      
+      // Só adicionar se a data estiver no mês selecionado
+      if (currentMonth === selectedMonthNum) {
+        // Only add to target on business days
+        if (!isWeekend && !FERIADOS.includes(dateStr)) {
+          accumulatedTarget += dailyTarget;
+        }
+        
+        allDaysData.push({
+          date: dateStr,
+          accumulated_revenue: 0, // Will be calculated in the next step
+          accumulated_target: accumulatedTarget,
+          forecast_revenue: 0, // Will be calculated in the next step
+          is_weekend: isWeekend
+        });
+      }
+      
+      // Move to next day
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    console.log(`Gerados ${allDaysData.length} dias para o gráfico, primeiro dia: ${allDaysData[0]?.date}, último dia: ${allDaysData[allDaysData.length-1]?.date}`);
+    
+    // Calculate accumulated actual revenue
+    let accumulatedRevenue = 0;
+    
+    // Calculate accumulated revenue for all days
+    allDaysData.forEach((day, index) => {
+      const dayDate = new Date(day.date);
+      
+      // Only add revenue for days up to today
+      if (dayDate <= today) {
+        // Add revenue for this day if it exists
+        if (revenueByDate.has(day.date)) {
+          accumulatedRevenue += revenueByDate.get(day.date) || 0;
+        }
+        
+        day.accumulated_revenue = accumulatedRevenue;
+      }
+    });
+    
+    // Calculate forecast revenue
+    
+    // Count business days passed and calculate total revenue
+    let businessDaysPassed = 0;
+    allDaysData.forEach(day => {
+      const dayDate = new Date(day.date);
+      if (dayDate <= today && !day.is_weekend && !FERIADOS.includes(day.date)) {
+        businessDaysPassed++;
+      }
+    });
+    
+    // Calculate daily average revenue based on business days passed
+    const dailyAverageRevenue = businessDaysPassed > 0 ? accumulatedRevenue / businessDaysPassed : 0;
+    
+    // Apply forecast to all days
+    let forecastRevenue = 0;
+    
+    allDaysData.forEach((day, index) => {
+      const dayDate = new Date(day.date);
+      
+      if (dayDate <= today) {
+        // For past days, forecast is the same as actual revenue
+        day.forecast_revenue = day.accumulated_revenue;
+        forecastRevenue = day.accumulated_revenue;
+      } else {
+        // For future days
+        const isBusinessDay = !day.is_weekend && !FERIADOS.includes(day.date);
+        
+        if (isBusinessDay) {
+          forecastRevenue += dailyAverageRevenue;
+        }
+        
+        day.forecast_revenue = forecastRevenue;
+      }
+    });
+    
+    setAccumulatedRevenueData(allDaysData);
   };
 
   // Calculate margin using the same formula as in the existing code
@@ -716,7 +920,8 @@ export default function DashboardVendas() {
               {/* Informação sobre a meta de faturamento */}
               <div className="mt-2 pt-2 border-t">
                 {(() => {
-                  const metaGeral = getMetaGeral(selectedAno, selectedMes);
+                  const monthFormatted = selectedMes.padStart(2, '0');
+                  const metaGeral = getMetaGeral(selectedAno, monthFormatted);
                   return metaGeral > 0 && (
                     <>
                       <div className="flex justify-between text-sm">
@@ -812,7 +1017,8 @@ export default function DashboardVendas() {
                   </div>
                 )}
                 {(() => {
-                  const metaGeral = getMetaGeral(selectedAno, selectedMes);
+                  const monthFormatted = selectedMes.padStart(2, '0');
+                  const metaGeral = getMetaGeral(selectedAno, monthFormatted);
                   return metaGeral > 0 && diasUteisInfo.diasUteisDecorridos > 0 && diasUteisInfo.diasUteisRestantes > 0 && (
                     <>
                       <div className="flex justify-between text-sm font-medium mt-1">
@@ -874,7 +1080,8 @@ export default function DashboardVendas() {
 
                 {/* Meta e projeção para a filial */}
                 {(() => {
-                  const metaFilial = getMetaFilial(filial.nome, selectedAno, selectedMes);
+                  const monthFormatted = selectedMes.padStart(2, '0');
+                  const metaFilial = getMetaFilial(filial.nome, selectedAno, monthFormatted);
                   return metaFilial > 0 && (
                     <div className="mt-2 pt-2 border-t">
                       <div className="flex justify-between text-sm">
@@ -1117,13 +1324,14 @@ export default function DashboardVendas() {
                             <ChartTooltip
                               content={
                                 <ChartTooltipContent
-                                  formatter={(value) => [
-                                    new Intl.NumberFormat('pt-BR', {
+                                  formatter={(value) => {
+                                    const formattedValue = new Intl.NumberFormat('pt-BR', {
                                       style: 'currency',
                                       currency: 'BRL'
-                                    }).format(Number(value)),
-                                    'Faturamento'
-                                  ]}
+                                    }).format(Number(value));
+
+                                    return [formattedValue];
+                                  }}
                                 />
                               }
                             />
@@ -1140,6 +1348,136 @@ export default function DashboardVendas() {
                 </CardContent>
               </Card>
             </div>
+
+            {/* New Accumulated Revenue Chart */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium">
+                  Projeção de Faturamento Acumulado
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[350px] w-full">
+                  {accumulatedRevenueData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <ChartContainer
+                        config={{
+                          accumulated_revenue: {
+                            label: 'Faturado',
+                            color: '#82ca9d'
+                          },
+                          accumulated_target: {
+                            label: 'Meta',
+                            color: '#8884d8'
+                          },
+                          forecast_revenue: {
+                            label: 'Previsão',
+                            color: '#FFBB28'
+                          }
+                        }}
+                      >
+                        <LineChart
+                          data={accumulatedRevenueData}
+                          margin={{ top: 20, right: 30, left: 20, bottom: 10 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis 
+                            dataKey="date" 
+                            tickFormatter={(value) => {
+                              const date = new Date(value);
+                              return date.getDate().toString().padStart(2, '0');
+                            }}
+                          />
+                          <YAxis 
+                            tickFormatter={(value) => 
+                              new Intl.NumberFormat('pt-BR', {
+                                notation: 'compact',
+                                compactDisplay: 'short',
+                                style: 'currency',
+                                currency: 'BRL'
+                              }).format(value)
+                            }
+                          />
+                          <ChartTooltip
+                            content={
+                              <ChartTooltipContent
+                                formatter={(value, name) => {
+                                  let label = '';
+                                  switch(String(name)) {
+                                    case 'accumulated_revenue':
+                                      label = 'Faturado';
+                                      break;
+                                    case 'accumulated_target':
+                                      label = 'Meta';
+                                      break;
+                                    case 'forecast_revenue':
+                                      label = 'Previsão';
+                                      break;
+                                    default:
+                                      label = String(name);
+                                  }
+                                  
+                                  const formattedValue = new Intl.NumberFormat('pt-BR', {
+                                    style: 'currency',
+                                    currency: 'BRL'
+                                  }).format(Number(value));
+
+                                  return [formattedValue, label];
+                                }}
+                                labelFormatter={(label) => {
+                                  const date = new Date(label);
+                                  return date.toLocaleDateString('pt-BR');
+                                }}
+                              />
+                            }
+                          />
+                          <Legend 
+                            formatter={(value) => {
+                              if (value === 'accumulated_revenue') return 'Faturado';
+                              if (value === 'accumulated_target') return 'Meta';
+                              if (value === 'forecast_revenue') return 'Previsão';
+                              return value;
+                            }}
+                          />
+                          <Line 
+                            type="monotone" 
+                            dataKey="accumulated_target" 
+                            stroke="#8884d8" 
+                            name="Meta"
+                            strokeWidth={2}
+                            dot={{ r: 2 }}
+                            activeDot={{ r: 5, strokeWidth: 1 }}
+                          />
+                          <Line 
+                            type="monotone" 
+                            dataKey="forecast_revenue" 
+                            stroke="#FFBB28" 
+                            name="Previsão"
+                            strokeWidth={2}
+                            dot={{ r: 2 }}
+                            activeDot={{ r: 5, strokeWidth: 1 }}
+                            strokeDasharray="5 5"
+                          />
+                          <Line 
+                            type="monotone" 
+                            dataKey="accumulated_revenue" 
+                            stroke="#82ca9d" 
+                            name="Faturado"
+                            strokeWidth={2}
+                            dot={{ r: 2 }}
+                            activeDot={{ r: 5, strokeWidth: 1 }}
+                          />
+                        </LineChart>
+                      </ChartContainer>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex items-center justify-center h-full">
+                      <p className="text-muted-foreground">Nenhum dado disponível para o período selecionado</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
 
@@ -1245,7 +1583,8 @@ export default function DashboardVendas() {
 
                       {/* Meta e projeção para a filial */}
                       {(() => {
-                        const metaFilial = getMetaFilial(filial.nome, selectedAno, selectedMes);
+                        const monthFormatted = selectedMes.padStart(2, '0');
+                        const metaFilial = getMetaFilial(filial.nome, selectedAno, monthFormatted);
                         return metaFilial > 0 && (
                           <div className="mt-2 pt-2 border-t">
                             <div className="flex justify-between text-sm">
@@ -1387,4 +1726,4 @@ export default function DashboardVendas() {
       </div>
     </PermissionGuard>
   );
-} 
+}
