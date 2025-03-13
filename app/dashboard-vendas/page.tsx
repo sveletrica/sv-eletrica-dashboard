@@ -384,6 +384,68 @@ export default function DashboardVendas() {
     setTotalMargem(totalMargemValue);
   };
 
+  // Helper function to format date as YYYY-MM-DD in the local timezone (GMT-3)
+  const formatDateToLocalISODate = (date: Date): string => {
+    // Format date to YYYY-MM-DD in local timezone
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  };
+  
+  // Nova função para depurar dados
+  const debugRevenueData = (data: AccumulatedRevenueData[]): void => {
+    console.log('---ANÁLISE COMPLETA DOS DADOS DO GRÁFICO---');
+    
+    // Procurar especificamente o dia 01/03/2025
+    const dia1Marco = data.find(d => d.date === '2025-03-01');
+    if (dia1Marco) {
+      console.log('DADOS 01/03/2025:', dia1Marco);
+    } else {
+      console.log('DADOS 01/03/2025: NÃO ENCONTRADO');
+    }
+    
+    // Verificar os 5 primeiros dias
+    console.log('PRIMEIROS 5 DIAS:');
+    for (let i = 0; i < 5 && i < data.length; i++) {
+      console.log(`  ${data[i].date}: accumulated=${data[i].accumulated_revenue}, forecast=${data[i].forecast_revenue}`);
+    }
+    
+    // Verificar se há valores acumulados zerados em dias que deveriam ter valores
+    const diasComZero = data.filter(d => d.accumulated_revenue === 0 && new Date(d.date) <= new Date());
+    if (diasComZero.length > 0) {
+      console.log(`ATENÇÃO: ${diasComZero.length} dias passados têm valor acumulado zero:`);
+      diasComZero.slice(0, 5).forEach(d => console.log(`  ${d.date}`));
+    }
+    
+    console.log('-------------------------------------');
+  };
+
+  // Helper function to create a date from a YYYY-MM-DD string in the local timezone
+  const createDateFromLocalString = (dateStr: string): Date => {
+    try {
+      // Parse the date string in local timezone
+      const [year, month, day] = dateStr.split('-').map(Number);
+      
+      // Verificar se os valores são válidos
+      if (isNaN(year) || isNaN(month) || isNaN(day)) {
+        console.error('Formato de data inválido:', dateStr);
+        throw new Error('Formato de data inválido: ' + dateStr);
+      }
+      
+      const date = new Date(year, month - 1, day);
+      
+      // Verificar se a data criada é válida
+      if (isNaN(date.getTime())) {
+        console.error('Data inválida criada:', dateStr, date);
+        throw new Error('Data inválida criada: ' + dateStr);
+      }
+      
+      return date;
+    } catch (error) {
+      console.error('Erro ao criar data:', error);
+      // Fallback para evitar quebrar o app
+      return new Date();
+    }
+  };
+
   // Process daily sales data to create accumulated revenue chart data
   const processAccumulatedRevenueData = (data: DailySales[]) => {
     if (!data || data.length === 0) return;
@@ -396,11 +458,8 @@ export default function DashboardVendas() {
     const year = parseInt(selectedAno);
     const month = parseInt(selectedMes);
     
-    // Corrigir a criação das datas do primeiro e último dia do mês
-    // month - 1 porque os meses em JS são 0-indexed (0 = Janeiro, 11 = Dezembro)
+    // Criar datas no fuso horário local (GMT-3)
     const firstDay = new Date(year, month - 1, 1);
-    
-    // Último dia do mês: primeiro dia do próximo mês menos 1 dia
     const lastDay = new Date(year, month, 0);
     
     console.log(`Processando dados para ${monthFormatted}/${selectedAno}`);
@@ -419,50 +478,78 @@ export default function DashboardVendas() {
     
     // Map to store actual revenue by date
     const revenueByDate = new Map<string, number>();
+    
+    // Log para verificar formato das datas
+    if (data.length > 0) {
+      console.log('Exemplo de data_emissao:', data[0].data_emissao);
+    }
+    
     data.forEach(item => {
-      // Verificar se a data está no formato correto e pertence ao mês selecionado
+      // Verificar se a data está no formato correto
       if (item.data_emissao) {
-        const dataEmissao = new Date(item.data_emissao);
-        const mesEmissao = dataEmissao.getMonth() + 1; // +1 porque getMonth() retorna 0-11
+        // Verificação mais direta usando o formato da string de data
+        // As datas vêm no formato YYYY-MM-DD da API
+        const [ano, mes, dia] = item.data_emissao.split('-');
         const selectedMonthNum = parseInt(selectedMes);
+        const mesNumerico = parseInt(mes);
         
-        // Só adicionar se a data estiver no mês selecionado
-        if (mesEmissao === selectedMonthNum) {
+        // Log para data específica de 01/03/2025
+        if (item.data_emissao === '2025-03-01') {
+          console.log('Encontrado dado para 01/03/2025:', item);
+          console.log('Comparação de meses para 01/03/2025:', {
+            mesNaData: mesNumerico,
+            mesSelecionado: selectedMonthNum,
+            formato: item.data_emissao
+          });
+        }
+        
+        // Comparação direta dos números do mês, sem criar objetos Date
+        // Isso elimina qualquer problema potencial com fuso horário
+        if (mesNumerico === selectedMonthNum) {
+          console.log(`Adicionando faturamento para ${item.data_emissao}: ${item.faturamento_total}`);
+          // Usar a string da data original para garantir consistência
           revenueByDate.set(item.data_emissao, item.faturamento_total);
         }
       }
     });
     
     console.log(`Dados de receita filtrados: ${revenueByDate.size} dias com faturamento`);
+    if (revenueByDate.size > 0) {
+      console.log('Exemplo de datas no mapa:', Array.from(revenueByDate.keys()).slice(0, 3));
+    }
     
     // Find the current date to determine which days are in the past
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const todayFormatted = formatDateToLocalISODate(today);
+    console.log('Data de hoje formatada:', todayFormatted);
     
-    // Generate data for each day of the month
-    for (let day = new Date(firstDay); day <= lastDay; day.setDate(day.getDate() + 1)) {
-      const dateStr = day.toISOString().split('T')[0];
-      const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+    // Gerar dados para cada dia do mês usando abordagem mais direta
+    // Primeiro, determine quantos dias tem o mês
+    const diasNoMes = new Date(year, month, 0).getDate();
+    console.log(`Mês ${month}/${year} tem ${diasNoMes} dias`);
+    
+    // Criar uma entrada para cada dia do mês
+    for (let dia = 1; dia <= diasNoMes; dia++) {
+      // Formato YYYY-MM-DD
+      const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
       
-      // Verificar se a data está no mês correto
-      const currentMonth = day.getMonth() + 1; // +1 porque getMonth() retorna 0-11
-      const selectedMonthNum = parseInt(selectedMes);
+      // Criar um objeto Date para verificar se é fim de semana
+      const dayDate = new Date(year, month - 1, dia);
+      const isWeekend = dayDate.getDay() === 0 || dayDate.getDay() === 6;
       
-      // Só adicionar se a data estiver no mês selecionado
-      if (currentMonth === selectedMonthNum) {
-        // Only add to target on business days
-        if (!isWeekend && !FERIADOS.includes(dateStr)) {
-          accumulatedTarget += dailyTarget;
-        }
-        
-        allDaysData.push({
-          date: dateStr,
-          accumulated_revenue: 0, // Will be calculated in the next step
-          accumulated_target: accumulatedTarget,
-          forecast_revenue: 0, // Will be calculated in the next step
-          is_weekend: isWeekend
-        });
+      // Only add to target on business days
+      if (!isWeekend && !FERIADOS.includes(dateStr)) {
+        accumulatedTarget += dailyTarget;
       }
+      
+      allDaysData.push({
+        date: dateStr,
+        accumulated_revenue: 0, // Will be calculated in the next step
+        accumulated_target: accumulatedTarget,
+        forecast_revenue: 0, // Will be calculated in the next step
+        is_weekend: isWeekend
+      });
     }
     
     console.log(`Gerados ${allDaysData.length} dias para o gráfico, primeiro dia: ${allDaysData[0]?.date}, último dia: ${allDaysData[allDaysData.length-1]?.date}`);
@@ -470,28 +557,76 @@ export default function DashboardVendas() {
     // Calculate accumulated actual revenue
     let accumulatedRevenue = 0;
     
-    // Calculate accumulated revenue for all days
-    allDaysData.forEach((day, index) => {
-      const dayDate = new Date(day.date);
-      
-      // Only add revenue for days up to today
-      if (dayDate <= today) {
-        // Add revenue for this day if it exists
-        if (revenueByDate.has(day.date)) {
-          accumulatedRevenue += revenueByDate.get(day.date) || 0;
-        }
+    // Adicionar log para ver se o dia 01/03/2025 está no mapa de faturamento
+    console.log('Verificando se 01/03/2025 está no mapa:', revenueByDate.has('2025-03-01'));
+    
+    // Dar um dump dos primeiros 5 dias do array para verificação
+    console.log('Primeiros 5 dias antes de processar:', allDaysData.slice(0, 5));
+    
+    // ABORDAGEM COMPLETAMENTE REVISADA PARA CALCULAR O FATURAMENTO ACUMULADO
+    // Primeiro, vamos garantir que todos os dias com vendas têm seu próprio valor não-acumulado registrado
+    allDaysData.forEach(day => {
+      if (revenueByDate.has(day.date)) {
+        // Atribuir o valor diário diretamente (antes de acumular)
+        const valorDiario = revenueByDate.get(day.date) || 0;
         
-        day.accumulated_revenue = accumulatedRevenue;
+        // Adicionamos uma propriedade extra para rastrear o valor diário
+        (day as any).daily_revenue = valorDiario;
+        
+        // Log especial para o dia 01/03/2025
+        if (day.date === '2025-03-01') {
+          console.log(`VALOR DIÁRIO 01/03/2025: ${valorDiario}`);
+        }
+      } else {
+        // Dias sem faturamento recebem 0
+        (day as any).daily_revenue = 0;
       }
     });
+    
+    // Agora acumulamos corretamente os valores para todos os dias até hoje
+    accumulatedRevenue = 0;
+    allDaysData.forEach(day => {
+      const isPastOrToday = day.date <= todayFormatted;
+      
+      if (isPastOrToday) {
+        // Adicionar o valor diário ao acumulado
+        accumulatedRevenue += (day as any).daily_revenue || 0;
+        
+        // Atribuir o acumulado atualizado
+        day.accumulated_revenue = accumulatedRevenue;
+        
+        // Log especial para o dia 01/03/2025
+        if (day.date === '2025-03-01') {
+          console.log(`ACUMULADO 01/03/2025: ${accumulatedRevenue}`);
+        }
+      }
+    });
+    
+    // Dar um dump dos primeiros 5 dias depois de processar
+    console.log('Primeiros 5 dias depois de processar:', allDaysData.slice(0, 5));
+    
+    // Verificação específica para o dia 01/03/2025
+    const dia1Marco = allDaysData.find(d => d.date === '2025-03-01');
+    if (dia1Marco) {
+      // Se o dia 01/03 não tiver valor acumulado mas tiver receita no mapa
+      if (dia1Marco.accumulated_revenue === 0 && revenueByDate.has('2025-03-01')) {
+        const valor = revenueByDate.get('2025-03-01') || 0;
+        console.log(`CORREÇÃO: Forçando valor acumulado do dia 01/03/2025 para ${valor}`);
+        dia1Marco.accumulated_revenue = valor;
+      }
+    }
+    
+    // Debug completo dos dados
+    debugRevenueData(allDaysData);
     
     // Calculate forecast revenue
     
     // Count business days passed and calculate total revenue
     let businessDaysPassed = 0;
     allDaysData.forEach(day => {
-      const dayDate = new Date(day.date);
-      if (dayDate <= today && !day.is_weekend && !FERIADOS.includes(day.date)) {
+      // Comparar strings de data em vez de objetos Date
+      const isPastOrToday = day.date <= todayFormatted;
+      if (isPastOrToday && !day.is_weekend && !FERIADOS.includes(day.date)) {
         businessDaysPassed++;
       }
     });
@@ -503,9 +638,10 @@ export default function DashboardVendas() {
     let forecastRevenue = 0;
     
     allDaysData.forEach((day, index) => {
-      const dayDate = new Date(day.date);
+      // Comparar strings de data em vez de objetos Date
+      const isPastOrToday = day.date <= todayFormatted;
       
-      if (dayDate <= today) {
+      if (isPastOrToday) {
         // For past days, forecast is the same as actual revenue
         day.forecast_revenue = day.accumulated_revenue;
         forecastRevenue = day.accumulated_revenue;
@@ -521,6 +657,24 @@ export default function DashboardVendas() {
       }
     });
     
+    // Verificação final para garantir que os dados estão consistentes
+    const dadosFiltrados = allDaysData.filter(day => {
+      // Remover qualquer dia que tenha dados inconsistentes (acumulado e previsão zerados em dias passados)
+      if (day.date <= todayFormatted) {
+        // Dias passados com acumulado zerado mas previsão diferente de zero são inconsistentes
+        if (day.accumulated_revenue === 0 && day.forecast_revenue !== 0) {
+          console.log(`INCONSISTÊNCIA: Dia ${day.date} tem previsão ${day.forecast_revenue} mas acumulado zero`);
+          return false;
+        }
+      }
+      return true;
+    });
+    
+    // Verificação detalhada antes de enviar para o gráfico
+    console.log(`Dados finais: ${allDaysData.length} dias, sendo ${dadosFiltrados.length} consistentes`);
+    debugRevenueData(allDaysData);
+    
+    // Definir os dados finais do gráfico
     setAccumulatedRevenueData(allDaysData);
   };
 

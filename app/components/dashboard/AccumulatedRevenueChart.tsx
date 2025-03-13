@@ -21,7 +21,9 @@ interface AccumulatedRevenueChartProps {
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
-    const date = new Date(label);
+    // Parse the date in local timezone (without creating UTC conversion issues)
+    const [year, month, day] = label.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
     const formattedDate = date.toLocaleDateString('pt-BR');
 
     return (
@@ -64,6 +66,13 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export function AccumulatedRevenueChart({ accumulatedRevenueData }: AccumulatedRevenueChartProps) {
+  // Log para verificar os dados recebidos
+  console.log('Dados recebidos pelo gráfico:', accumulatedRevenueData);
+  
+  // Verificar especificamente o dia 01/03
+  const dia1Marco = accumulatedRevenueData.find(item => item.date === '2025-03-01');
+  console.log('Dados para 01/03/2025 no gráfico:', dia1Marco);
+  
   return (
     <Card>
       <CardHeader>
@@ -99,8 +108,9 @@ export function AccumulatedRevenueChart({ accumulatedRevenueData }: AccumulatedR
                   <XAxis 
                     dataKey="date" 
                     tickFormatter={(value) => {
-                      const date = new Date(value);
-                      return date.getDate().toString().padStart(2, '0');
+                      // Parse the date in local timezone (without conversion issues)
+                      const [year, month, day] = value.split('-').map(Number);
+                      return day.toString().padStart(2, '0');
                     }}
                   />
                   <YAxis 
@@ -122,6 +132,18 @@ export function AccumulatedRevenueChart({ accumulatedRevenueData }: AccumulatedR
                       return value;
                     }}
                   />
+                  {/* Renderizar as linhas na ordem correta para visualização */}
+                  <Line 
+                    type="monotone" 
+                    dataKey="accumulated_revenue" 
+                    stroke="#82ca9d" 
+                    name="Faturado"
+                    strokeWidth={2}
+                    dot={{ r: 2 }}
+                    activeDot={{ r: 5, strokeWidth: 1 }}
+                    isAnimationActive={false} // Desativar animação para debug
+                    connectNulls={true} // Conectar pontos através de valores nulos
+                  />
                   <Line 
                     type="monotone" 
                     dataKey="accumulated_target" 
@@ -130,6 +152,7 @@ export function AccumulatedRevenueChart({ accumulatedRevenueData }: AccumulatedR
                     strokeWidth={2}
                     dot={{ r: 2 }}
                     activeDot={{ r: 5, strokeWidth: 1 }}
+                    isAnimationActive={false} // Desativar animação para debug
                   />
                   <Line 
                     type="monotone" 
@@ -140,15 +163,7 @@ export function AccumulatedRevenueChart({ accumulatedRevenueData }: AccumulatedR
                     dot={{ r: 2 }}
                     activeDot={{ r: 5, strokeWidth: 1 }}
                     strokeDasharray="5 5"
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="accumulated_revenue" 
-                    stroke="#82ca9d" 
-                    name="Faturado"
-                    strokeWidth={2}
-                    dot={{ r: 2 }}
-                    activeDot={{ r: 5, strokeWidth: 1 }}
+                    isAnimationActive={false} // Desativar animação para debug
                   />
                 </LineChart>
               </ChartContainer>

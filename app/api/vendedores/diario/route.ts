@@ -20,7 +20,13 @@ export async function GET(request: Request) {
         
         // Calculate first and last day of the month
         const firstDayOfMonth = `${currentYear}-${currentMonth}-01`
-        const lastDayOfMonth = new Date(parseInt(currentYear), parseInt(currentMonth), 0).toISOString().split('T')[0]
+        
+        // Last day of month (correctly calculated in local timezone)
+        // O mês em JS é 0-indexed, então para o último dia, usamos o mês seguinte (month) e dia 0
+        const lastDay = new Date(parseInt(currentYear), parseInt(currentMonth), 0)
+        const lastDayOfMonth = `${lastDay.getFullYear()}-${String(lastDay.getMonth() + 1).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')}`
+        
+        console.log(`Buscando dados de vendas diárias de ${firstDayOfMonth} até ${lastDayOfMonth}`)
 
         // Query the daily sales for the specified month
         const { data, error } = await supabase
