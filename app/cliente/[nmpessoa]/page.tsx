@@ -682,8 +682,28 @@ export default function ClientDetails() {
                                     </TableHeader>
                                     <TableBody>
                                         {recentQuotations.map((quotation) => {
-                                            const margin = ((quotation.total_faturamento - (quotation.total_faturamento * 0.268 + quotation.total_custo_produto)) / quotation.total_faturamento) * 100
+                                            const margin = ((quotation.total_faturamento - (quotation.total_faturamento * 0.268 + quotation.total_custo_produto)) / quotation.total_faturamento) * 100;
                                             const isFullyAvailable = quotation.percentualdisponivel === 100;
+                                            
+                                            // Parse the date correctly from dd/mm/yyyy format
+                                            let formattedDate;
+                                            if (typeof quotation.dtemissao === 'string') {
+                                                if (quotation.dtemissao.includes('/')) {
+                                                    // Handle dd/mm/yyyy format
+                                                    const [day, month, year] = quotation.dtemissao.split('/');
+                                                    formattedDate = `${day}/${month}/${year}`;
+                                                } else {
+                                                    // Try to format using Date object if it's in ISO format
+                                                    try {
+                                                        const date = new Date(quotation.dtemissao);
+                                                        formattedDate = date.toLocaleDateString('pt-BR');
+                                                    } catch (e) {
+                                                        formattedDate = quotation.dtemissao;
+                                                    }
+                                                }
+                                            } else {
+                                                formattedDate = 'Data inválida';
+                                            }
 
                                             return (
                                                 <TableRow 
@@ -692,7 +712,7 @@ export default function ClientDetails() {
                                                     onClick={() => router.push(`/orcamento/${quotation.cdpedidodevenda}`)}
                                                 >
                                                     <TableCell className="py-1 text-xs md:text-sm">
-                                                        {new Date(quotation.dtemissao).toLocaleDateString('pt-BR')}
+                                                        {formattedDate}
                                                     </TableCell>
                                                     <TableCell className="py-1 text-xs md:text-sm">
                                                         <Link href={`/orcamento/${quotation.cdpedidodevenda}`} className="text-blue-600 hover:underline">
