@@ -146,6 +146,20 @@ const getDaysOverdue = (dateString: string | undefined): number | null => {
   }
 };
 
+// Função para garantir que o código do produto tenha um zero à esquerda se necessário
+const formatProductCode = (code: string): string => {
+  // Verifica se o código já começa com zero
+  if (code.startsWith('0')) return code;
+  
+  // Verifica se o código é numérico e não começa com zero
+  if (/^\d+$/.test(code)) {
+    return `0${code}`;
+  }
+  
+  // Retorna o código original se não for numérico ou já tiver um formato especial
+  return code;
+};
+
 export default function RequisicaoPage() {
   const router = useRouter();
   const [inputMode, setInputMode] = useState<'single' | 'multiple'>('single');
@@ -158,6 +172,8 @@ export default function RequisicaoPage() {
   const [quantidadeRequisitada, setQuantidadeRequisitada] = useState<{ [key: string]: number | string }>({});
   const [lastUpdateDate, setLastUpdateDate] = useState<string | undefined>(undefined);
   const [purchaseOrdersData, setPurchaseOrdersData] = useState<{ [key: string]: PurchaseOrderData[] }>({});
+  // Add state to track which input should be highlighted
+  const [highlightedInput, setHighlightedInput] = useState<string | null>(null);
   
   // Função para analisar produtos
   const analisarProdutos = async () => {
@@ -168,18 +184,20 @@ export default function RequisicaoPage() {
     setProgress(0);
     setLastUpdateDate(undefined);
     setPurchaseOrdersData({});
+    setHighlightedInput(null);
     
     try {
       // Obter lista de códigos de produtos
       let produtosCodigos: string[] = [];
       
       if (inputMode === 'single' && singleProductCode.trim()) {
-        produtosCodigos = [singleProductCode.trim()];
+        produtosCodigos = [formatProductCode(singleProductCode.trim())];
       } else if (inputMode === 'multiple' && multipleProductCodes.trim()) {
         produtosCodigos = multipleProductCodes
           .split('\n')
           .map(line => line.trim())
-          .filter(line => line.length > 0);
+          .filter(line => line.length > 0)
+          .map(code => formatProductCode(code));
       }
       
       if (produtosCodigos.length === 0) {
@@ -232,6 +250,13 @@ export default function RequisicaoPage() {
           const mostRecentDate = new Date(Math.max(...dates)).toISOString();
           setLastUpdateDate(mostRecentDate);
         }
+        
+        // Highlight the first product's quantidade input after a short delay
+        setTimeout(() => {
+          if (data.resultados.length > 0) {
+            setHighlightedInput(data.resultados[0].cdproduto);
+          }
+        }, 500);
       }
       
       if (data.totalEncontrados === 0) {
@@ -263,6 +288,11 @@ export default function RequisicaoPage() {
       ...prev,
       [cdproduto]: quantidade
     }));
+    
+    // Remove highlight after user interaction
+    if (highlightedInput === cdproduto) {
+      setHighlightedInput(null);
+    }
   };
   
   // Função para buscar dados de pedidos de compra para cada produto
@@ -343,7 +373,21 @@ export default function RequisicaoPage() {
                     placeholder="Digite o código do produto"
                     value={singleProductCode}
                     onChange={(e) => setSingleProductCode(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && analisarProdutos()}
+                    onBlur={(e) => {
+                      // Format with leading zero when the input loses focus
+                      if (e.target.value.trim()) {
+                        setSingleProductCode(formatProductCode(e.target.value.trim()));
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        // Format with leading zero before submitting
+                        if (singleProductCode.trim()) {
+                          setSingleProductCode(formatProductCode(singleProductCode.trim()));
+                        }
+                        analisarProdutos();
+                      }
+                    }}
                   />
                 </div>
                 <Button
@@ -370,6 +414,16 @@ export default function RequisicaoPage() {
                     placeholder="Digite os códigos dos produtos, um por linha"
                     value={multipleProductCodes}
                     onChange={(e) => setMultipleProductCodes(e.target.value)}
+                    onBlur={(e) => {
+                      // Format each line with leading zeros when the textarea loses focus
+                      if (e.target.value.trim()) {
+                        const formattedCodes = e.target.value
+                          .split('\n')
+                          .map(line => line.trim() ? formatProductCode(line.trim()) : line)
+                          .join('\n');
+                        setMultipleProductCodes(formattedCodes);
+                      }
+                    }}
                     rows={5}
                   />
                 </div>
@@ -453,7 +507,17 @@ export default function RequisicaoPage() {
                         const value = parseInt(e.target.value);
                         handleQuantidadeChange(produto.cdproduto, isNaN(value) || value < 1 ? 1 : value);
                       }}
-                      className="w-20"
+                      className={cn(
+                        "w-20",
+                        highlightedInput === produto.cdproduto ? 
+                          "ring-8 ring-primary animate-pulse focus:animate-pulse focus:ring-8" : ""
+                      )}
+                      // Auto-focus when this is the highlighted input
+                      ref={(input) => {
+                        if (input && highlightedInput === produto.cdproduto) {
+                          input.focus();
+                        }
+                      }}
                     />
                   </div>
                 </div>

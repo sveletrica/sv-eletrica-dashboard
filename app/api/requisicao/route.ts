@@ -43,6 +43,20 @@ const FILIAIS_MAP: { [key: string]: string } = {
     'QtEstoque_Empresa59': 'SV WS EXPRESS'
 };
 
+// Função para garantir que o código do produto tenha um zero à esquerda se necessário
+const formatProductCode = (code: string): string => {
+    // Verifica se o código já começa com zero
+    if (code.startsWith('0')) return code;
+    
+    // Verifica se o código é numérico e não começa com zero
+    if (/^\d+$/.test(code)) {
+        return `0${code}`;
+    }
+    
+    // Retorna o código original se não for numérico ou já tiver um formato especial
+    return code;
+};
+
 // Função para calcular o giro médio dos últimos 3 meses
 const calculateGiro3M = (salesData: SalesData[], filial: string): number => {
     // Verificar se temos dados de vendas
@@ -148,12 +162,15 @@ export async function POST(request: Request) {
 
         // Limitar o número de produtos para evitar sobrecarga
         const limitedCodigos = produtosCodigos.slice(0, 50);
+        
+        // Formatar os códigos de produtos para garantir o zero à esquerda
+        const formattedCodigos = limitedCodigos.map(codigo => formatProductCode(codigo.toString()));
 
         // Resultados para cada produto
         const resultados = [];
 
         // Buscar dados para cada produto
-        for (const codigo of limitedCodigos) {
+        for (const codigo of formattedCodigos) {
             try {
                 // Buscar dados de estoque
                 const { data: stockData, error: stockError } = await supabase
