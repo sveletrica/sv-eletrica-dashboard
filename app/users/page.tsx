@@ -402,6 +402,19 @@ export default function Users() {
                                     />
                                     <span>Simulações</span>
                                 </label>
+                                <label className="flex items-center space-x-2">
+                                    <Checkbox
+                                        checked={newUser.permissions.simulations}
+                                        onCheckedChange={(checked) => setNewUser(prev => ({
+                                            ...prev,
+                                            permissions: {
+                                                ...prev.permissions,
+                                                simulations: checked as boolean
+                                            }
+                                        }))}
+                                    />
+                                    <span>Requisições</span>
+                                </label>
                             </div>
                         </div>
 
